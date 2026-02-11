@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Wand2 } from 'lucide-react';
-import { products } from '../data/products';
+import { products } from "../data/products"; // CAMBIÉ ESTA LÍNEA
 import { ProductCard } from '../components/ProductCard';
 import { PageTransition } from '../components/PageTransition';
 
@@ -10,7 +10,10 @@ export function Home() {
   const category = searchParams.get('category');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const filteredProducts = products
+  // Filtrar solo productos de Harry Potter
+  const harryPotterProducts = products.filter(p => p.universe === 'harry-potter');
+  
+  const filteredProducts = harryPotterProducts
     .filter(product => !category || product.category === category)
     .filter(product => 
       searchTerm === '' || 

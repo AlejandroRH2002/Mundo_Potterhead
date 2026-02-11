@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
-import { otherUniversesProducts } from '../data/otherUniverses';
+import { otherUniversesProducts } from '../data/otherUniverses'; // CAMBIÉ ESTA LÍNEA
 import { ProductCard } from '../components/ProductCard';
 import { PageTransition } from '../components/PageTransition';
 
