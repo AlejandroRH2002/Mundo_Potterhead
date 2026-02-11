@@ -15,6 +15,13 @@ export function ProductDetail() {
   // Buscar el producto por ID
   const product = allProducts.find(p => p.id === id);
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   if (!product) {
     return (
       <div className="bg-gradient-to-br from-[#4a0001] via-[#740001] to-[#4a0001] min-h-screen">
@@ -24,6 +31,7 @@ export function ProductDetail() {
             <p className="text-white/80 mt-2 mb-6">El producto que buscas no existe o ha sido removido.</p>
             <Link 
               to="/" 
+              onClick={scrollToTop}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-[#FDB813] to-[#FFD700] text-[#4a0001] rounded-lg hover:from-[#FFD700] hover:to-[#FDB813] transition-all font-cinzel font-bold"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
@@ -54,6 +62,7 @@ export function ProductDetail() {
         <div className="max-w-6xl mx-auto px-4">
           <Link 
             to={isHarryPotter ? "/" : "/otros-universos"} 
+            onClick={scrollToTop}
             className="inline-flex items-center text-[#FDB813] hover:text-[#FFD700] mb-8 font-cinzel"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -190,7 +199,11 @@ export function ProductDetail() {
                         transition: { duration: 0.2 }
                       }}
                     >
-                      <Link to={`/product/${relatedProduct.id}`} className="group block">
+                      <Link 
+                        to={`/product/${relatedProduct.id}`} 
+                        onClick={scrollToTop}
+                        className="group block"
+                      >
                         <div className="bg-white rounded-lg border border-gray-200 p-3 hover:border-yellow-300 hover:shadow-lg transition-shadow">
                           <motion.img 
                             src={relatedProduct.image} 

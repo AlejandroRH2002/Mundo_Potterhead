@@ -7,8 +7,19 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product }: ProductCardProps) {
+  const handleClick = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth' // Desplazamiento suave
+    });
+  };
+
   return (
-    <Link to={`/product/${product.id}`} className="group">
+    <Link 
+      to={`/product/${product.id}`} 
+      onClick={handleClick}
+      className="group"
+    >
       <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-xl overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl border border-yellow-300/30 hover:border-yellow-300/50 relative magical-shine">
         {product.isOnSale && (
           <div className="absolute top-4 right-4 bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-full font-cinzel text-sm transform rotate-12 shadow-lg">

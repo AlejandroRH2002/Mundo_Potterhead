@@ -4,6 +4,13 @@ import { Link } from 'react-router-dom';
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   return (
     <footer className="bg-[#740001] text-white py-8">
       <div className="max-w-7xl mx-auto px-4">
@@ -19,17 +26,29 @@ export function Footer() {
             <h3 className="text-xl font-cinzel font-bold text-[#FDB813] mb-4">Enlaces Rápidos</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/" className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors">
+                <Link 
+                  to="/" 
+                  onClick={scrollToTop}
+                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
+                >
                   Inicio
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors">
+                <Link 
+                  to="/contact" 
+                  onClick={scrollToTop}
+                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
+                >
                   Contacto
                 </Link>
               </li>
               <li>
-                <Link to="/?category=accessories" className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors">
+                <Link 
+                  to="/?category=accessories" 
+                  onClick={scrollToTop}
+                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
+                >
                   Productos
                 </Link>
               </li>
@@ -40,12 +59,20 @@ export function Footer() {
             <h3 className="text-xl font-cinzel font-bold text-[#FDB813] mb-4">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/privacy" className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors">
+                <Link 
+                  to="/privacy" 
+                  onClick={scrollToTop}
+                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
+                >
                   Política de Privacidad
                 </Link>
               </li>
               <li>
-                <Link to="/terms" className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors">
+                <Link 
+                  to="/terms" 
+                  onClick={scrollToTop}
+                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
+                >
                   Términos y Condiciones
                 </Link>
               </li>
