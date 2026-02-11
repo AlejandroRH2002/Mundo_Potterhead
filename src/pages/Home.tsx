@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, Wand2 } from 'lucide-react';
-import { products } from "../data/products"; // CAMBIÉ ESTA LÍNEA
+import { products } from "../data/products";
 import { ProductCard } from '../components/ProductCard';
 import { PageTransition } from '../components/PageTransition';
 
@@ -9,6 +9,7 @@ export function Home() {
   const [searchParams] = useSearchParams();
   const category = searchParams.get('category');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDobbyMessage, setShowDobbyMessage] = useState(false);
   
   // Filtrar solo productos de Harry Potter
   const harryPotterProducts = products.filter(p => p.universe === 'harry-potter');
@@ -26,7 +27,43 @@ export function Home() {
 
   return (
     <PageTransition>
-      <div className="bg-magical min-h-screen pb-12">
+      <div className="bg-magical min-h-screen pb-12 relative">
+        
+        {/* 🧦 EASTER EGG - DOBBY (casi invisible) */}
+        <div className="fixed bottom-2 right-2 opacity-[0.15] hover:opacity-100 transition-opacity duration-300 z-50 cursor-pointer group">
+          <div 
+            className="relative"
+            onClick={() => setShowDobbyMessage(!showDobbyMessage)}
+          >
+            {/* Calcetín de Dobby */}
+            <div className="text-4xl transform group-hover:scale-110 transition-transform">
+              🧦
+            </div>
+            
+            {/* Mensaje del easter egg */}
+            {showDobbyMessage && (
+              <div className="absolute bottom-10 right-0 w-80 p-4 bg-gradient-to-br from-[#2a1a0a] to-[#4a2a1a] border-2 border-[#FDB813]/50 rounded-lg shadow-2xl font-crimson text-sm">
+                <div className="flex items-start space-x-3">
+                  <span className="text-3xl">🧦</span>
+                  <div>
+                    <p className="text-[#FDB813] font-cinzel font-bold mb-2 text-xs">Dobby dice:</p>
+                    <p className="text-white/90 text-xs leading-relaxed">
+                      "Cuando auron no entendía me daba mucha ansiedad, me puse mal porque clínicamente sufro de ansiedad, 
+                      me llevaron a urgencias por su culpa, Pero lo entiendo, está grande el viejo calvo, aprende más lento que antes."
+                    </p>
+                    <div className="mt-2 text-[#FDB813]/70 text-[10px] italic">
+                      — Dobby es libre
+                    </div>
+                  </div>
+                </div>
+                {/* Triángulo decorativo */}
+                <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-[#4a2a1a] border-r-2 border-b-2 border-[#FDB813]/50 transform rotate-45"></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Contenido principal */}
         <div className="content-wrapper">
           <div className="max-w-7xl mx-auto px-4 py-12">
             <div className="text-center mb-12">

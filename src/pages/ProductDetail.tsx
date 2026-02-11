@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Sparkles, Castle } from 'lucide-react';
 import { products } from "../data/products";
 import { otherUniversesProducts } from "../data/otherUniverses";
+import { motion } from 'framer-motion';
 
 export function ProductDetail() {
   const { id } = useParams();
@@ -139,8 +140,7 @@ export function ProductDetail() {
                   <ul className="text-gray-600 space-y-1">
                     <li>• Categoría: <span className="font-medium capitalize">{product.category}</span></li>
                     <li>• Universo: <span className="font-medium">{isHarryPotter ? 'Harry Potter' : 'Otros Universos'}</span></li>
-                    <li>• Envío gratuito a todo el Perú</li>
-                    <li>• Garantía de 30 días</li>
+                    <li>• Garantía de 14 días o 2 semanas.</li>
                   </ul>
                 </div>
                 
@@ -166,29 +166,46 @@ export function ProductDetail() {
             
             {/* Sección de recomendaciones */}
             <div className="border-t border-gray-200 p-8">
-              <h3 className="text-xl font-cinzel font-bold text-gray-800 mb-6">También te podría interesar</h3>
+              <motion.h3 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-xl font-cinzel font-bold text-gray-800 mb-6"
+              >
+                También te podría interesar
+              </motion.h3>
+              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {allProducts
                   .filter(p => p.id !== product.id && p.universe === product.universe)
                   .slice(0, 4)
-                  .map(relatedProduct => (
-                    <Link 
+                  .map((relatedProduct, index) => (
+                    <motion.div
                       key={relatedProduct.id}
-                      to={`/product/${relatedProduct.id}`}
-                      className="group"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      whileHover={{ 
+                        scale: 1.05,
+                        transition: { duration: 0.2 }
+                      }}
                     >
-                      <div className="bg-white rounded-lg border border-gray-200 p-3 hover:border-yellow-300 hover:shadow-md transition-all">
-                        <img 
-                          src={relatedProduct.image} 
-                          alt={relatedProduct.name}
-                          className="w-full h-32 object-cover rounded-md mb-2"
-                        />
-                        <h4 className="font-cinzel font-bold text-gray-800 text-sm group-hover:text-yellow-700 line-clamp-1">
-                          {relatedProduct.name}
-                        </h4>
-                        <p className="text-gray-600 font-bold">${relatedProduct.price.toFixed(2)}</p>
-                      </div>
-                    </Link>
+                      <Link to={`/product/${relatedProduct.id}`} className="group block">
+                        <div className="bg-white rounded-lg border border-gray-200 p-3 hover:border-yellow-300 hover:shadow-lg transition-shadow">
+                          <motion.img 
+                            src={relatedProduct.image} 
+                            alt={relatedProduct.name}
+                            className="w-full h-32 object-cover rounded-md mb-2"
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.3 }}
+                          />
+                          <h4 className="font-cinzel font-bold text-gray-800 text-sm group-hover:text-yellow-700 line-clamp-1">
+                            {relatedProduct.name}
+                          </h4>
+                          <p className="text-gray-600 font-bold">${relatedProduct.price.toFixed(2)}</p>
+                        </div>
+                      </Link>
+                    </motion.div>
                   ))}
               </div>
             </div>

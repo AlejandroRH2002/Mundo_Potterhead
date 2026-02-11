@@ -13,6 +13,9 @@ import { Profile } from './pages/Profile';
 import { EditProduct } from './pages/EditProduct';
 import { AddProduct } from './pages/AddProduct';
 import { Cart } from './pages/Cart';
+import { Privacy } from './pages/Privacy';
+import { Terms } from './pages/Terms';
+
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -26,6 +29,8 @@ function AnimatedRoutes() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/otros-universos" element={<OtherUniverses />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/cart" element={<Cart />} /> {/* ← AÑADE ESTA LÍNEA */}
         
         {/* Rutas de usuario */}
