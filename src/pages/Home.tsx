@@ -29,41 +29,41 @@ export function Home() {
     <PageTransition>
       <div className="bg-magical min-h-screen pb-12 relative">
         
-        {/* 🧦 EASTER EGG - DOBBY (casi invisible) */}
-        <div className="fixed bottom-2 right-2 opacity-[0.15] hover:opacity-100 transition-opacity duration-300 z-50 cursor-pointer group">
+        {/* 🧦 EASTER EGG - DOBBY (minúsculo, en la esquina) */}
+        <div className="fixed bottom-1 right-1 opacity-[0.08] hover:opacity-100 transition-opacity duration-300 z-50 cursor-pointer group">
           <div 
             className="relative"
             onClick={() => setShowDobbyMessage(!showDobbyMessage)}
           >
-            {/* Calcetín de Dobby */}
-            <div className="text-4xl transform group-hover:scale-110 transition-transform">
+            {/* Calcetín de Dobby - tamaño reducido */}
+            <span className="text-xs block transform group-hover:scale-110 transition-transform">
               🧦
-            </div>
+            </span>
             
             {/* Mensaje del easter egg */}
             {showDobbyMessage && (
-              <div className="absolute bottom-10 right-0 w-80 p-4 bg-gradient-to-br from-[#2a1a0a] to-[#4a2a1a] border-2 border-[#FDB813]/50 rounded-lg shadow-2xl font-crimson text-sm">
-                <div className="flex items-start space-x-3">
-                  <span className="text-3xl">🧦</span>
+              <div className="absolute bottom-6 right-0 w-72 p-3 bg-gradient-to-br from-[#2a1a0a] to-[#4a2a1a] border border-[#FDB813]/40 rounded-lg shadow-2xl font-crimson">
+                <div className="flex items-start space-x-2">
+                  <span className="text-xl">🧦</span>
                   <div>
-                    <p className="text-[#FDB813] font-cinzel font-bold mb-2 text-xs">Dobby dice:</p>
-                    <p className="text-white/90 text-xs leading-relaxed">
+                    <p className="text-[#FDB813] font-cinzel font-bold mb-1 text-[10px]">Dobby dice:</p>
+                    <p className="text-white/90 text-[10px] leading-relaxed">
                       "Cuando auron no entendía me daba mucha ansiedad, me puse mal porque clínicamente sufro de ansiedad, 
                       me llevaron a urgencias por su culpa, Pero lo entiendo, está grande el viejo calvo, aprende más lento que antes."
                     </p>
-                    <div className="mt-2 text-[#FDB813]/70 text-[10px] italic">
+                    <div className="mt-1 text-[#FDB813]/70 text-[8px] italic">
                       — Dobby es libre
                     </div>
                   </div>
                 </div>
                 {/* Triángulo decorativo */}
-                <div className="absolute bottom-[-6px] right-4 w-3 h-3 bg-[#4a2a1a] border-r-2 border-b-2 border-[#FDB813]/50 transform rotate-45"></div>
+                <div className="absolute bottom-[-4px] right-2 w-2 h-2 bg-[#4a2a1a] border-r border-b border-[#FDB813]/40 transform rotate-45"></div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Contenido principal */}
+        {/* Contenido principal - IGUAL QUE ANTES */}
         <div className="content-wrapper">
           <div className="max-w-7xl mx-auto px-4 py-12">
             <div className="text-center mb-12">
