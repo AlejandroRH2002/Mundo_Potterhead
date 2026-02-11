@@ -12,6 +12,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { Profile } from './pages/Profile';
 import { EditProduct } from './pages/EditProduct';
 import { AddProduct } from './pages/AddProduct';
+import { Cart } from './pages/Cart';
 
 function AnimatedRoutes() {
   const location = useLocation();
@@ -25,6 +26,7 @@ function AnimatedRoutes() {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/otros-universos" element={<OtherUniverses />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/cart" element={<Cart />} /> {/* ← AÑADE ESTA LÍNEA */}
         
         {/* Rutas de usuario */}
         <Route path="/profile" element={<Profile />} />
