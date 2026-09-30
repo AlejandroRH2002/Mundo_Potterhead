@@ -1,8 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+@layer components {
+  .shop-page { @apply mx-auto max-w-7xl px-4 py-10 text-white min-h-[70vh]; }
+  .shop-title { @apply font-cinzel text-3xl md:text-4xl font-bold text-amber-300 my-6; }
+  .shop-panel { @apply rounded-xl border border-amber-300/20 bg-red-950/90 p-6 my-4 text-white; }
+  .shop-input { @apply block w-full rounded-lg border border-amber-300/40 bg-white px-3 py-3 mt-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-300; }
+  .shop-button { @apply inline-block rounded-lg bg-amber-300 px-5 py-3 font-semibold text-red-950 hover:bg-amber-200 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .shop-link { @apply text-amber-300 underline underline-offset-4 hover:text-amber-100; }
+  .shop-error { @apply rounded-lg bg-red-900 border border-red-300 p-4 text-white my-4; }
+}
+
+body { background: #2a0001; }
 
 .font-cinzel {
   font-family: 'Cinzel', serif;
@@ -13,8 +25,10 @@
 }
 
 .bg-magical {
+  position: relative;
+  isolation: isolate;
   background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
-    url('https://wallpapercg.com/media/ts_orig/18896.webp');
+    url('/images/hogwarts-fondo.jpg');
   background-size: cover;
   background-position: center;
   background-attachment: fixed;

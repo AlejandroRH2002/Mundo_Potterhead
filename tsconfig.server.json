@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2022",
+    "lib": [
+      "ES2023"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "server/index.ts",
+    "server/config.ts",
+    "server/security/**/*.ts",
+    "server/http/**/*.ts",
+    "src/types/**/*.ts",
+    "src/features/catalog/services/productValidation.ts",
+    "src/features/catalog/mocks/**/*.ts",
+    "shared/**/*.ts",
+    "server/**/*.ts"
+  ]
+}

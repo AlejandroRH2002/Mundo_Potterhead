@@ -8,6 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+node_modules.previous
+node_modules.previous-*
+*.tsbuildinfo
 dist
 dist-ssr
 *.local
@@ -23,3 +26,29 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
+server/data/
+
+dist-server/
+# Local assistant/editor configuration
+.agents/
+.claude/
+.cursor/
+.devin/
+.codex/
+
+# Private databases, backups and key material
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.dump
+*.sql.gz
+*.bak
+*.pem
+*.key
+*.p12
+*.pfx
+coverage/

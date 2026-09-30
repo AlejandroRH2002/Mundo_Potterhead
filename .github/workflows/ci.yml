@@ -1,0 +1,85 @@
+name: Validate and prepare release
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      migrate:
+        description: Apply migrations after validation
+        type: boolean
+        default: false
+      environment:
+        description: Protected target environment
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # Generation only; integration creates its own disposable database.
+      DATABASE_URL: postgresql://localhost/build_only
+      VITE_API_URL: ${{ vars.VITE_API_URL || '/api' }}
+      VITE_WHATSAPP_NUMBER: ${{ vars.VITE_WHATSAPP_NUMBER }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm test
+      - run: docker build -t mundo-potterhead-api:ci .
+      - run: pnpm test:integration --image mundo-potterhead-api:ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ github.sha }}
+          path: |
+            dist/
+            dist-server/
+            prisma/
+            package.json
+            pnpm-lock.yaml
+            pnpm-workspace.yaml
+          retention-days: 7
+          if-no-files-found: error
+
+  migrate:
+    needs: verify
+    if: github.event_name == 'workflow_dispatch' && inputs.migrate && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: database-migrations-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Secrets are scoped to this step, after trusted code installation.
+      - name: Apply approved migrations with a direct TLS connection
+        run: pnpm db:migrate
+        env:
+          NODE_ENV: production
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DB_TLS_MODE: require
+      # Roll out the tested commit through the chosen hosting platform after this job.
