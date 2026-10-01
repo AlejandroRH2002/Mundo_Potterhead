@@ -1,4 +1,4 @@
-﻿# Mundo Potterhead
+# Mundo Potterhead
 
 SPA React/TypeScript/Vite y API Node independiente con PostgreSQL/Prisma. Usuarios, hashes scrypt, sesiones, límites de intentos y catálogo se guardan en PostgreSQL. Las implementaciones en memoria existen únicamente como fixtures de pruebas.
 
@@ -81,6 +81,7 @@ En producción `pnpm start:api` lee únicamente variables del proceso, sin carga
 Las variables VITE son de compilación: reconstruye el frontend cuando cambien. Vite rechaza otros nombres con ese prefijo y URLs de API con credenciales/query. El build inspecciona `dist` buscando valores privados conocidos del entorno, sus versiones codificadas para URL y archivos privados. Esta comprobación no sustituye una revisión de seguridad.
 
 ## Build y despliegue
+`pnpm pack:source` genera `artifacts/mundo-potterhead-source-<commit>.zip` mediante `git archive HEAD`. Incluye solo archivos de la última revisión confirmada; primero crea el commit para incorporar cambios locales. Las exclusiones de `.gitattributes` omiten material local y generado. `artifacts/` está ignorado por Git y Docker; el ZIP contiene código fuente, no una imagen ejecutable.
 
 ```sh
 pnpm build

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "pack:source": "node scripts/pack-source.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:web": "vite",
     "dev:api": "node --env-file=.env server/index.ts",

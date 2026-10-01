@@ -1,0 +1,22 @@
+# Exclude local and generated material from source archives.
+/.env* export-ignore
+/.env.example -export-ignore
+/node_modules* export-ignore
+/dist export-ignore
+/dist-server export-ignore
+/coverage export-ignore
+/artifacts export-ignore
+/uploads export-ignore
+/.uploads export-ignore
+/server/data export-ignore
+/.cache export-ignore
+/.vite export-ignore
+/.prisma export-ignore
+/.turbo export-ignore
+/.agents export-ignore
+/.claude export-ignore
+/.cursor export-ignore
+/.devin export-ignore
+/.codex export-ignore
+*.log export-ignore
+*.tsbuildinfo export-ignore
