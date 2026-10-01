@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface PageTransitionProps {
   children: React.ReactNode;
@@ -7,6 +7,7 @@ interface PageTransitionProps {
 }
 
 export function PageTransition({ children, isOtherUniverses = false }: PageTransitionProps) {
+  const reduceMotion = useReducedMotion();
   const variants = isOtherUniverses ? {
     initial: {
       opacity: 0,
@@ -53,6 +54,8 @@ export function PageTransition({ children, isOtherUniverses = false }: PageTrans
       },
     },
   };
+
+  if (reduceMotion) return <div>{children}</div>;
 
   return (
     <motion.div

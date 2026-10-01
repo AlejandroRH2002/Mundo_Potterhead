@@ -144,3 +144,7 @@ Antes de publicar, configura `VITE_LEGAL_NAME`, `VITE_LEGAL_EMAIL` y `VITE_SITE_
 El build genera robots.txt y sitemap.xml con rutas públicas estáticas. Sin VITE_SITE_URL, no se emiten URLs canónicas y se solicita no indexar. Las rutas privadas llevan noindex mediante JavaScript; robots.txt no sustituye los guards. Vercel y Netlify incluyen reglas X-Robots-Tag: noindex para rutas privadas; replica esas cabeceras si usas otro hosting.
 
 El hook actualiza metadatos por ruta y producto, pero los crawlers que no ejecutan JavaScript solo reciben los metadatos generales del HTML. Para posicionar o compartir productos, conviene prerender de páginas públicas con invalidación al editar catálogo. Estimación de implementación: 1–3 jornadas para una primera versión, más operación según catálogo y plataforma; no implementado ni presupuestado con un proveedor.
+
+## Accesibilidad: alcance de la revisión
+
+Se comprobaron nombres, etiquetas y alt en el código, foco visible, enlace de salto, orden DOM del carrito/editor y contraste de la paleta base. El borrado usa confirmación nativa del navegador; no hay modal propio. Se respeta movimiento reducido. El mapa abre un enlace externo y las fuentes usan el sistema, sin cargas automáticas de Google. Pendiente: recorrido real con teclado (incluido foco tras eliminar), lector de pantalla, zoom, menú móvil y contraste de todas las composiciones temáticas. Las pruebas estáticas no certifican accesibilidad.

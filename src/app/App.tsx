@@ -69,8 +69,9 @@ export default function App() {
   return <BrowserRouter>
     <AuthProvider>
       <div className="flex min-h-screen flex-col">
+        <a className="skip-link" href="#main-content">Saltar al contenido</a>
         <Navbar />
-        <main className="flex-grow"><RouteMetadata /><AnimatedRoutes /></main>
+        <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><AnimatedRoutes /></main>
         <Footer />
       </div>
     </AuthProvider>

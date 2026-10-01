@@ -20,7 +20,7 @@ export function Cart() {
         <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value))} aria-label={`Cantidad de ${line.product.name}`} />
       </label>
       <strong>{money(line.subtotal)}</strong>
-      <button className="shop-link" onClick={() => cart.remove(line.productId)}>Eliminar</button>
+      <button aria-label={`Eliminar ${line.product.name} del carrito`} className="shop-link" onClick={() => cart.remove(line.productId)}>Eliminar</button>
     </article>)}
     {!!cart.lines.length && <div className="shop-panel">
       <p className="text-2xl font-bold">Total: {money(cart.total)} MXN</p>

@@ -12,7 +12,7 @@
     "build": "pnpm db:generate && tsc -b && vite build && node scripts/build-server.mjs && node scripts/check-client-secrets.mjs",
     "audit:client": "node scripts/check-client-secrets.mjs",
     "typecheck": "tsc -b",
-    "test": "node --test tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs",
+    "test": "node --test tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs tests/accessibility.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:server": "pnpm db:generate && tsc -b tsconfig.server.json && node scripts/build-server.mjs",

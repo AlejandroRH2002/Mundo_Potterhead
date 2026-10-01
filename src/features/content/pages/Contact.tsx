@@ -85,16 +85,7 @@ export function Contact() {
                 
                 {/* Map */}
                 <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
-                  <iframe 
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3725.7626837013445!2d-89.59659942440523!3d20.962043380670764!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8f567770e1998fd9%3A0x5da3f69cb5ddb815!2sMundo%20Potterhead%20y%20Otros%20Universos!5e0!3m2!1ses-419!2smx!4v1741651206481!5m2!1ses-419!2smx"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    className="rounded-lg shadow-lg"
-                  ></iframe>
+                  <a className="inline-block rounded-lg bg-red-950 px-5 py-3 text-white underline" href="https://www.google.com/maps/search/?api=1&amp;query=Mundo+Potterhead+y+Otros+Universos+Merida" target="_blank" rel="noopener noreferrer">Ver ubicación en Google Maps (abre otra pestaña)</a>
                 </div>
               </div>
             </div>

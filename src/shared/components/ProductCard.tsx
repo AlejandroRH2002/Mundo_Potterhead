@@ -10,8 +10,8 @@ export function ProductCard({ product }: { product: Product }) {
       {product.isOnSale && <span className="text-red-800 font-bold">En oferta</span>}
       <Link className="font-cinzel text-xl font-bold" to={`/product/${product.id}`}>{product.name}</Link>
       <p className="line-clamp-2 my-3">{product.description}</p>
-      <p className="text-xl font-bold mb-3">{money(product.price)} {product.isOnSale && product.originalPrice && <span className="text-sm text-gray-500 line-through">{money(product.originalPrice)}</span>}</p>
-      <button className="shop-button mt-auto" onClick={() => cart.add(product.id)}>Agregar al carrito</button>
+      <p className="text-xl font-bold mb-3">{money(product.price)} {product.isOnSale && product.originalPrice && <span className="text-sm text-gray-600 line-through">{money(product.originalPrice)}</span>}</p>
+      <button aria-label={`Agregar ${product.name} al carrito`} className="shop-button mt-auto" onClick={() => cart.add(product.id)}>Agregar al carrito</button>
       <p role="status" className="text-sm mt-2">{cart.message}</p>
     </div>
   </article>;

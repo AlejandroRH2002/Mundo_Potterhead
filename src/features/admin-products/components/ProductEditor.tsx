@@ -6,7 +6,7 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
   return <section className="shop-page"><Link className="shop-link" to="/admin">← Volver al panel</Link>
     <h1 className="shop-title">{editing ? 'Editar producto' : 'Nuevo producto'}</h1>
     {editor.error && <p role="alert" className="shop-error">{editor.error}</p>}
-    {editor.loading ? <p role="status">Cargando producto…</p> : <form className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
+    {editor.loading ? <p role="status">Cargando producto…</p> : <form aria-busy={editor.saving || editor.uploading} className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
       <label>Nombre<input className="shop-input" name="name" required maxLength={150} value={editor.draft.name} onChange={editor.change} /></label>
       <label>Precio (MXN)<input className="shop-input" name="price" type="number" min="0.01" max="1000000" step="0.01" required value={editor.draft.price} onChange={editor.change} /></label>
       <label className="md:col-span-2">Descripción<textarea className="shop-input" name="description" required maxLength={5000} rows={4} value={editor.draft.description} onChange={editor.change} /></label>

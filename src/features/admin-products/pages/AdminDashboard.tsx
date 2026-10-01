@@ -14,7 +14,7 @@ export function AdminDashboard() {
       <div className="flex-1"><h2 className="font-bold">{product.name}</h2><p className="line-clamp-2">{product.description}</p><strong>{money(product.price)}</strong></div>
       <Link className="shop-link" to={`/product/${product.id}`}>Ver</Link>
       <Link className="shop-button" to={`/products/edit/${product.id}`}>Editar</Link>
-      <button className="shop-link" disabled={admin.deleting !== null} onClick={() => void admin.remove(product.id)}>{admin.deleting === product.id ? 'Eliminando…' : 'Eliminar'}</button>
+      <button aria-label={`Eliminar ${product.name}`} className="shop-link" disabled={admin.deleting !== null} onClick={() => void admin.remove(product.id)}>{admin.deleting === product.id ? 'Eliminando…' : 'Eliminar'}</button>
     </article>)}
   </section>;
 }
