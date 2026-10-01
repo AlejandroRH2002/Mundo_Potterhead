@@ -46,7 +46,7 @@ El Compose opcional inicia solo PostgreSQL: configura `POSTGRES_PASSWORD` privad
 
 Se conserva la migración inicial y se añade una migración incremental de sesiones, límites y campos de catálogo. Los precios usan `DECIMAL(12,2)`. Las tablas de pedidos anteriores se mantienen; el checkout actual coordina pedidos por WhatsApp.
 
-El archivo antiguo `server/data/products.json` no se importa automáticamente. Prepara una importación validada si contiene productos que quieras conservar. Los registros de una BD anterior deben ajustarse al contrato de categorías, universos, descripción y precios. Contraseñas con formatos distintos de scrypt requieren restablecimiento controlado.
+Los datos antiguos requieren una importación explícita y validada antes de incorporarse al catálogo. Los registros de una BD anterior deben ajustarse al contrato de categorías, universos, descripción y precios. Contraseñas con formatos distintos de scrypt requieren restablecimiento controlado.
 
 ## Autenticación y seguridad
 
@@ -135,4 +135,4 @@ Antes del lanzamiento operativo faltan decisiones del entorno: proveedor y capac
 
 ## Infraestructura cloud
 
-Consulta [deploy/CLOUD.md](deploy/CLOUD.md) para pools/TLS administrados, cargas directas S3, CI/CD, migraciones protegidas y sondas. `MEDIA_STORAGE=s3` habilita cargas de hasta 10 MB; el modo local mantiene 2 MB. En producci?n, las migraciones requieren `DIRECT_DATABASE_URL`.
+Consulta [deploy/CLOUD.md](deploy/CLOUD.md) para pools/TLS administrados, cargas directas S3, CI/CD, migraciones protegidas y sondas. `MEDIA_STORAGE=s3` habilita cargas de hasta 10 MB; el modo local mantiene 2 MB. En producción, las migraciones requieren `DIRECT_DATABASE_URL`.
