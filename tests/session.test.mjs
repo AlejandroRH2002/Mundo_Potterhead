@@ -9,7 +9,7 @@ async function fixture() {
   let row;
   let writes = 0;
   const password = 'session-test-only-password';
-  const user = { id: 'test', name: 'Test', email: 'test@example.invalid', role: 'CUSTOMER', password: await hashPassword(password) };
+  const user = { id: 'test', name: 'Test', email: 'test@example.invalid', role: 'CUSTOMER', isActive: true, password: await hashPassword(password) };
   const db = {
     user: { findUnique: async () => user },
     session: {
@@ -22,6 +22,8 @@ async function fixture() {
       deleteMany: async ({ where }) => { if (row?.tokenHash === where.tokenHash) row = undefined; },
     },
   };
+  db.$transaction = async operation => operation(db);
+  db.$queryRaw = async () => [];
   const auth = await createDatabaseAuth(db, 'test-secret', 30 * minute, () => clock);
   const login = () => auth.authenticate(user.email, password);
   return { auth, db, login, advance: ms => { clock += ms; }, row: () => row, writes: () => writes };

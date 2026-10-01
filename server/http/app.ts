@@ -1,3 +1,5 @@
+import { createUserSchema, changeUserSchema, userPageSchema } from '../../shared/userSchema.ts';
+import { UserManagementError, type UserRepository } from '../repositories/users.ts';
 import { randomUUID } from 'node:crypto';
 import type { MediaStorage } from '../media.ts';
 import { uploadInputSchema } from '../../shared/mediaSchema.ts';
@@ -33,9 +35,9 @@ function json(response: ServerResponse, status: number, value?: unknown) {
   response.end(value === undefined ? undefined : JSON.stringify(value));
 }
 export function createApi({ auth, products, origin, secureCookies = false, sameSite = 'Strict', trustProxy = false,
-  registrationEnabled = false, limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media,
+  registrationEnabled = false, limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users,
 }: { auth: Auth; products: ProductRepository; origin: string; secureCookies?: boolean;
-  media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
+  users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
   limiter?: (key: string) => boolean | Promise<boolean>; ready?: () => Promise<void>; logger?: (entry: AuditEntry) => void;
 }) {
   if (sameSite === 'None' && !secureCookies) throw new Error('SameSite=None requires Secure.');
@@ -62,7 +64,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
     const handle = async () => {
       const path = new URL(request.url ?? '/', 'http://localhost').pathname;
       const method = request.method ?? 'GET';
-      route = /^\/api\/products(?:\/[^/]+)?$/.test(path) ? '/api/products/:id?' :
+      route = /^\/api\/admin\/users(?:\/[^/]+)?$/.test(path) ? '/api/admin/users/:id?' : /^\/api\/products(?:\/[^/]+)?$/.test(path) ? '/api/products/:id?' :
         ['/api/media/config', '/api/media/upload', '/api/auth/session', '/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/users/me', '/health/live', '/health/ready'].includes(path) ? path : 'unknown';
       const requestOrigin = request.headers.origin;
       if (requestOrigin && requestOrigin !== origin) throw new HttpError(403, 'Origen no autorizado.');
@@ -90,6 +92,31 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       if (user && token) response.setHeader('Set-Cookie', cookie(token, Math.floor(auth.ttlMs / 1000)));
       if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
         if (request.headers.origin !== origin || request.headers['x-requested-with'] !== 'MundoPotterhead') throw new HttpError(403, 'Origen de solicitud no autorizado.');
+      }
+      if (path === '/api/admin/users' || /^\/api\/admin\/users\/[^/]+$/.test(path)) {
+        if (!user) throw new HttpError(401, 'Inicia sesión para continuar.');
+        if (user.role !== 'admin') throw new HttpError(403, 'Se requiere administrador.');
+        if (!users) throw new HttpError(503, 'Gestión de usuarios no disponible.');
+        if (path === '/api/admin/users' && method === 'GET') {
+          const params = new URL(request.url ?? '/', 'http://localhost').searchParams;
+          if (new Set(params.keys()).size !== Array.from(params.keys()).length) throw new HttpError(400, 'Paginación inválida.');
+          const parsed = userPageSchema.safeParse(Object.fromEntries(params));
+          if (!parsed.success) throw new HttpError(400, 'Paginación inválida.');
+          json(response, 200, await users.list(parsed.data)); return;
+        }
+        if (path === '/api/admin/users' && method === 'POST') {
+          const parsed = createUserSchema.safeParse(await body(request));
+          if (!parsed.success) throw new HttpError(400, 'Datos inválidos. La contraseña debe tener entre 20 y 256 caracteres.');
+          json(response, 201, await users.create(user.id, parsed.data)); return;
+        }
+        if (path !== '/api/admin/users' && method === 'PATCH') {
+          const parsed = changeUserSchema.safeParse(await body(request));
+          if (!parsed.success) throw new HttpError(400, 'Cambio de usuario inválido.');
+          let id: string;
+          try { id = decodeURIComponent(path.slice('/api/admin/users/'.length)); } catch { throw new HttpError(400, 'Identificador inválido.'); }
+          json(response, 200, await users.change(user.id, id, parsed.data)); return;
+        }
+        throw new HttpError(405, 'Operación no permitida.');
       }
       if (path === '/api/media/config' || path === '/api/media/upload') {
         if (!user) throw new HttpError(401, 'Inicia sesion para continuar.');
@@ -177,6 +204,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       throw new HttpError(404, 'Ruta no encontrada.');
     };
     void handle().catch((error: unknown) => {
+      if (error instanceof UserManagementError) { json(response, error.status, { message: error.message }); return; }
       let status = error instanceof HttpError ? error.status : 500;
       let message = error instanceof HttpError ? error.message : 'No se pudo completar la solicitud.';
       if (error instanceof Prisma.PrismaClientKnownRequestError && ['P2002', 'P2003'].includes(error.code)) {

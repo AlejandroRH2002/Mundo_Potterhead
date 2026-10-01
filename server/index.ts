@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { readConfig } from './config.ts';
 import { createDatabaseAuth, databaseLoginLimiter } from './repositories/auth.ts';
+import { createDatabaseUsers } from './repositories/users.ts';
 import { createDatabaseProducts } from './repositories/products.ts';
 import { createApi } from './http/app.ts';
 import { createReadiness } from './health.ts';
@@ -15,7 +16,7 @@ async function start() {
   const auth = await createDatabaseAuth(db, config.sessionSecret);
   const health = createReadiness(async () => { await db.$queryRaw`SELECT 1`; });
   const media = createMediaStorage(process.env);
-  const server = createApi({ auth, products: createDatabaseProducts(db), ...config,
+  const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
     limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
   });
