@@ -1,5 +1,44 @@
 # Operación cloud
 
+## Checklist de release
+
+1. **Variables:** cargar desde el gestor de secretos del entorno; comprobar arranque fallido al omitir una obligatoria. Los errores nombran campos, nunca sus valores.
+
+| Variable | Obligatoria/opcional | Verificación |
+| --- | --- | --- |
+| NODE_ENV=production | Obligatoria al desplegar | Activa validaciones y cookies Secure |
+| DATABASE_URL | Obligatoria para API/bootstrap | PostgreSQL privado, pool y TLS del proveedor |
+| DIRECT_DATABASE_URL | Obligatoria para migraciones | Conexión directa de release; no requerida en el proceso API |
+| SESSION_SECRET | Obligatoria, 32–512 caracteres | Aleatorio y compartido entre réplicas |
+| APP_ORIGIN | Obligatoria, origen HTTPS exacto | Sin ruta, query ni credenciales |
+| MEDIA_STORAGE=s3 | Obligatoria en producción | Sin fallback inline |
+| S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PUBLIC_BASE_URL | Obligatorias para API/migración de medios | Endpoint API y URL pública HTTPS; región según proveedor |
+| S3_FORCE_PATH_STYLE | Opcional, false | Ajustar al proveedor compatible |
+| AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY; AWS_SESSION_TOKEN | Credenciales obligatorias si no hay identidad de carga; token opcional | Cadena SDK privada; permisos de bucket mínimos |
+| COOKIE_SAME_SITE | Opcional, Strict | None exige HTTPS/Secure |
+| TRUST_PROXY | Opcional, false | true genera warn; proxy sobrescribe X-Real-IP y bloquea acceso directo |
+| REGISTRATION_ENABLED | Opcional, false | true genera warn; alta pública solo de clientes |
+| PORT/API_PORT, API_HOST | Opcionales | Puerto asignado y escucha interna; no publicar sin proxy TLS |
+| DB_POOL_*, DB_CONNECT_TIMEOUT_SECONDS, DB_QUERY_TIMEOUT_SECONDS, DB_TLS_MODE, DB_SSL_CERT_PATH | Opcionales | Límites medidos, TLS require; CA montada si corresponde |
+| ADMIN_BOOTSTRAP_EMAIL/ADMIN_BOOTSTRAP_PASSWORD | Solo bootstrap inicial | Contraseña de 20–256 caracteres; retirar después |
+| VITE_API_URL, VITE_SITE_URL, VITE_WHATSAPP_NUMBER, VITE_LEGAL_NAME, VITE_LEGAL_EMAIL | Configuración pública de build para lanzamiento | API, canonical HTTPS, atención y responsable reales; reconstruir al cambiar |
+
+2. **Build → migrate → bootstrap → start:** ejecutar instalación frozen y pnpm build; verificar artefactos del mismo SHA. Ejecutar pnpm db:migrate una vez con NODE_ENV=production y DIRECT_DATABASE_URL; revisar resultado sin reset. Primer aprovisionamiento: pnpm db:bootstrap. Iniciar pnpm start:api. En la imagen usar node dist-server/migrate.js, bootstrap.js e index.js respectivamente. No ejecutar bootstrap en cada réplica.
+3. **HTTPS y cookies:** certificado válido y redirección HTTP→HTTPS en el proxy. Mismo origen: VITE_API_URL=/api; enrutar /api y /health al backend antes del fallback SPA. Subdominios del mismo sitio: APP_ORIGIN exacto y credentials include; cookie host-only en la API. Sitios diferentes: COOKIE_SAME_SITE=None y Secure; comprobar bloqueo de cookies de terceros en navegadores objetivo. No añadir Domain a cookies __Host-.
+4. **Salud:** GET/HEAD /health/live devuelve 200; /health/ready devuelve 200 con BD accesible y 503 al retirar tráfico o fallar BD. Readiness admite tráfico; liveness no depende de BD. Comprobar shutdown con SIGTERM y margen de gracia superior a 15 segundos.
+5. **Bucket y CDN:** configurar endpoint, región, bucket y URL pública por entorno. _pending/ privado y no accesible mediante CDN ni bucket público; products/ legible mediante CDN HTTPS. Verificar que una petición anónima a un temporal falle. CORS permite PUT desde APP_ORIGIN, Content-Type y HEAD/GET según uso; no comodín de origen en producción. Verificar subida, validación y lectura pública de una imagen válida, y rechazo de contenido/MIME incorrecto. Aplicar expiración solo a temporales; no borrar productos vigentes.
+6. **Backups:** programar backups cifrados/PITR según necesidades; antes del release restaurar una copia en una BD aislada y comprobar catálogo, cuentas y migraciones. Registrar fecha, duración y resultado; definir RPO/RTO y responsables. No declarar la restauración probada sin ejecutarla.
+7. **Rotación:** generar SESSION_SECRET nuevo en el gestor de secretos y cambiarlo coordinadamente en todas las réplicas. Reiniciar despliegue completo; las sesiones y tickets de subida anteriores quedan inválidos. Comprobar nuevo login y rechazo del anterior. No alternar secretos entre réplicas.
+8. **Smoke:** pnpm smoke -- --url https://tu-origen (opcional --api-url https://tu-api). Solo GET, sin credenciales ni login. Verifica salud/frontend y denegación del API admin; una SPA puede servir HTML 200 en /admin. La redirección del guard requiere comprobación de navegador; las cookies del login requieren una sesión de prueba manual. El smoke marca estos casos pendientes y termina con código 2, no éxito completo; código 1 indica fallo y 0 indica todas las comprobaciones verificadas.
+
+### Guía de plataforma
+
+Render/Railway: servicio Node o imagen con secretos de sistema, comando de build/release/start anterior, puerto del proveedor y health /health/ready. Frontend estático con fallback SPA; mantener /api y /health fuera del fallback. Confirmar logs de avisos y SHA publicado. No se configuraron cuentas o recursos.
+
+VPS: contenedor o servicio supervisado con usuario sin privilegios, variables privadas, reinicio y SIGTERM, proxy HTTPS delante; acceso de BD y API limitado a la red prevista. Ejecutar release una vez antes del rollout y comprobar sondas desde la red real.
+
+S3/R2 o equivalente: usar el endpoint API del proveedor para firmar PUT y una URL pública/CDN separada para products/. R2 puede usar región auto; path-style depende del servicio. Las plantillas AWS son ejemplos: en otros servicios traducir permisos a su modelo de tokens. Si no es posible ocultar _pending/ en el dominio público, usar CDN/proxy que solo permita products/ antes de lanzar.
+
 ## PostgreSQL administrado
 
 La aplicación conserva Prisma 5.22 y su motor de conexiones. `server/database.ts` normaliza la URL privada sin imprimirla. Se crea un `PrismaClient` por proceso, compartido por repositorios, sesiones y health checks.
@@ -35,8 +74,7 @@ MEDIA_STORAGE=s3
 S3_BUCKET=tu-bucket
 S3_REGION=tu-region
 S3_PUBLIC_BASE_URL=https://imagenes.tu-dominio
-# Solo para un servicio compatible con políticas POST de S3:
-# S3_ENDPOINT=https://endpoint-del-proveedor
+S3_ENDPOINT=https://endpoint-del-proveedor
 # S3_FORCE_PATH_STYLE=true
 ```
 
