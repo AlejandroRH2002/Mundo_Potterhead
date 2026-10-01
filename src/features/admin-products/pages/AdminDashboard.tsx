@@ -4,7 +4,7 @@ import { money } from '@/shared/lib/money';
 export function AdminDashboard() {
   const admin = useAdminProducts();
   return <section className="shop-page">
-    <div className="flex flex-wrap items-center justify-between gap-4"><h1 className="shop-title">Administración de productos</h1><Link className="shop-button" to="/products/new">Crear producto</Link></div>
+    <div className="flex flex-wrap items-center justify-between gap-4"><Link className="shop-link" to="/admin/usuarios">Gestionar usuarios</Link><h1 className="shop-title">Administración de productos</h1><Link className="shop-button" to="/products/new">Crear producto</Link></div>
     <label>Buscar producto<input className="shop-input mb-6" type="search" value={admin.search} onChange={event => admin.setSearch(event.target.value)} /></label>
     {admin.error && <p className="shop-error" role="alert">{admin.error}</p>}
     {admin.loading && <p role="status">Cargando productos…</p>}

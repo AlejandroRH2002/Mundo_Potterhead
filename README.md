@@ -148,3 +148,9 @@ El hook actualiza metadatos por ruta y producto, pero los crawlers que no ejecut
 ## Accesibilidad: alcance de la revisión
 
 Se comprobaron nombres, etiquetas y alt en el código, foco visible, enlace de salto, orden DOM del carrito/editor y contraste de la paleta base. El borrado usa confirmación nativa del navegador; no hay modal propio. Se respeta movimiento reducido. El mapa abre un enlace externo y las fuentes usan el sistema, sin cargas automáticas de Google. Pendiente: recorrido real con teclado (incluido foco tras eliminar), lector de pantalla, zoom, menú móvil y contraste de todas las composiciones temáticas. Las pruebas estáticas no certifican accesibilidad.
+
+## Administración de usuarios
+
+`/admin/usuarios` permite listar con paginación, crear cuentas (contraseña de 20–256 caracteres), activar/desactivar y cambiar roles. La API usa `/api/admin/users` (GET/POST) y `/api/admin/users/:id` (PATCH); no ofrece eliminación. Las escrituras revalidan al administrador dentro de una transacción y preservan al menos un administrador activo. No puedes desactivar ni degradar tu propia cuenta. Desactivar o cambiar el rol revoca las sesiones; reactivar requiere iniciar sesión de nuevo.
+
+Antes de arrancar el backend actualizado, aplica `pnpm db:migrate` a la base de destino revisada: migración incremental `20261001000000_user_is_active`, sin reset. Las cuentas existentes quedan activas. Las pruebas unitarias usan dobles de persistencia; la integración PostgreSQL se ejecuta aparte con `pnpm test:integration`.

@@ -13,6 +13,7 @@ const Contact = lazy(() => import('@/features/content/pages/Contact').then(modul
 const ProductDetail = lazy(() => import('@/features/catalog/pages/ProductDetail').then(module => ({ default: module.ProductDetail })));
 const OtherUniverses = lazy(() => import('@/features/catalog/pages/OtherUniverses').then(module => ({ default: module.OtherUniverses })));
 const Login = lazy(() => import('@/features/auth/pages/Login').then(module => ({ default: module.Login })));
+const AdminUsers = lazy(() => import('@/features/admin-users/pages/AdminUsers').then(module => ({ default: module.AdminUsers })));
 const AdminDashboard = lazy(() => import('@/features/admin-products/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const Profile = lazy(() => import('@/features/auth/pages/Profile').then(module => ({ default: module.Profile })));
 const EditProduct = lazy(() => import('@/features/admin-products/pages/EditProduct').then(module => ({ default: module.EditProduct })));
@@ -53,6 +54,7 @@ function AnimatedRoutes() {
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/usuarios" element={<AdminUsers />} />
           <Route path="/products/new" element={<AddProduct />} />
           <Route path="/products/edit" element={<EditProduct />} />
           <Route path="/products/edit/:id" element={<EditProduct />} />
