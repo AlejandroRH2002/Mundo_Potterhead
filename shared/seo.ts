@@ -19,7 +19,7 @@ export function routeMetadata(path: string) {
   const title = path === '/cart' ? 'Mi cotización' : path === '/login' ? 'Iniciar sesión' : path === '/profile' ? 'Mi perfil' : path.startsWith('/admin') || path.startsWith('/products/') ? 'Administración' : 'Página no encontrada';
   return { title, description: 'Mundo Potterhead: catálogo y cotizaciones por WhatsApp.', noindex: true };
 }
-const xml = (value: string) => value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
+const xml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 export function discoveryFiles(origin: string | undefined) {
   return {
     robots: origin ? 'User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /products/\nDisallow: /profile\nDisallow: /login\nDisallow: /cart\nSitemap: ' + origin + '/sitemap.xml\n' : 'User-agent: *\nDisallow: /\n',
