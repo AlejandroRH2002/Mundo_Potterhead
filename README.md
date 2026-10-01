@@ -166,3 +166,7 @@ La migración valida firmas y MIME, genera claves deterministas, confirma la sub
 Producción requiere MEDIA_STORAGE=s3, S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PUBLIC_BASE_URL y SESSION_SECRET. Configura credenciales privadas mediante IAM o AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY; S3_FORCE_PATH_STYLE es opcional. El CDN debe servir solo products/, sin _pending/. Los originales del editor se decodifican y comprimen a WebP (lado máximo 1200 px, calidad 0.8); el navegador debe soportar canvas/WebP. Las imágenes animadas se convierten en una imagen fija.
 
 El listado no devuelve Base64: los datos antiguos muestran un placeholder hasta migrarse. El detalle consulta un único producto. Primera imagen con prioridad; las demás se cargan lazy, con dimensiones reservadas y decoding async. Verifica una carga real PUT + confirmación, lectura CDN, CORS y permisos en staging; no se ejecutaron operaciones sobre el bucket real.
+
+## Medición del bundle (fase 4)
+
+Medición desde la salida de Vite, sin leer dist: index-1V6mypez.js 242.73 KiB; Contact-JPMIY0uc.js 114.51 KiB; ProductEditor-CIk6r3XK.js 6.05 KiB; AdminUsers-BoDWtlOH.js 6.00 KiB; Cart-DUGKtk0l.js 2.52 KiB (JavaScript sin gzip, hashes variables). Admin ya usa lazy/Suspense; no se añadió otra división sin ganancia demostrada. La configuración de integración usa endpoints S3 ficticios solo para verificar arranque; no prueba operaciones de bucket.

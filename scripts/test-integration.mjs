@@ -31,11 +31,11 @@ try {
   }
   if (!ready) throw new Error('Disposable PostgreSQL did not become ready.');
   const port = run('docker', ['inspect', '--format', '{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}', name]);
-  const testEnv = { ...env, DATABASE_URL: `postgresql://mp_test:${password}@127.0.0.1:${port}/mp_test`, SESSION_SECRET: randomBytes(48).toString('hex'), MP_ISOLATED_TEST_DB: 'true', DB_TLS_MODE: 'disable' };
+  const testEnv = { ...env, DATABASE_URL: `postgresql://mp_test:${password}@127.0.0.1:${port}/mp_test`, SESSION_SECRET: randomBytes(48).toString('hex'), MP_ISOLATED_TEST_DB: 'true', DB_TLS_MODE: 'disable', MEDIA_STORAGE: 's3', S3_ENDPOINT: 'https://objects.test.invalid', S3_REGION: 'auto', S3_BUCKET: 'isolated-test-bucket', S3_PUBLIC_BASE_URL: 'https://images.test.invalid' };
   const migrationEnv = { ...testEnv, NODE_ENV: 'production', DIRECT_DATABASE_URL: testEnv.DATABASE_URL };
   run(process.execPath, ['scripts/migrate.mjs'], { env: migrationEnv });
   run(process.execPath, ['scripts/migrate.mjs'], { env: migrationEnv }); // Idempotent release retry.
-  console.log('Both migrations applied to disposable PostgreSQL.');
+  console.log('Versioned migrations applied to disposable PostgreSQL.');
   run(process.execPath, ['--test', 'tests/persistence.test.mjs'], { env: testEnv, stdio: 'inherit' });
   if (imageName) {
     const apiEnv = { ...testEnv, DATABASE_URL: `postgresql://mp_test:${password}@${name}:5432/mp_test`, APP_ORIGIN: 'https://shop.test.invalid' };
@@ -43,7 +43,7 @@ try {
     run('docker', ['run', '--rm', '--network', network, '-e', 'DIRECT_DATABASE_URL', '-e', 'DB_TLS_MODE',
       imageName, 'node', 'dist-server/migrate.js'], { env: apiEnv });
     run('docker', ['run', '--detach', '--rm', '--name', apiName, '--network', network, '-p', '127.0.0.1::3001',
-      '-e', 'DATABASE_URL', '-e', 'DB_TLS_MODE', '-e', 'SESSION_SECRET', '-e', 'APP_ORIGIN', imageName], { env: apiEnv });
+      '-e', 'DATABASE_URL', '-e', 'DB_TLS_MODE', '-e', 'SESSION_SECRET', '-e', 'APP_ORIGIN', '-e', 'MEDIA_STORAGE', '-e', 'S3_ENDPOINT', '-e', 'S3_REGION', '-e', 'S3_BUCKET', '-e', 'S3_PUBLIC_BASE_URL', imageName], { env: apiEnv });
     apiCreated = true;
     const apiPort = run('docker', ['inspect', '--format', '{{(index (index .NetworkSettings.Ports "3001/tcp") 0).HostPort}}', apiName]);
     let healthy = false;
