@@ -12,7 +12,7 @@ export function CatalogPage({ universe, title }: { universe: Product['universe']
     {catalog.loading && <p role="status">Cargando catálogo…</p>}
     {catalog.error && <p role="alert" className="shop-error">{catalog.error}</p>}
     {!catalog.loading && !catalog.error && !catalog.items.length && <p>No encontramos productos con esos filtros.</p>}
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{catalog.items.map(product => <ProductCard key={product.id} product={product} />)}</div>
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{catalog.items.map((product, index) => <ProductCard key={product.id} product={product} priority={index === 0} />)}</div>
     <Subscription />
   </section></div>;
 }

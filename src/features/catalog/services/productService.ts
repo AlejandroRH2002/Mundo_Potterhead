@@ -15,7 +15,7 @@ export const productService = {
     if (!isProductList(value)) throw new Error('El catálogo recibido no es válido.');
     return value;
   },
-  getById: async (id: string) => parseProduct(await requestJson<unknown>(`/products/${encodeURIComponent(id)}`)),
+  getById: async (id: string, signal?: AbortSignal) => parseProduct(await requestJson<unknown>(`/products/${encodeURIComponent(id)}`, { signal })),
   create: async (draft: ProductDraft): Promise<Product> => {
     const product = parseProduct(await requestJson<unknown>('/products', { method: 'POST', body: JSON.stringify(validateDraft(draft)) }));
     notify();

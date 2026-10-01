@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { useProducts } from './useProducts';
+import { productService } from '../services/productService';
+import { errorMessage } from '@/shared/lib/money';
 import type { Product } from '@/types/product';
 export function useCatalog(universe: Product['universe']) {
   const catalog = useProducts();
@@ -18,6 +20,17 @@ export function useCatalog(universe: Product['universe']) {
 }
 export function useProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const catalog = useProducts();
-  return { ...catalog, product: catalog.products.find(product => product.id === id) };
+  const [state, setState] = useState<{ product?: Product; loading: boolean; error: string }>({ loading: true, error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({ loading: true, error: '' });
+    if (!id) { setState({ loading: false, error: 'Producto no encontrado.' }); return; }
+    void productService.getById(id, controller.signal).then(product => {
+      if (!controller.signal.aborted) setState({ product, loading: false, error: '' });
+    }).catch((cause: unknown) => {
+      if (!controller.signal.aborted) setState({ loading: false, error: errorMessage(cause) });
+    });
+    return () => controller.abort();
+  }, [id]);
+  return state;
 }

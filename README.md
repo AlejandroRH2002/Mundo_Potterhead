@@ -160,3 +160,9 @@ Antes de arrancar el backend actualizado, aplica `pnpm db:migrate` a la base de 
 `pnpm media:migrate-base64` usa variables privadas del proceso y hace dry-run por defecto; `--batch-size=25` limita la memoria por lote (1–100). Revisa el resumen antes de `pnpm media:migrate-base64 --apply`. Para desarrollo puedes usar `pnpm exec node --env-file=.env server/scripts/migrateMedia.ts --dry-run`; producción usa `node dist-server/migrateMedia.js`. No se ejecuta al arrancar.
 
 La migración valida firmas y MIME, genera claves deterministas, confirma la subida con HEAD y cambia la URL solo si el valor original de BD sigue igual. Fallos conservan el original; repetir no crea nuevos nombres ni procesa URLs ya migradas. Se imprimen únicamente contadores; no imágenes, URLs privadas ni contenidos. No se ha ejecutado contra la BD o bucket reales.
+
+## Imágenes y despliegue
+
+Producción requiere MEDIA_STORAGE=s3, S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PUBLIC_BASE_URL y SESSION_SECRET. Configura credenciales privadas mediante IAM o AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY; S3_FORCE_PATH_STYLE es opcional. El CDN debe servir solo products/, sin _pending/. Los originales del editor se decodifican y comprimen a WebP (lado máximo 1200 px, calidad 0.8); el navegador debe soportar canvas/WebP. Las imágenes animadas se convierten en una imagen fija.
+
+El listado no devuelve Base64: los datos antiguos muestran un placeholder hasta migrarse. El detalle consulta un único producto. Primera imagen con prioridad; las demás se cargan lazy, con dimensiones reservadas y decoding async. Verifica una carga real PUT + confirmación, lectura CDN, CORS y permisos en staging; no se ejecutaron operaciones sobre el bucket real.

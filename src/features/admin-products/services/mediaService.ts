@@ -1,8 +1,10 @@
+import { compressImage } from './compressImage';
 import { requestJson } from '@/shared/lib/httpClient';
 import { imageTypes, mediaConfigSchema, uploadPolicySchema, completedUploadSchema } from '../../../../shared/mediaSchema';
 
 export async function uploadProductImage(file: File): Promise<string> {
   if (!imageTypes.some(type => type === file.type) || file.size === 0) throw new Error('Selecciona una imagen PNG, JPEG o WebP.');
+  file = await compressImage(file);
   const config = mediaConfigSchema.parse(await requestJson<unknown>('/media/config'));
   if (file.size > config.maxBytes) throw new Error(`La imagen debe ocupar como máximo ${config.maxBytes / 1024 / 1024} MB.`);
   if (!config.enabled) {

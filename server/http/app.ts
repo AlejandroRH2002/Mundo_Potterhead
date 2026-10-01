@@ -187,7 +187,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         if (method === 'GET') {
           const result = id ? await products.get(id) : await products.list();
           if (!result) throw new HttpError(404, 'Producto no encontrado.');
-          json(response, 200, result); return;
+          json(response, 200, Array.isArray(result) ? result.map(item => ({ ...item, image: item.image.startsWith('data:') ? '/images/product-placeholder.svg' : item.image })) : result); return;
         }
         // Check authorization before parsing input or accessing mutation handlers.
         if (!user) throw new HttpError(401, 'Inicia sesión para continuar.');

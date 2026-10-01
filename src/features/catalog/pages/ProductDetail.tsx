@@ -14,7 +14,7 @@ export function ProductDetail() {
   return <section className="shop-page">
     <Link to="/" className="shop-link">← Volver al catálogo</Link>
     <article className="shop-panel grid gap-8 md:grid-cols-2">
-      <img className="w-full rounded-lg object-cover" src={product.image} alt={product.name} />
+      <img loading="eager" fetchPriority="high" decoding="async" width={1200} height={1200} className="w-full aspect-square rounded-lg object-contain" src={product.image} alt={product.name} />
       <div><h1 className="shop-title">{product.name}</h1><p className="whitespace-pre-line">{product.description}</p>
         <p className="text-3xl font-bold text-amber-300 my-5">{money(product.price)}</p>
         {product.isOnSale && product.originalPrice && <p className="line-through mb-4">{money(product.originalPrice)}</p>}
