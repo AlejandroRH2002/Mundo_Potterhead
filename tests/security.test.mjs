@@ -1,5 +1,6 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { loginCookieAttributes } from '../scripts/smoke-lib.mjs';
 import { randomBytes } from 'node:crypto';
 import { createAuth } from './fixtures/memoryAuth.ts';
 import { createApi } from '../server/http/app.ts';
@@ -100,6 +101,7 @@ test('production config requires secrets and HTTPS; secure cookies use Host pref
     });
     assert.match(response.headers.get('set-cookie'), /^__Host-mp_session=/);
     assert.match(response.headers.get('set-cookie'), /; Secure/);
+    assert.equal(loginCookieAttributes(response.headers.get('set-cookie')), true);
   } finally { await new Promise(resolve => secure.close(resolve)); }
 });
 test('repeated login attempts are throttled without disclosing account existence', async () => {

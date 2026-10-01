@@ -170,3 +170,7 @@ El listado no devuelve Base64: los datos antiguos muestran un placeholder hasta 
 ## Medición del bundle (fase 4)
 
 Medición desde la salida de Vite, sin leer dist: index-1V6mypez.js 242.73 KiB; Contact-JPMIY0uc.js 114.51 KiB; ProductEditor-CIk6r3XK.js 6.05 KiB; AdminUsers-BoDWtlOH.js 6.00 KiB; Cart-DUGKtk0l.js 2.52 KiB (JavaScript sin gzip, hashes variables). Admin ya usa lazy/Suspense; no se añadió otra división sin ganancia demostrada. La configuración de integración usa endpoints S3 ficticios solo para verificar arranque; no prueba operaciones de bucket.
+
+## Smoke post-despliegue
+
+`pnpm smoke -- --url https://tu-origen` (opcional `--api-url https://tu-api`) usa solo GET anónimos y timeouts. Comprueba readiness JSON, frontend y denegación del API admin. Una respuesta HTML 200 de la SPA no demuestra que el guard redirija: se marca pendiente. Las cookies emitidas por un login requieren revisión manual con una cuenta de prueba; el script no crea sesiones ni afecta el limitador. Código 1: fallo; código 2: comprobaciones pendientes. El verificador de atributos se prueba contra el login real del fixture unitario, sin credenciales reales.
