@@ -1,9 +1,8 @@
 import { Phone, MapPin, Facebook } from 'lucide-react';
-import { PageTransition } from '@/shared/components/PageTransition';
 
 export function Contact() {
   return (
-    <PageTransition>
+    <div className="contact-enter">
       <div className="bg-magical min-h-screen">
         <div className="content-wrapper py-16">
           <div className="max-w-6xl mx-auto px-4">
@@ -92,6 +91,6 @@ export function Contact() {
           </div>
         </div>
       </div>
-    </PageTransition>
+    </div>
   );
 }
