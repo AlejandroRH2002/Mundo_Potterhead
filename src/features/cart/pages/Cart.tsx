@@ -25,6 +25,8 @@ export function Cart() {
     {!!cart.lines.length && <div className="shop-panel">
       <p className="text-2xl font-bold">Total: {money(cart.total)} MXN</p>
       <p className="my-3">Coordinaremos disponibilidad, envío y pago por WhatsApp. El envío no está incluido.</p>
+      {/* REVISAR CON ASESOR LEGAL */}
+      <p className="mb-4 text-sm">Este carrito es una cotización, no una compra. Confirmaremos precios, disponibilidad y envío por WhatsApp. Consulta los <Link className="shop-link" to="/terms">términos</Link> y el <Link className="shop-link" to="/privacy">aviso de privacidad</Link> antes de continuar.</p>
       <button className="shop-button" disabled={cart.sending || cart.loading || cart.missing.length > 0} onClick={() => void cart.checkout()}>{cart.sending ? 'Preparando pedido…' : 'Enviar pedido por WhatsApp'}</button>
       <button className="ml-6 shop-link" onClick={cart.clear}>Vaciar carrito</button>
     </div>}

@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const publicEnv = loadEnv(mode, process.cwd(), 'VITE_');
-  const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL']);
+  const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL']);
   for (const key of Object.keys(publicEnv)) {
     if (!allowed.has(key)) throw new Error(`Variable pública no autorizada: ${key}. Los secretos pertenecen al entorno del servidor.`);
   }

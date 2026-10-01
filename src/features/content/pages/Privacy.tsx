@@ -1,190 +1,20 @@
 import { Link } from 'react-router-dom';
-import { 
-  Shield, 
-  Lock, 
-  Eye, 
-  Database, 
-  Cookie, 
-  Mail,
-  ArrowLeft,
-  AlertCircle,
-  UserCheck,
-  MessageCircle
-} from 'lucide-react';
+import { LegalContact } from '../components/LegalContact';
 
+// REVISAR CON ASESOR LEGAL
 export function Privacy() {
-  return (
-    <div className="bg-gradient-to-br from-[#0a000a] via-[#1a0a1a] to-[#0a000a] min-h-screen pt-24">
-      <div className="content-wrapper max-w-5xl mx-auto px-4 py-12">
-        
-        {/* Encabezado */}
-        <div className="mb-8">
-          <Link 
-            to="/" 
-            className="inline-flex items-center space-x-2 text-[#FDB813] hover:text-[#FFD700] font-cinzel mb-6 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Volver al inicio</span>
-          </Link>
-          
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="p-3 bg-gradient-to-br from-[#FDB813]/20 to-[#FFD700]/20 rounded-lg">
-              <Shield className="h-10 w-10 text-[#FDB813]" />
-            </div>
-            <div>
-              <h1 className="text-4xl md:text-5xl font-cinzel font-bold text-[#FDB813]">
-                Política de Privacidad
-              </h1>
-              <p className="text-white/70 font-crimson text-lg mt-2">
-                Última actualización: 15 de Febrero, 2025
-              </p>
-            </div>
-          </div>
-          
-          <div className="h-1 w-32 bg-gradient-to-r from-[#FDB813] to-[#FFD700] rounded-full mb-8"></div>
-          
-          <p className="text-white/90 font-crimson text-lg leading-relaxed">
-            En <span className="text-[#FDB813] font-bold">Mundo Potterhead</span>, nos tomamos muy en serio tu privacidad. 
-            Esta política describe cómo recopilamos, usamos y protegemos tu información personal.
-          </p>
-        </div>
-
-        {/* Contenido principal */}
-        <div className="space-y-8">
-          
-          {/* 1. Información que recopilamos */}
-          <div className="bg-gradient-to-br from-white/5 to-transparent rounded-xl p-6 border border-[#FDB813]/20">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FDB813]/10 rounded-lg">
-                <Database className="h-6 w-6 text-[#FDB813]" />
-              </div>
-              <h2 className="text-2xl font-cinzel font-bold text-white">1. Información que recopilamos</h2>
-            </div>
-            <div className="space-y-4 text-white/80 font-crimson pl-4">
-              <p><span className="text-[#FDB813] font-bold">• Información de cuenta:</span> Nombre, correo electrónico, dirección de envío y datos de pago.</p>
-              <p><span className="text-[#FDB813] font-bold">• Información de navegación:</span> Dirección IP, tipo de navegador, páginas visitadas y tiempo de sesión.</p>
-              <p><span className="text-[#FDB813] font-bold">• Historial de compras:</span> Productos adquiridos, fechas y montos.</p>
-              <p><span className="text-[#FDB813] font-bold">• Comunicaciones:</span> Consultas realizadas a través del formulario de contacto.</p>
-            </div>
-          </div>
-
-          {/* 2. Uso de la información */}
-          <div className="bg-gradient-to-br from-white/5 to-transparent rounded-xl p-6 border border-[#FDB813]/20">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FDB813]/10 rounded-lg">
-                <Eye className="h-6 w-6 text-[#FDB813]" />
-              </div>
-              <h2 className="text-2xl font-cinzel font-bold text-white">2. Uso de la información</h2>
-            </div>
-            <div className="space-y-4 text-white/80 font-crimson pl-4">
-              <p>• Procesar y gestionar tus pedidos.</p>
-              <p>• Mejorar nuestra tienda y experiencia de usuario.</p>
-              <p>• Enviar actualizaciones sobre tus compras.</p>
-              <p>• Enviar promociones y novedades (solo si aceptaste).</p>
-              <p>• Prevenir fraudes y garantizar la seguridad.</p>
-            </div>
-          </div>
-
-          {/* 3. Protección de datos */}
-          <div className="bg-gradient-to-br from-white/5 to-transparent rounded-xl p-6 border border-[#FDB813]/20">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FDB813]/10 rounded-lg">
-                <Lock className="h-6 w-6 text-[#FDB813]" />
-              </div>
-              <h2 className="text-2xl font-cinzel font-bold text-white">3. Protección de tus datos</h2>
-            </div>
-            <div className="space-y-4 text-white/80 font-crimson pl-4">
-              <p>• Usamos cifrado SSL para proteger la información sensible.</p>
-              <p>• No compartimos tus datos personales con terceros sin tu consentimiento.</p>
-              <p>• Implementamos medidas de seguridad físicas, electrónicas y administrativas.</p>
-              <p>• Realizamos copias de seguridad periódicas.</p>
-            </div>
-          </div>
-
-          {/* 4. Tus derechos */}
-          <div className="bg-gradient-to-br from-white/5 to-transparent rounded-xl p-6 border border-[#FDB813]/20">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FDB813]/10 rounded-lg">
-                <UserCheck className="h-6 w-6 text-[#FDB813]" />
-              </div>
-              <h2 className="text-2xl font-cinzel font-bold text-white">4. Tus derechos</h2>
-            </div>
-            <div className="space-y-4 text-white/80 font-crimson pl-4">
-              <p><span className="text-[#FDB813] font-bold">• Acceso:</span> Puedes solicitar una copia de tus datos personales.</p>
-              <p><span className="text-[#FDB813] font-bold">• Rectificación:</span> Puedes corregir información inexacta.</p>
-              <p><span className="text-[#FDB813] font-bold">• Eliminación:</span> Puedes solicitar la eliminación de tu cuenta.</p>
-              <p><span className="text-[#FDB813] font-bold">• Oposición:</span> Puedes negarte al procesamiento de tus datos.</p>
-            </div>
-          </div>
-
-          {/* 5. Cookies */}
-          <div className="bg-gradient-to-br from-white/5 to-transparent rounded-xl p-6 border border-[#FDB813]/20">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FDB813]/10 rounded-lg">
-                <Cookie className="h-6 w-6 text-[#FDB813]" />
-              </div>
-              <h2 className="text-2xl font-cinzel font-bold text-white">5. Uso de Cookies</h2>
-            </div>
-            <div className="space-y-4 text-white/80 font-crimson pl-4">
-              <p>Utilizamos cookies para mejorar tu experiencia, recordar tus preferencias y analizar el tráfico del sitio. Puedes desactivarlas desde la configuración de tu navegador.</p>
-            </div>
-          </div>
-
-        {/* 6. Contacto */}
-        <div className="bg-gradient-to-br from-[#4a0001]/30 to-transparent rounded-xl p-6 border border-[#FDB813]/40">
-        <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-[#FDB813]/20 rounded-lg">
-            <Mail className="h-6 w-6 text-[#FDB813]" />
-            </div>
-            <h2 className="text-2xl font-cinzel font-bold text-white">6. Contacto</h2>
-        </div>
-        <p className="text-white/90 font-crimson mb-4">
-            Si tienes preguntas sobre esta política de privacidad, contáctanos:
-        </p>
-        <div className="bg-black/20 p-4 rounded-lg space-y-3">
-            <div className="flex items-center space-x-3">
-            <MessageCircle className="h-5 w-5 text-[#FDB813]" />
-            <span className="text-[#FDB813] font-cinzel">{import.meta.env.VITE_WHATSAPP_NUMBER ? `WhatsApp: +${import.meta.env.VITE_WHATSAPP_NUMBER}` : 'Consulta nuestros canales de contacto.'}</span>
-            </div>
-            <div className="flex items-center space-x-3">
-            <Mail className="h-5 w-5 text-[#FDB813]" />
-            <Link 
-                to="/contact" 
-                className="text-[#FDB813] font-cinzel hover:text-[#FFD700] transition-colors underline underline-offset-2"
-            >
-                Página de Contacto
-            </Link>
-            </div>
-            
-            {/* Horario de atención detallado */}
-            <div className="mt-3 border-t border-white/10 pt-3">
-            <p className="text-[#FDB813] font-cinzel text-sm mb-2">⏰ Horario de atención:</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-white/70 text-sm font-crimson">
-                <span>Lunes - Jueves:</span>
-                <span>4:00 PM - 8:00 PM</span>
-                <span>Viernes:</span>
-                <span>10:00 AM - 1:00 PM, 4:00 PM - 8:00 PM</span>
-                <span>Sábado:</span>
-                <span>10:00 AM - 6:00 PM</span>
-                <span>Domingo:</span>
-                <span className="text-red-400">Cerrado</span>
-            </div>
-            </div>
-        </div>
-        </div>
-
-          {/* Aviso final */}
-          <div className="bg-white/5 rounded-lg p-6 border border-white/10">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-6 w-6 text-[#FDB813] flex-shrink-0 mt-1" />
-              <p className="text-white/70 text-sm font-crimson">
-                Nos reservamos el derecho de modificar esta política de privacidad en cualquier momento. 
-                Los cambios serán publicados en esta página. Te recomendamos revisarla periódicamente.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <section className="shop-page space-y-5">
+    <h1 className="shop-title">Aviso de privacidad</h1>
+    <LegalContact />
+    <h2 className="text-xl font-bold">Cuenta y acceso</h2>
+    <p>Para las cuentas habilitadas, el servidor guarda nombre, correo, rol y un hash de la contraseña; no guarda la contraseña en texto legible. Estos datos permiten identificarte y controlar el acceso. La contraseña se transmite al servidor al iniciar sesión o registrar una cuenta.</p>
+    <p>La sesión utiliza una cookie técnica HttpOnly y un identificador protegido en el servidor. Cerrar sesión revoca el acceso. Los controles de intentos usan un identificador derivado de la dirección IP; los registros técnicos incluyen ruta, estado y duración, sin cuerpos de mensajes, contraseñas ni cookies.</p>
+    <h2 className="text-xl font-bold">Preferencias de este navegador</h2>
+    <p>El carrito guarda identificadores de productos y cantidades en el almacenamiento local del navegador. Puedes vaciarlo desde el carrito o borrar los datos del sitio. No se registra una compra por añadir productos.</p>
+    <p>Si usas la suscripción de novedades, el correo y la fecha se guardan solo en este navegador tras tu consentimiento. Es una simulación: no se envían correos. Puedes borrar esa preferencia eliminando los datos del sitio.</p>
+    <h2 className="text-xl font-bold">WhatsApp</h2>
+    <p>Al pulsar enviar, se abre WhatsApp con un mensaje de productos, cantidades y total. Tú decides enviarlo. El sitio no guarda ese mensaje como pedido; su envío y la conversación posterior se gestionan fuera del sitio mediante WhatsApp/Meta, conforme a sus condiciones y privacidad.</p>
+    <p>Para consultas sobre tu cuenta y los datos tratados por el responsable, utiliza el contacto indicado arriba. El almacenamiento del navegador se conserva hasta que lo elimines; las sesiones vencen o se revocan. No se promete una eliminación automática de la cuenta.</p>
+    <Link className="shop-link" to="/terms">Ver términos de la cotización</Link>
+  </section>;
 }
