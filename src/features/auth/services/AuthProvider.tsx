@@ -35,10 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const onFocus = () => { void checkSession(false); };
     window.addEventListener('focus', onFocus);
     window.addEventListener(SESSION_INVALID, invalidate);
-    const timer = window.setInterval(onFocus, 60_000);
+    // No background heartbeat: an idle tab must not keep its session alive.
     return () => {
       generation.current += 1;
-      window.clearInterval(timer);
+
       window.removeEventListener('focus', onFocus);
       window.removeEventListener(SESSION_INVALID, invalidate);
     };

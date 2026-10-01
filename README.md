@@ -51,7 +51,7 @@ Los datos antiguos requieren una importación explícita y validada antes de inc
 ## Autenticación y seguridad
 
 - El cliente nunca decide el rol. El guard revalida sesión y la API exige administrador para modificar productos.
-- Sesiones aleatorias de 256 bits, digest HMAC en BD y caducidad absoluta de 30 minutos. Las réplicas comparten BD y `SESSION_SECRET`; un nuevo login rota la sesión anterior. Logout revoca en todas las instancias. Rotar el secreto invalida sesiones existentes.
+- Sesiones aleatorias de 256 bits, digest HMAC en BD y caducidad por inactividad de 30 minutos y tope absoluto de 8 horas desde el último login. Las réplicas comparten BD y `SESSION_SECRET`; un nuevo login rota la sesión anterior. Las solicitudes autenticadas renuevan la cookie y la expiración persistida como máximo una vez por minuto por sesión, también entre réplicas. La granularidad puede adelantar el cierre por inactividad hasta 59 segundos. No hay sondeo periódico del navegador que mantenga viva una pestaña inactiva. Logout revoca en todas las instancias. Rotar el secreto invalida sesiones existentes.
 - Cookies HttpOnly, host-only, Path=/, con Secure y prefijo `__Host-` en producción. Sin Domain para evitar compartirlas con otros subdominios.
 - CORS acepta únicamente `APP_ORIGIN`, permite credenciales y verifica el preflight. Las escrituras exigen Origin correcto y `X-Requested-With: MundoPotterhead`.
 - `COOKIE_SAME_SITE=Strict` funciona con frontend/API del mismo sitio. Para sitios diferentes usa `None` con HTTPS; el navegador puede bloquear cookies de terceros. Se recomienda proxy del mismo origen o subdominios del mismo sitio.

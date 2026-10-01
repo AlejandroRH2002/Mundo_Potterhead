@@ -5,7 +5,7 @@ import type { Auth } from '../security/auth.ts';
 import { hashPassword, verifyPassword } from '../security/password.ts';
 
 const profile = (user: User): UserSession => ({ id: user.id, name: user.name ?? '', email: user.email, role: user.role === 'ADMIN' ? 'admin' : 'user' });
-export async function createDatabaseAuth(db: PrismaClient, secret: string, ttlMs = 30 * 60 * 1000): Promise<Auth> {
+export async function createDatabaseAuth(db: PrismaClient, secret: string, ttlMs = 30 * 60 * 1000, now: () => number = Date.now): Promise<Auth> {
   const dummy = await hashPassword(randomBytes(32).toString('hex'));
   const digest = (token: string) => createHmac('sha256', secret).update(token).digest('hex');
   return {
@@ -14,17 +14,32 @@ export async function createDatabaseAuth(db: PrismaClient, secret: string, ttlMs
       const user = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } });
       if (!await verifyPassword(password, user?.password ?? dummy) || !user) return null;
       const token = randomBytes(32).toString('base64url');
+      const createdAt = new Date(now());
+      const expiresAt = new Date(createdAt.getTime() + Math.min(ttlMs, 8 * 60 * 60 * 1000));
       // Unique userId makes rotation atomic across replicas; last login wins.
       await db.session.upsert({ where: { userId: user.id },
-        create: { userId: user.id, tokenHash: digest(token), expiresAt: new Date(Date.now() + ttlMs) },
-        update: { tokenHash: digest(token), expiresAt: new Date(Date.now() + ttlMs) },
+        create: { userId: user.id, tokenHash: digest(token), createdAt, expiresAt },
+        update: { tokenHash: digest(token), createdAt, expiresAt },
       });
       return { token, user: profile(user) };
     },
     async session(token) {
       if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
-      const session = await db.session.findUnique({ where: { tokenHash: digest(token) }, include: { user: true } });
-      return session && session.expiresAt.getTime() > Date.now() ? profile(session.user) : null;
+      const tokenHash = digest(token);
+      let session = await db.session.findUnique({ where: { tokenHash }, include: { user: true } });
+      const current = now();
+      const absoluteLimit = (session?.createdAt.getTime() ?? 0) + 8 * 60 * 60 * 1000;
+      if (!session || session.expiresAt.getTime() <= current || absoluteLimit <= current) return null;
+      // expiresAt encodes the last persisted activity. CAS prevents competing replicas
+      // from renewing more than once/minute; an update never recreates a revoked token.
+      if (session.expiresAt.getTime() < absoluteLimit && session.expiresAt.getTime() <= current + ttlMs - 60_000) {
+        await db.session.updateMany({
+          where: { tokenHash, expiresAt: session.expiresAt, createdAt: session.createdAt },
+          data: { expiresAt: new Date(Math.min(current + ttlMs, absoluteLimit)) },
+        });
+        session = await db.session.findUnique({ where: { tokenHash }, include: { user: true } });
+      }
+      return session && session.expiresAt.getTime() > now() && session.createdAt.getTime() + 8 * 60 * 60 * 1000 > now() ? profile(session.user) : null;
     },
     async revoke(token) { if (token) await db.session.deleteMany({ where: { tokenHash: digest(token) } }); },
     async updateName(id, name) { return profile(await db.user.update({ where: { id }, data: { name } })); },

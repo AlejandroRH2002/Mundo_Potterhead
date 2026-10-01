@@ -87,6 +87,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       }
       const token = tokenFrom(request);
       const user = await auth.session(token);
+      if (user && token) response.setHeader('Set-Cookie', cookie(token, Math.floor(auth.ttlMs / 1000)));
       if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
         if (request.headers.origin !== origin || request.headers['x-requested-with'] !== 'MundoPotterhead') throw new HttpError(403, 'Origen de solicitud no autorizado.');
       }
