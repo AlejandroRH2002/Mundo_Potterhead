@@ -154,3 +154,9 @@ Se comprobaron nombres, etiquetas y alt en el código, foco visible, enlace de s
 `/admin/usuarios` permite listar con paginación, crear cuentas (contraseña de 20–256 caracteres), activar/desactivar y cambiar roles. La API usa `/api/admin/users` (GET/POST) y `/api/admin/users/:id` (PATCH); no ofrece eliminación. Las escrituras revalidan al administrador dentro de una transacción y preservan al menos un administrador activo. No puedes desactivar ni degradar tu propia cuenta. Desactivar o cambiar el rol revoca las sesiones; reactivar requiere iniciar sesión de nuevo.
 
 Antes de arrancar el backend actualizado, aplica `pnpm db:migrate` a la base de destino revisada: migración incremental `20261001000000_user_is_active`, sin reset. Las cuentas existentes quedan activas. Las pruebas unitarias usan dobles de persistencia; la integración PostgreSQL se ejecuta aparte con `pnpm test:integration`.
+
+## Migración de imágenes
+
+`pnpm media:migrate-base64` usa variables privadas del proceso y hace dry-run por defecto; `--batch-size=25` limita la memoria por lote (1–100). Revisa el resumen antes de `pnpm media:migrate-base64 --apply`. Para desarrollo puedes usar `pnpm exec node --env-file=.env server/scripts/migrateMedia.ts --dry-run`; producción usa `node dist-server/migrateMedia.js`. No se ejecuta al arrancar.
+
+La migración valida firmas y MIME, genera claves deterministas, confirma la subida con HEAD y cambia la URL solo si el valor original de BD sigue igual. Fallos conservan el original; repetir no crea nuevos nombres ni procesa URLs ya migradas. Se imprimen únicamente contadores; no imágenes, URLs privadas ni contenidos. No se ha ejecutado contra la BD o bucket reales.
