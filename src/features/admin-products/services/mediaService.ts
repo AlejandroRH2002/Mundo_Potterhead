@@ -1,5 +1,5 @@
 import { requestJson } from '@/shared/lib/httpClient';
-import { imageTypes, mediaConfigSchema, uploadPolicySchema } from '../../../../shared/mediaSchema';
+import { imageTypes, mediaConfigSchema, uploadPolicySchema, completedUploadSchema } from '../../../../shared/mediaSchema';
 
 export async function uploadProductImage(file: File): Promise<string> {
   if (!imageTypes.some(type => type === file.type) || file.size === 0) throw new Error('Selecciona una imagen PNG, JPEG o WebP.');
@@ -18,10 +18,8 @@ export async function uploadProductImage(file: File): Promise<string> {
   }));
   const url = new URL(policy.url);
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Destino de carga inválido.');
-  const data = new FormData();
-  for (const [key, value] of Object.entries(policy.fields)) data.append(key, value);
-  data.append('file', file); // S3 requires the file field last.
-  const response = await fetch(url, { method: 'POST', body: data, credentials: 'omit', signal: AbortSignal.timeout(120_000) });
+  const response = await fetch(url, { method: policy.method, headers: policy.headers, body: file, credentials: 'omit', signal: AbortSignal.timeout(120_000) });
   if (!response.ok) throw new Error('No se pudo subir la imagen. Inténtalo de nuevo.');
-  return policy.publicUrl;
+  const completed = completedUploadSchema.parse(await requestJson<unknown>('/media/complete', { method: 'POST', body: JSON.stringify({ ticket: policy.ticket }) }));
+  return completed.publicUrl;
 }

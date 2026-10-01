@@ -12,7 +12,7 @@
     "build": "pnpm db:generate && tsc -b && vite build && node scripts/build-server.mjs && node scripts/check-client-secrets.mjs",
     "audit:client": "node scripts/check-client-secrets.mjs",
     "typecheck": "tsc -b",
-    "test": "node --test tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs tests/accessibility.test.mjs tests/users.test.mjs",
+    "test": "node --test tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs tests/accessibility.test.mjs tests/users.test.mjs tests/media.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:server": "pnpm db:generate && tsc -b tsconfig.server.json && node scripts/build-server.mjs",
@@ -25,7 +25,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1142.0",
-    "@aws-sdk/s3-presigned-post": "^3.1142.0",
+    "@aws-sdk/s3-request-presigner": "3.1142.0",
     "@prisma/client": "5.22.0",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",

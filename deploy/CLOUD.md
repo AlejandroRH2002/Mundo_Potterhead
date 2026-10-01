@@ -44,22 +44,14 @@ Usa IAM workload roles en AWS. Fuera de AWS, inyecta `AWS_ACCESS_KEY_ID`, `AWS_S
 
 Flujo implementado:
 
-1. El editor consulta `/api/media/config`; muestra errores según el límite configurado.
-2. El administrador solicita `POST /api/media/upload` con tamaño y MIME. El servidor exige sesión, rol admin y protección CSRF.
-3. La API genera un nombre UUID, política POST de 60 segundos, tamaño exacto y MIME permitido: PNG, JPEG o WebP, hasta 10 MB.
-4. El navegador envía multipart directamente a S3 sin cookies de la aplicación. Solo después de recibir éxito usa la URL permanente en el producto.
+1. El editor consulta el límite, comprime a WebP y solicita PUT firmado con tamaño/MIME declarado. La API exige administrador y CSRF.
+2. El servidor genera UUID y firma una carga de 60 segundos a `_pending/`, nunca usando nombres del cliente. El navegador hace PUT con Content-Type.
+3. `/api/media/complete` valida un ticket HMAC de 5 minutos, tamaño real, Content-Type y firmas binarias PNG/JPEG/WebP; copia la versión inspeccionada a `products/` y confirma la subida antes de entregar la URL.
+4. `_pending/` debe ser privado y excluirse del CDN/URL pública. Configura una regla de limpieza solo para temporales. No se entrega URL pública antes de validar; las firmas binarias no sustituyen un decodificador completo o un análisis antimalware.
 
-Las [políticas POST de S3](https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sigv4-HTTPPOSTConstructPolicy.html) permiten imponer tamaño y campos firmados. Los servicios compatibles deben soportar esta operación; una API que solo implemente PUT firmado necesita otro adaptador. La firma y los campos temporales se entregan al administrador, pero nunca la clave secreta de AWS.
+Producción exige MEDIA_STORAGE=s3, S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PUBLIC_BASE_URL y SESSION_SECRET. S3_FORCE_PATH_STYLE es configurable (false por defecto). Usa HTTPS; R2 suele usar región auto. Credenciales mediante la cadena SDK (IAM o AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY), nunca VITE_. Sin Base64 nuevo ni rutas locales en producción.
 
-`MEDIA_STORAGE=inline` conserva el modo local de 2 MB. No hay fallback automático a Base64 cuando S3 falla. Las imágenes antiguas permanecen válidas y no se migran automáticamente.
-
-Preparación del bucket/CDN:
-
-- Adapta `s3-upload-policy.json`: permite únicamente `s3:PutObject` en `products/*`. Sin List/Delete/ACL para la aplicación.
-- Adapta `s3-cors.json` al origen real del frontend. Mantén Block Public Access, cifrado y Object Ownership adecuados; sirve lectura mediante CDN con acceso al origen. No se envían ACL desde el cliente.
-- `S3_PUBLIC_BASE_URL` debe mapear el mismo prefijo `products/` del bucket. Configura HTTPS, Content-Type correcto y `X-Content-Type-Options: nosniff` en el CDN.
-- El MIME firmado limita la declaración, no inspecciona los bytes. Para contenido no confiable agrega cuarentena y procesamiento de imágenes antes de publicar. El flujo actual está restringido a administradores.
-- Archivos cargados sin guardar el producto pueden quedar huérfanos. Planifica limpieza comparando URLs referenciadas, con un periodo de gracia. No apliques una expiración global que elimine imágenes vigentes.
+Usa CORS PUT/GET/HEAD y los permisos de las plantillas: Put/Get en temporales y productos, Delete solo en temporales; Copy usa Get+Put. R2 no utiliza políticas IAM de AWS: aplica permisos equivalentes en su token. Sirve products/ con CDN HTTPS y nosniff; mantén temporales privados. El modo inline de 2 MB es exclusivo de desarrollo/pruebas. No hay fallback cuando falla el bucket.
 
 Las pruebas validan la firma y sus restricciones sin usar credenciales cloud. Antes de activar S3, verifica una carga real, CORS y lectura CDN en staging.
 

@@ -5,17 +5,17 @@ import { createDatabaseUsers } from './repositories/users.ts';
 import { createDatabaseProducts } from './repositories/products.ts';
 import { createApi } from './http/app.ts';
 import { createReadiness } from './health.ts';
-import { createMediaStorage } from './media.ts';
+import { createMediaStorage, MediaConfigError } from './media.ts';
 import { audit } from './logger.ts';
 import { createCleanup, cleanExpiredRecords } from './cleanup.ts';
 
 async function start() {
+  const media = createMediaStorage(process.env);
   const config = readConfig(process.env);
   const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   await db.$connect();
   const auth = await createDatabaseAuth(db, config.sessionSecret);
   const health = createReadiness(async () => { await db.$queryRaw`SELECT 1`; });
-  const media = createMediaStorage(process.env);
   const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
     limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
@@ -43,4 +43,4 @@ async function start() {
   server.on('error', () => { audit({ event: 'failure', code: 'LISTEN_FAILED' }); process.exit(1); });
   server.listen(config.port, config.host, () => audit({ event: 'startup' }));
 }
-void start().catch(() => { audit({ event: 'failure', code: 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE' }); process.exit(1); });
+void start().catch((error: unknown) => { audit({ event: 'failure', code: error instanceof MediaConfigError ? 'MEDIA_CONFIGURATION' : 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE', ...(error instanceof MediaConfigError ? { reason: error.message } : {}) }); process.exit(1); });

@@ -1,9 +1,21 @@
 {
   "Version": "2012-10-17",
-  "Statement": [{
-    "Sid": "UploadProductImagesOnly",
-    "Effect": "Allow",
-    "Action": "s3:PutObject",
-    "Resource": "arn:aws:s3:::REPLACE_BUCKET/products/*"
-  }]
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::REPLACE_BUCKET/_pending/*",
+        "arn:aws:s3:::REPLACE_BUCKET/products/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:DeleteObject",
+      "Resource": "arn:aws:s3:::REPLACE_BUCKET/_pending/*"
+    }
+  ]
 }

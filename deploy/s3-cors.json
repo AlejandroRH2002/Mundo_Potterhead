@@ -1,9 +1,21 @@
 {
-  "CORSRules": [{
-    "AllowedOrigins": ["https://shop.example.com"],
-    "AllowedMethods": ["POST", "GET", "HEAD"],
-    "AllowedHeaders": ["*"],
-    "ExposeHeaders": ["ETag"],
-    "MaxAgeSeconds": 300
-  }]
+  "CORSRules": [
+    {
+      "AllowedOrigins": [
+        "https://shop.example.com"
+      ],
+      "AllowedMethods": [
+        "PUT",
+        "GET",
+        "HEAD"
+      ],
+      "AllowedHeaders": [
+        "*"
+      ],
+      "ExposeHeaders": [
+        "ETag"
+      ],
+      "MaxAgeSeconds": 300
+    }
+  ]
 }

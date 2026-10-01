@@ -1,8 +1,8 @@
 import { createUserSchema, changeUserSchema, userPageSchema } from '../../shared/userSchema.ts';
 import { UserManagementError, type UserRepository } from '../repositories/users.ts';
 import { randomUUID } from 'node:crypto';
-import type { MediaStorage } from '../media.ts';
-import { uploadInputSchema } from '../../shared/mediaSchema.ts';
+import { MediaValidationError, type MediaStorage } from '../media.ts';
+import { uploadInputSchema, completeUploadSchema } from '../../shared/mediaSchema.ts';
 import { Prisma } from '@prisma/client';
 import { isIP } from 'node:net';
 import { loginSchema, registerSchema, profileSchema } from '../validation/auth.ts';
@@ -35,9 +35,9 @@ function json(response: ServerResponse, status: number, value?: unknown) {
   response.end(value === undefined ? undefined : JSON.stringify(value));
 }
 export function createApi({ auth, products, origin, secureCookies = false, sameSite = 'Strict', trustProxy = false,
-  registrationEnabled = false, limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users,
+  registrationEnabled = false, allowInlineImages = process.env.NODE_ENV !== 'production', limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users,
 }: { auth: Auth; products: ProductRepository; origin: string; secureCookies?: boolean;
-  users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
+  allowInlineImages?: boolean; users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
   limiter?: (key: string) => boolean | Promise<boolean>; ready?: () => Promise<void>; logger?: (entry: AuditEntry) => void;
 }) {
   if (sameSite === 'None' && !secureCookies) throw new Error('SameSite=None requires Secure.');
@@ -65,7 +65,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       const path = new URL(request.url ?? '/', 'http://localhost').pathname;
       const method = request.method ?? 'GET';
       route = /^\/api\/admin\/users(?:\/[^/]+)?$/.test(path) ? '/api/admin/users/:id?' : /^\/api\/products(?:\/[^/]+)?$/.test(path) ? '/api/products/:id?' :
-        ['/api/media/config', '/api/media/upload', '/api/auth/session', '/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/users/me', '/health/live', '/health/ready'].includes(path) ? path : 'unknown';
+        ['/api/media/config', '/api/media/upload', '/api/media/complete', '/api/auth/session', '/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/users/me', '/health/live', '/health/ready'].includes(path) ? path : 'unknown';
       const requestOrigin = request.headers.origin;
       if (requestOrigin && requestOrigin !== origin) throw new HttpError(403, 'Origen no autorizado.');
       if (requestOrigin === origin) {
@@ -118,10 +118,16 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         }
         throw new HttpError(405, 'Operación no permitida.');
       }
-      if (path === '/api/media/config' || path === '/api/media/upload') {
+      if (path === '/api/media/config' || path === '/api/media/upload' || path === '/api/media/complete') {
         if (!user) throw new HttpError(401, 'Inicia sesion para continuar.');
         if (user.role !== 'admin') throw new HttpError(403, 'Se requiere administrador.');
         if (path.endsWith('/config') && method === 'GET') { json(response, 200, { enabled: !!media, maxBytes: media?.maxBytes ?? 2 * 1024 * 1024 }); return; }
+        if (path.endsWith('/complete') && method === 'POST') {
+          if (!media) throw new HttpError(503, 'Carga de objetos no configurada.');
+          const input = completeUploadSchema.safeParse(await body(request));
+          if (!input.success) throw new HttpError(400, 'Carga inválida.');
+          json(response, 200, { publicUrl: await media.complete(input.data.ticket) }); return;
+        }
         if (path.endsWith('/upload') && method === 'POST') {
           if (!media) throw new HttpError(503, 'La carga de archivos no esta configurada.');
           const input = uploadInputSchema.safeParse(await body(request));
@@ -196,6 +202,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
           const parsed = productDraftSchema.safeParse(value);
           if (!parsed.success) throw new HttpError(400, 'Datos de producto inválidos.');
           const draft = parsed.data;
+          if (!allowInlineImages && !draft.image.startsWith('https://')) throw new HttpError(400, 'En producción se requiere una imagen alojada por HTTPS.');
           const product = id ? await products.update(id, draft) : await products.create(draft);
           if (!product) throw new HttpError(404, 'Producto no encontrado.');
           json(response, id ? 200 : 201, product); return;
@@ -204,6 +211,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       throw new HttpError(404, 'Ruta no encontrada.');
     };
     void handle().catch((error: unknown) => {
+      if (error instanceof MediaValidationError) { json(response, 400, { message: error.message }); return; }
       if (error instanceof UserManagementError) { json(response, error.status, { message: error.message }); return; }
       let status = error instanceof HttpError ? error.status : 500;
       let message = error instanceof HttpError ? error.message : 'No se pudo completar la solicitud.';

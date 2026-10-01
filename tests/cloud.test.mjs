@@ -39,28 +39,19 @@ test('readiness deadlines coalesce concurrent probes, recover and fail while dra
   health.drain(); await assert.rejects(health.ready(), /DRAINING/);
 });
 
-test('S3 policies constrain MIME, exact size, unique key and expiry without exposing secret key', async () => {
+test('S3 signed PUT constrains object name, headers, expiry and custom endpoint', async () => {
   const secret = randomBytes(32).toString('hex');
   const previous = { AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN: process.env.AWS_SESSION_TOKEN };
-  process.env.AWS_ACCESS_KEY_ID = 'TEST' + randomBytes(8).toString('hex');
-  process.env.AWS_SECRET_ACCESS_KEY = secret; delete process.env.AWS_SESSION_TOKEN;
-  const storage = createMediaStorage({ MEDIA_STORAGE: 's3', S3_BUCKET: 'test-bucket', S3_REGION: 'us-east-1', S3_PUBLIC_BASE_URL: 'https://images.test.invalid' });
+  process.env.AWS_ACCESS_KEY_ID = 'TEST' + randomBytes(8).toString('hex'); process.env.AWS_SECRET_ACCESS_KEY = secret; delete process.env.AWS_SESSION_TOKEN;
+  const storage = createMediaStorage({ MEDIA_STORAGE: 's3', SESSION_SECRET: secret, S3_ENDPOINT: 'https://objects.test.invalid', S3_FORCE_PATH_STYLE: 'true', S3_BUCKET: 'test-bucket', S3_REGION: 'auto', S3_PUBLIC_BASE_URL: 'https://images.test.invalid' });
   try {
-    const first = await storage.sign({ contentType: 'image/png', size: 4096 });
-    const second = await storage.sign({ contentType: 'image/png', size: 4096 });
-    assert.notEqual(first.publicUrl, second.publicUrl);
-    const policy = JSON.parse(Buffer.from(first.fields.Policy, 'base64').toString());
-    assert.ok(policy.conditions.some(condition => JSON.stringify(condition) === JSON.stringify(['content-length-range', 4096, 4096])));
-    assert.ok(policy.conditions.some(condition => JSON.stringify(condition) === JSON.stringify(['eq', '$Content-Type', 'image/png'])));
-    assert.ok(new Date(policy.expiration).getTime() <= Date.now() + 61_000);
-    assert.equal(JSON.stringify(first).includes(secret), false);
-    assert.match(first.fields.key, /^products\/[a-f0-9-]+\.png$/);
-    await assert.rejects(storage.sign({ contentType: 'image/svg+xml', size: 1 }));
-    await assert.rejects(storage.sign({ contentType: 'image/png', size: 11 * 1024 * 1024 }));
-  } finally {
-    storage.close();
-    for (const [key, value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
-  }
+    const first = await storage.sign({ contentType: 'image/png', size: 4096 }); const second = await storage.sign({ contentType: 'image/png', size: 4096 });
+    assert.notEqual(first.url, second.url); const url = new URL(first.url);
+    assert.match(url.pathname, /^\/test-bucket\/_pending\/[a-f0-9-]+$/); assert.equal(url.searchParams.get('X-Amz-Expires'), '60');
+    assert.match(url.searchParams.get('X-Amz-SignedHeaders'), /content-length/); assert.match(url.searchParams.get('X-Amz-SignedHeaders'), /content-type/);
+    assert.equal(first.method, 'PUT'); assert.equal(first.headers['Content-Type'], 'image/png'); assert.equal('publicUrl' in first, false); assert.equal(JSON.stringify(first).includes(secret), false);
+    await assert.rejects(storage.sign({ contentType: 'image/svg+xml', size: 1 })); await assert.rejects(storage.sign({ contentType: 'image/png', size: 11 * 1024 * 1024 }));
+  } finally { storage.close(); for (const [key,value] of Object.entries(previous)) { if (value === undefined) delete process.env[key]; else process.env[key]=value; } }
 });
 
 test('image signing requires administrator and CSRF checks; health HEAD avoids auth', async () => {
