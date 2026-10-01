@@ -4,8 +4,8 @@ export function databaseUrl(env: NodeJS.ProcessEnv, migration = false): string {
   const raw = migration ? env.DIRECT_DATABASE_URL || (!production ? env.DATABASE_URL : undefined) : env.DATABASE_URL;
   if (!raw) throw new Error(migration ? 'DIRECT_DATABASE_URL is required for production migrations.' : 'DATABASE_URL is required.');
   let url: URL;
-  try { url = new URL(raw); } catch { throw new Error('Invalid database connection URL.'); }
-  if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('PostgreSQL connection required.');
+  try { url = new URL(raw); } catch { throw new Error((migration ? 'DIRECT_DATABASE_URL' : 'DATABASE_URL') + ' is invalid.'); }
+  if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error((migration ? 'DIRECT_DATABASE_URL' : 'DATABASE_URL') + ' requires PostgreSQL.');
   const parameters = url.searchParams;
   const positive = (name: string, value: string, max: number) => {
     if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > max) throw new Error('Invalid database parameter: ' + name);
@@ -20,7 +20,7 @@ export function databaseUrl(env: NodeJS.ProcessEnv, migration = false): string {
   const tls = env.DB_TLS_MODE ?? (production ? 'require' : parameters.get('sslmode') ?? 'disable');
   if (!['require', 'disable'].includes(tls)) throw new Error('DB_TLS_MODE must be require or disable.');
   if (production && tls === 'require' && (parameters.get('sslmode') === 'disable' || parameters.get('sslaccept') === 'accept_invalid_certs'))
-    throw new Error('Production database URL conflicts with strict TLS.');
+    throw new Error((migration ? 'DIRECT_DATABASE_URL' : 'DATABASE_URL') + ' conflicts with strict TLS.');
   parameters.set('sslmode', tls);
   if (tls === 'require') parameters.set('sslaccept', 'strict');
   if (env.DB_SSL_CERT_PATH) parameters.set('sslcert', env.DB_SSL_CERT_PATH);

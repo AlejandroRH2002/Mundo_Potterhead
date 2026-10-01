@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { readConfig } from './config.ts';
+import { readConfig, ConfigurationError, configurationWarnings } from './config.ts';
 import { createDatabaseAuth, databaseLoginLimiter } from './repositories/auth.ts';
 import { createDatabaseUsers } from './repositories/users.ts';
 import { createDatabaseProducts } from './repositories/products.ts';
@@ -10,8 +10,9 @@ import { audit } from './logger.ts';
 import { createCleanup, cleanExpiredRecords } from './cleanup.ts';
 
 async function start() {
-  const media = createMediaStorage(process.env);
   const config = readConfig(process.env);
+  const media = createMediaStorage(process.env);
+  for (const reason of configurationWarnings(config)) audit({ event: 'warning', code: 'STARTUP_CONFIGURATION_WARNING', reason });
   const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   await db.$connect();
   const auth = await createDatabaseAuth(db, config.sessionSecret);
@@ -43,4 +44,4 @@ async function start() {
   server.on('error', () => { audit({ event: 'failure', code: 'LISTEN_FAILED' }); process.exit(1); });
   server.listen(config.port, config.host, () => audit({ event: 'startup' }));
 }
-void start().catch((error: unknown) => { audit({ event: 'failure', code: error instanceof MediaConfigError ? 'MEDIA_CONFIGURATION' : 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE', ...(error instanceof MediaConfigError ? { reason: error.message } : {}) }); process.exit(1); });
+void start().catch((error: unknown) => { audit({ event: 'failure', code: error instanceof ConfigurationError ? 'SERVER_CONFIGURATION' : error instanceof MediaConfigError ? 'MEDIA_CONFIGURATION' : 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE', ...(error instanceof MediaConfigError || error instanceof ConfigurationError ? { reason: error.message } : {}) }); process.exit(1); });
