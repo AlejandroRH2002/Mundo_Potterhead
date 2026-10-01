@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom';
 import { useProductDetail } from '../hooks/useCatalog';
 import { useAddToCart } from '@/features/cart/hooks/useCart';
 import { money } from '@/shared/lib/money';
+import { usePageMetadata } from '@/shared/lib/usePageMetadata';
 export function ProductDetail() {
   const detail = useProductDetail();
   const cart = useAddToCart();
+  usePageMetadata({ title: detail.product?.name ?? 'Producto', description: detail.product?.description, image: detail.product?.image, noindex: !detail.product || !!detail.error });
   if (detail.loading) return <section className="shop-page" role="status">Cargando producto…</section>;
   if (detail.error) return <section className="shop-page shop-error" role="alert">{detail.error}</section>;
   if (!detail.product) return <section className="shop-page"><h1 className="shop-title">Producto no encontrado</h1><Link className="shop-link" to="/">Volver al catálogo</Link></section>;

@@ -6,6 +6,8 @@ import { Navbar } from '@/shared/components/Navbar';
 import { Footer } from '@/shared/components/Footer';
 import { Home } from '@/features/catalog/pages/Home';
 import { ProtectedRoute } from './ProtectedRoute';
+import { usePageMetadata } from '@/shared/lib/usePageMetadata';
+import { routeMetadata } from '../../shared/seo';
 
 const Contact = lazy(() => import('@/features/content/pages/Contact').then(module => ({ default: module.Contact })));
 const ProductDetail = lazy(() => import('@/features/catalog/pages/ProductDetail').then(module => ({ default: module.ProductDetail })));
@@ -25,6 +27,12 @@ function NotFound() {
     <p className="font-cinzel text-xl">Página no encontrada</p>
     <Link to="/" className="mt-6 inline-block rounded-lg bg-[#FDB813] px-6 py-3 font-cinzel font-bold text-[#4a0001]">Volver al inicio</Link>
   </section>;
+}
+
+function RouteMetadata() {
+  const { pathname } = useLocation();
+  usePageMetadata(routeMetadata(pathname));
+  return null;
 }
 
 function AnimatedRoutes() {
@@ -62,7 +70,7 @@ export default function App() {
     <AuthProvider>
       <div className="flex min-h-screen flex-col">
         <Navbar />
-        <main className="flex-grow"><AnimatedRoutes /></main>
+        <main className="flex-grow"><RouteMetadata /><AnimatedRoutes /></main>
         <Footer />
       </div>
     </AuthProvider>

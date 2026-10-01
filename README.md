@@ -136,3 +136,11 @@ Antes del lanzamiento operativo faltan decisiones del entorno: proveedor y capac
 ## Infraestructura cloud
 
 Consulta [deploy/CLOUD.md](deploy/CLOUD.md) para pools/TLS administrados, cargas directas S3, CI/CD, migraciones protegidas y sondas. `MEDIA_STORAGE=s3` habilita cargas de hasta 10 MB; el modo local mantiene 2 MB. En producción, las migraciones requieren `DIRECT_DATABASE_URL`.
+
+## Identidad pública y SEO
+
+Antes de publicar, configura `VITE_LEGAL_NAME`, `VITE_LEGAL_EMAIL` y `VITE_SITE_URL` (origen HTTPS sin ruta), y reconstruye el frontend. Los dos primeros son datos públicos del responsable, no secretos. Los textos de privacidad y términos requieren revisión con asesor legal.
+
+El build genera robots.txt y sitemap.xml con rutas públicas estáticas. Sin VITE_SITE_URL, no se emiten URLs canónicas y se solicita no indexar. Las rutas privadas llevan noindex mediante JavaScript; robots.txt no sustituye los guards. Vercel y Netlify incluyen reglas X-Robots-Tag: noindex para rutas privadas; replica esas cabeceras si usas otro hosting.
+
+El hook actualiza metadatos por ruta y producto, pero los crawlers que no ejecutan JavaScript solo reciben los metadatos generales del HTML. Para posicionar o compartir productos, conviene prerender de páginas públicas con invalidación al editar catálogo. Estimación de implementación: 1–3 jornadas para una primera versión, más operación según catálogo y plataforma; no implementado ni presupuestado con un proveedor.
