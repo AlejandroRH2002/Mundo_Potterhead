@@ -21,7 +21,7 @@ async function start() {
   const probeUrl=new URL(config.databaseUrl);probeUrl.searchParams.set('connection_limit','1');
   const probeDb=new PrismaClient({datasources:{db:{url:probeUrl.toString()}}});
   await probeDb.$connect();
-  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} });
+  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
   const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
     limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,

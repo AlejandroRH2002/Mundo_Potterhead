@@ -13,7 +13,7 @@ export function databaseUrl(env: NodeJS.ProcessEnv, migration = false): string {
   };
   positive('connection_limit', migration ? '1' : env.DB_POOL_SIZE ?? parameters.get('connection_limit') ?? '5', 100);
   positive('pool_timeout', env.DB_POOL_TIMEOUT_SECONDS ?? parameters.get('pool_timeout') ?? '5', 60);
-  positive('connect_timeout', env.DB_CONNECT_TIMEOUT_SECONDS ?? parameters.get('connect_timeout') ?? '5', 60);
+  positive('connect_timeout', env.DB_CONNECT_TIMEOUT_SECONDS ?? parameters.get('connect_timeout') ?? (production ? '15' : '5'), 60);
   // Migration DDL can legitimately exceed the application query deadline.
   if (!migration) positive('socket_timeout', env.DB_QUERY_TIMEOUT_SECONDS ?? parameters.get('socket_timeout') ?? '10', 120);
   else { parameters.delete('socket_timeout'); parameters.delete('pgbouncer'); }

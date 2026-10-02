@@ -15,6 +15,7 @@ test('Prisma URLs bound pool/timeouts, enforce default production TLS and separa
   assert.equal(runtime.searchParams.get('sslmode'), 'require');
   assert.equal(runtime.searchParams.get('sslaccept'), 'strict');
   assert.equal(runtime.searchParams.get('socket_timeout'), '10');
+  assert.equal(runtime.searchParams.get('connect_timeout'), '15');
   const direct = new URL(databaseUrl(env, true));
   assert.equal(direct.hostname, 'direct.invalid'); assert.equal(direct.searchParams.get('connection_limit'), '1');
   assert.equal(direct.searchParams.has('pgbouncer'), false); assert.equal(direct.searchParams.has('socket_timeout'), false);
@@ -80,4 +81,8 @@ test('image signing requires administrator and CSRF checks; health HEAD avoids a
       assert.equal(response.headers.get('cache-control'), 'no-store');
     }
   } finally { await new Promise(resolve => server.close(resolve)); }
+});
+
+test('readiness permits a bounded slow wake and still coalesces concurrent probes',async()=>{
+ let checks=0;const health=createReadiness(async()=>{checks++;await new Promise(resolve=>setTimeout(resolve,25));},{timeoutMs:100,cacheMs:1000});await Promise.all(Array.from({length:10},()=>health.ready()));assert.equal(checks,1);
 });
