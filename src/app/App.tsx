@@ -3,6 +3,8 @@ import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-do
 import { AnimatePresence, LazyMotion, MotionConfig } from 'framer-motion';
 import { PageTransition } from '@/shared/components/PageTransition';
 import { AuthProvider } from '@/features/auth/services/AuthProvider';
+import { ScrollManager } from './ScrollManager';
+import { Announcement } from '@/features/marketing/components/Announcement';
 import { Navbar } from '@/shared/components/Navbar';
 import { BrandMark } from '@/shared/components/BrandMark';
 import { Footer } from '@/shared/components/Footer';
@@ -43,7 +45,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return <Suspense fallback={<div className="page-loading" role="status"><BrandMark/><p>Cargando…</p></div>}>
     <AnimatePresence mode="wait">
-      <PageTransition key={location.pathname}><Routes location={location}>
+      <PageTransition key={location.pathname} routeKey={location.key}><Routes location={location}>
         <Route path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/product/:id" element={<ProductDetail />} />
@@ -75,8 +77,8 @@ export default function App() {
     <MotionConfig reducedMotion="user"><LazyMotion features={loadMotion} strict><AuthProvider>
       <div className="flex min-h-screen flex-col">
         <a className="skip-link" href="#main-content">Saltar al contenido</a>
-        <Navbar />
-        <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><AnimatedRoutes /></main>
+        <Announcement /><Navbar />
+        <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><ScrollManager/><AnimatedRoutes /></main>
         <Footer />
       </div>
     </AuthProvider></LazyMotion></MotionConfig>
