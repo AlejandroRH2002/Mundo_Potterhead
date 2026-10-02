@@ -1,3 +1,4 @@
+import { databaseDiagnostic } from '../lib/databaseDiagnostic.ts';
 import { serialQueue } from '../lib/catalogQueue.ts';
 import { Prisma, type PrismaClient, type Product as Row } from '@prisma/client';
 import type { Product } from '../../src/types/product.ts';
@@ -45,7 +46,7 @@ export function createDatabaseProducts(db: PrismaClient): ProductRepository {
         if(query.onSale){if(offersCache.size>=100)offersCache.delete(offersCache.keys().next().value!);offersCache.set(key,{expires:Date.now()+30_000,value});}
         return value;
       } catch(error:unknown){
-        if(process.env.NODE_ENV==='development')console.warn(JSON.stringify({event:'catalog.diagnostic',stage,errorClass:error instanceof Prisma.PrismaClientKnownRequestError?'PrismaClientKnownRequestError':error instanceof Error?'Error':'Unknown',code:error instanceof Prisma.PrismaClientKnownRequestError?error.code:'UNKNOWN'}));
+        databaseDiagnostic(error,stage);
         throw error;
       }
     }); },
