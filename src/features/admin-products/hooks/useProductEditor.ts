@@ -34,6 +34,8 @@ export function useProductEditor(editing: boolean) {
     const { name, value } = event.target;
     if (name === 'isOnSale') setDraft(current => ({ ...current, isOnSale: (event.target as HTMLInputElement).checked }));
     else if (name === 'price' || name === 'originalPrice') setDraft(current => ({ ...current, [name]: value === '' && name === 'originalPrice' ? undefined : Number(value) }));
+    else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
+    else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
     else setDraft(current => ({ ...current, [name]: value }));
   };
   const upload = async (file?: File) => {
@@ -50,6 +52,7 @@ export function useProductEditor(editing: boolean) {
     if (saving || uploading || !ready) return;
     setSaving(true); setError('');
     try {
+      if (!draft.subcategory) throw new Error('Selecciona una subcategoría para este producto.');
       if (editing) {
         if (!id) throw new Error('Falta el identificador del producto.');
         await productService.update(id, draft);

@@ -133,4 +133,6 @@ body { background: #2a0001; }
 }
 
 @keyframes contact-enter { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes catalog-drawer-enter { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: no-preference) { .catalog-filter-drawer[open] { animation: catalog-drawer-enter 0.2s ease-out; } }
 @media (prefers-reduced-motion: no-preference) { .contact-enter { animation: contact-enter 0.4s ease-out; } }

@@ -48,6 +48,16 @@ Se conserva la migración inicial y se añade una migración incremental de sesi
 
 Los datos antiguos requieren una importación explícita y validada antes de incorporarse al catálogo. Los registros de una BD anterior deben ajustarse al contrato de categorías, universos, descripción y precios. Contraseñas con formatos distintos de scrypt requieren restablecimiento controlado.
 
+### Subcategorías y filtros del catálogo
+
+La taxonomía compartida está en `shared/catalogTaxonomy.ts`. Conserva los slugs existentes de categorías y universos; cada subcategoría pertenece a una categoría. Los registros antiguos admiten `subcategory: null`; el formulario admin exige seleccionarla al guardar.
+
+La migración incremental `20261001010000_product_subcategory` debe aplicarse explícitamente antes de arrancar esta versión contra una BD existente. No requiere reset. Después, ejecuta `pnpm catalog:backfill-subcategory --dry-run` (también es el modo por defecto), revisa las clasificaciones por palabras clave y ejecuta `pnpm catalog:backfill-subcategory --apply` para escribir. Procesa lotes de 100, conserva clasificaciones existentes y lista únicamente id/nombre de los productos sin clasificar. En producción usa `node dist-server/backfillSubcategory.js --dry-run` con `DATABASE_URL` del sistema, seguido de `--apply` tras la revisión. El seed solo clasifica nuevas filas; no modifica las existentes.
+
+`GET /api/products` devuelve `{ items, total, page, pageSize, facets }` y acepta `universe`, `category`, `subcategory`, `onSale=true|false`, `minPrice`, `maxPrice`, `q`, `sort=novedad|precio-asc|precio-desc|descuento`, `page` y `pageSize` (máximo 100). Rechaza filtros desconocidos, repetidos o incoherentes. No devuelve imágenes Base64. Las facetas conservan búsqueda/precios/ofertas; universo ignora los tres niveles, categoría conserva universo y subcategoría conserva universo/categoría. Así los conteos permiten cambiar de opción sin quedar limitados a la ya seleccionada.
+
+Los filtros y la paginación viven en la URL. `universe=all` es una convención de la vista (la API omite ese filtro); los enlaces antiguos `offers=1` siguen funcionando. En móvil el panel modal admite Tab/Shift+Tab, Escape y retorno del foco. Comprobar también con teclado y lector de pantalla en el navegador de destino.
+
 ## Autenticación y seguridad
 
 - El cliente nunca decide el rol. El guard revalida sesión y la API exige administrador para modificar productos.
