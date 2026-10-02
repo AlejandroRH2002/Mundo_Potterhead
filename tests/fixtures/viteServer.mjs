@@ -14,6 +14,7 @@ export async function createTestViteServer() {
       configResolved(config) { config.server.hmr = { server: transport }; },
       configureServer(server) { server.config.server.hmr = false; },
     }],
+    optimizeDeps: { noDiscovery: true, entries: [], include: [] },
     appType: 'custom',
   });
   return server;

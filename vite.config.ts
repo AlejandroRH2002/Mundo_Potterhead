@@ -40,6 +40,7 @@ export default defineConfig(({ mode }) => {
     }],
     define: { __HAS_BANNER_2X__: JSON.stringify(existsSync(fileURLToPath(new URL('./public/brand/banner@2x.jpg', import.meta.url)))) },
     envPrefix: 'VITE_',
+    optimizeDeps: { entries: ['index.html'] },
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
       host: 'localhost', port: 5173, strictPort: true,

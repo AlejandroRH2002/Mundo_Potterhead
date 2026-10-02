@@ -220,3 +220,7 @@ Diagnóstico local: el catálogo fallaba con P2028 en adquisición de transacci�
 ### Actualización de Router 7
 
 React Router DOM 7.18.4 conserva los imports y BrowserRouter/Routes existentes. La [guía oficial v6 → v7](https://github.com/remix-run/react-router/blob/react-router%407.18.4/docs/upgrading/v6.md) requiere React 18 y Node 20 como mínimos; React 18.3/Node 24 cumplen. No hay rutas multi-segmento con splat ni enlaces relativos, data routers, loaders/actions o hidratación; sus flags no aplican. React.lazy permanece en ámbito de módulo para las transiciones. Scroll/foco y AnimatePresence siguen centralizados; revisar manualmente navegación, Atrás/Adelante y carga diferida tras desplegar.
+
+### Actualización de Vite 6
+
+Vite 6.4.3 y plugin-react 4.7.0 usan esbuild 0.25.12 también en el árbol anidado. Se revisó la [migración oficial desde Vite 5](https://v6.vite.dev/guide/migration): no hay Sass, PostCSS TS ni conditions personalizados que adaptar. El escaneo de dependencias se limita a index.html para no recorrer backups node_modules.previous-*; los tests desactivan discovery/entries y mantienen middlewareMode/HMR sin listener. Alias con fileURLToPath y transformación HTML SEO se conservan.
