@@ -70,7 +70,7 @@ La migración incremental `20261001010000_product_subcategory` debe aplicarse ex
 
 `GET /api/products` devuelve `{ items, total, page, pageSize, facets }` y acepta `universe`, `category`, `subcategory`, `onSale=true|false`, `minPrice`, `maxPrice`, `q`, `sort=novedad|precio-asc|precio-desc|descuento`, `page` y `pageSize` (máximo 100). Rechaza filtros desconocidos, repetidos o incoherentes. No devuelve imágenes Base64. Las facetas conservan búsqueda/precios/ofertas; universo ignora los tres niveles, categoría conserva universo y subcategoría conserva universo/categoría. Así los conteos permiten cambiar de opción sin quedar limitados a la ya seleccionada.
 
-Los filtros y la paginación viven en la URL. `universe=all` es una convención de la vista (la API omite ese filtro); los enlaces antiguos `offers=1` siguen funcionando. En móvil el panel modal admite Tab/Shift+Tab, Escape y retorno del foco. Comprobar también con teclado y lector de pantalla en el navegador de destino.
+Los filtros y la paginación viven en la URL. Sin parámetros no se preselecciona universo/categoría/subcategoría. `universe=all` se conserva por compatibilidad con enlaces antiguos (la API omite ese filtro); los enlaces antiguos `offers=1` siguen funcionando. En móvil el panel modal admite Tab/Shift+Tab, Escape y retorno del foco. Comprobar también con teclado y lector de pantalla en el navegador de destino.
 
 ## Autenticación y seguridad
 
@@ -198,3 +198,9 @@ Medición desde la salida de Vite, sin leer dist: index-1V6mypez.js 242.73 KiB; 
 ## Smoke post-despliegue
 
 `pnpm smoke -- --url https://tu-origen` (opcional `--api-url https://tu-api`) usa solo GET anónimos y timeouts. Comprueba readiness JSON, frontend y denegación del API admin. Una respuesta HTML 200 de la SPA no demuestra que el guard redirija: se marca pendiente. Las cookies emitidas por un login requieren revisión manual con una cuenta de prueba; el script no crea sesiones ni afecta el limitador. Código 1: fallo; código 2: comprobaciones pendientes. El verificador de atributos se prueba contra el login real del fixture unitario, sin credenciales reales.
+
+## Mapa opcional y catálogo sin selección implícita
+
+Sin parámetros el catálogo muestra todos los universos. Los enlaces filtrados usan query params explícitos. `VITE_MAP_QUERY` configura la dirección pública; vacío oculta el mapa. `VITE_MAP_EMBED_URL` es opcional y admite únicamente HTTPS de www.google.com bajo /maps/embed; sin él se genera una inserción a partir de la dirección. No hay solicitudes a Google hasta pulsar «Ver mapa». Reconstruye tras cambiar estas variables. La CSP actual pertenece solo a la API JSON, no al documento frontend; no se amplía. Si el hosting aplica CSP al HTML, permite `frame-src https://www.google.com`.
+
+Comprobación de esta revisión: lint y 60 tests pasan; el build completo vuelve a generar Prisma sin EPERM. La API local estaba detenida en tres comprobaciones consecutivas; iniciar `pnpm dev:api` y repetir listado/readiness para diagnosticar el 500/503 anterior. No se modificaron pool/timeouts ni se infirió una causa sin evidencia. Revisar manualmente portada, catálogo sin filtros/con filtros/ofertas, drawer de filtros, navbar, detalle/carrito, footer/contacto/mapa y tablas/formularios admin en 320/360/390/768/1024/1440 px, con teclado y Atrás/Adelante; las pruebas estáticas no comprueban el layout renderizado.

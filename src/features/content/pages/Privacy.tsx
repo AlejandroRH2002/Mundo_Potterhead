@@ -15,6 +15,7 @@ export function Privacy() {
     <h2 className="text-xl font-bold">WhatsApp</h2>
     <p>Al pulsar enviar, se abre WhatsApp con un mensaje de productos, cantidades y total. Tú decides enviarlo. El sitio no guarda ese mensaje como pedido; su envío y la conversación posterior se gestionan fuera del sitio mediante WhatsApp/Meta, conforme a sus condiciones y privacidad.</p>
     <p>Para consultas sobre tu cuenta y los datos tratados por el responsable, utiliza el contacto indicado arriba. El almacenamiento del navegador se conserva hasta que lo elimines; las sesiones vencen o se revocan. No se promete una eliminación automática de la cuenta.</p>
+    <p>El mapa no carga servicios externos por defecto. Al elegir cargarlo, Google puede tratar datos técnicos de la visita según sus propias políticas.</p>
     <Link className="shop-link" to="/terms">Ver términos de la cotización</Link>
   </section>;
 }

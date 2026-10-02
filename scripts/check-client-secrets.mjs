@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseEnv } from 'node:util';
 
-const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL', 'VITE_SITE_URL']);
+const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL', 'VITE_SITE_URL', 'VITE_MAP_QUERY', 'VITE_MAP_EMBED_URL']);
 const sources = readdirSync('.').filter(name => /^\.env(?:\.|$)/.test(name));
 const environments = [...sources.map(file => parseEnv(readFileSync(file, 'utf8'))), process.env];
 const secrets = new Set();

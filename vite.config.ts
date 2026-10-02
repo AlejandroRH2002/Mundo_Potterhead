@@ -7,7 +7,7 @@ import { discoveryFiles, siteOrigin } from './shared/seo';
 const root = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig(({ mode }) => {
   const publicEnv = loadEnv(mode, root, 'VITE_');
-  const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL', 'VITE_SITE_URL']);
+  const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL', 'VITE_SITE_URL', 'VITE_MAP_QUERY', 'VITE_MAP_EMBED_URL']);
   for (const key of Object.keys(publicEnv)) {
     if (!allowed.has(key)) throw new Error('Variable pública no autorizada: ' + key + '. Los secretos pertenecen al entorno del servidor.');
   }

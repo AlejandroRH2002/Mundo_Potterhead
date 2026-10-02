@@ -1,3 +1,4 @@
+import { ContactMap } from '../components/ContactMap';
 import { Phone, MapPin, Facebook } from 'lucide-react';
 
 export function Contact() {
@@ -46,8 +47,7 @@ export function Contact() {
                       <MapPin className="h-5 w-5 text-yellow-700" />
                       <div>
                         <p className="font-bold text-gray-800">Ubicación</p>
-                        <p className="text-gray-600"> Calle 63B x 8 local 4 Plaza                                   Cortés. Colonia Cortes Sarmiento.</p>
-                        <p className="text-gray-600">Mérida Yucatán</p>
+                        <p className="text-gray-600">{import.meta.env.VITE_MAP_QUERY || 'Consulta la ubicación por WhatsApp.'}</p>
                       </div>
                     </div>
                   </div>
@@ -83,9 +83,7 @@ export function Contact() {
                 </div>
                 
                 {/* Map */}
-                <div className="w-full h-full min-h-[400px] rounded-lg overflow-hidden">
-                  <a className="inline-block rounded-lg bg-red-950 px-5 py-3 text-white underline" href="https://www.google.com/maps/search/?api=1&amp;query=Mundo+Potterhead+y+Otros+Universos+Merida" target="_blank" rel="noopener noreferrer">Ver ubicación en Google Maps (abre otra pestaña)</a>
-                </div>
+                <ContactMap/>
               </div>
             </div>
           </div>
