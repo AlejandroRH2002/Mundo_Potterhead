@@ -2,25 +2,36 @@ import { Prisma, type PrismaClient, type Product as Row } from '@prisma/client';
 import type { Product } from '../../src/types/product.ts';
 import { productDraftSchema } from '../../shared/productSchema.ts';
 import type { ProductRepository } from '../http/products.ts';
+import { catalogWhere, catalogOrder, catalogFacets } from './catalog.ts';
 
-type CatalogRow = Pick<Row, 'id' | 'name' | 'description' | 'price' | 'imageUrl' | 'category' | 'universe' | 'originalPrice' | 'isOnSale'>;
+type CatalogRow = Pick<Row, 'id' | 'name' | 'description' | 'price' | 'imageUrl' | 'category' | 'subcategory' | 'universe' | 'originalPrice' | 'isOnSale'>;
 function product(row: CatalogRow): Product {
   const draft = productDraftSchema.parse({ name: row.name, description: row.description ?? '', price: Number(row.price),
-    image: row.imageUrl ?? '/images/product-placeholder.svg', category: row.category, universe: row.universe,
+    image: row.imageUrl ?? '/images/product-placeholder.svg', category: row.category, subcategory: row.subcategory, universe: row.universe,
     originalPrice: row.originalPrice === null ? undefined : Number(row.originalPrice), isOnSale: row.isOnSale });
   return { id: row.id, ...draft };
 }
 function data(input: Omit<Product, 'id'>) {
   const draft = productDraftSchema.parse(input);
   return { name: draft.name, description: draft.description, price: new Prisma.Decimal(draft.price.toFixed(2)),
-    imageUrl: draft.image, category: draft.category, universe: draft.universe,
+    imageUrl: draft.image, category: draft.category, subcategory: draft.subcategory ?? null, universe: draft.universe,
     originalPrice: draft.originalPrice === undefined ? null : new Prisma.Decimal(draft.originalPrice.toFixed(2)), isOnSale: draft.isOnSale ?? false };
 }
 export function createDatabaseProducts(db: PrismaClient): ProductRepository {
   return {
+    async search(query) {
+      return db.$transaction(async tx => {
+        const where = catalogWhere(query);
+        const rows = await tx.$queryRaw<CatalogRow[]>(Prisma.sql`SELECT "id", "name", "description", "price", "category", "subcategory", "universe", "originalPrice", "isOnSale",
+          CASE WHEN "imageUrl" LIKE 'data:%' THEN '/images/product-placeholder.svg' ELSE "imageUrl" END AS "imageUrl"
+          FROM "Product" ${where} ORDER BY ${catalogOrder(query)} LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`);
+        const counts = await tx.$queryRaw<{ count: bigint }[]>(Prisma.sql`SELECT COUNT(*) AS count FROM "Product" ${where}`);
+        return { items: rows.map(product), total: Number(counts[0].count), page: query.page, pageSize: query.pageSize, facets: await catalogFacets(tx, query) };
+      }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+    },
     async list() {
       // CASE keeps large legacy data URLs out of both the DB result and JSON list.
-      const rows = await db.$queryRaw<CatalogRow[]>`SELECT "id", "name", "description", "price", "category", "universe", "originalPrice", "isOnSale",
+      const rows = await db.$queryRaw<CatalogRow[]>`SELECT "id", "name", "description", "price", "category", "subcategory", "universe", "originalPrice", "isOnSale",
         CASE WHEN "imageUrl" LIKE 'data:%' THEN '/images/product-placeholder.svg' ELSE "imageUrl" END AS "imageUrl"
         FROM "Product" ORDER BY "createdAt" ASC, "id" ASC`;
       return rows.map(product);

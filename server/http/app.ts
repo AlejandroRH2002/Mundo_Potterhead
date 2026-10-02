@@ -12,6 +12,7 @@ import type { Auth } from '../security/auth.ts';
 import { createLoginLimiter } from '../security/rateLimit.ts';
 import type { ProductRepository } from './products.ts';
 import { productDraftSchema } from '../../shared/productSchema.ts';
+import { parseCatalogQuery, filterCatalog } from '../../shared/catalogQuery.ts';
 
 class HttpError extends Error { status: number; constructor(status: number, message: string) { super(message); this.status = status; } }
 async function body(request: IncomingMessage, limit = 16 * 1024): Promise<Record<string, unknown>> {
@@ -185,7 +186,14 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         try { id = path === '/api/products' ? undefined : decodeURIComponent(path.slice('/api/products/'.length)); }
         catch { throw new HttpError(400, 'Identificador inválido.'); }
         if (method === 'GET') {
-          const result = id ? await products.get(id) : await products.list();
+          if (!id) {
+            let query;
+            try { query = parseCatalogQuery(new URL(request.url ?? '/', 'http://localhost').searchParams); }
+            catch { throw new HttpError(400, 'Filtros de catálogo inválidos. Revisa categoría, subcategoría, precios y paginación.'); }
+            const page = products.search ? await products.search(query) : filterCatalog(await products.list(), query);
+            json(response, 200, { ...page, items: page.items.map(item => ({ ...item, image: item.image.startsWith('data:') ? '/images/product-placeholder.svg' : item.image })) }); return;
+          }
+          const result = await products.get(id);
           if (!result) throw new HttpError(404, 'Producto no encontrado.');
           json(response, 200, Array.isArray(result) ? result.map(item => ({ ...item, image: item.image.startsWith('data:') ? '/images/product-placeholder.svg' : item.image })) : result); return;
         }
