@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, LazyMotion, MotionConfig } from 'framer-motion';
+import { PageTransition } from '@/shared/components/PageTransition';
 import { AuthProvider } from '@/features/auth/services/AuthProvider';
 import { Navbar } from '@/shared/components/Navbar';
 import { Footer } from '@/shared/components/Footer';
@@ -21,6 +22,7 @@ const AddProduct = lazy(() => import('@/features/admin-products/pages/AddProduct
 const Cart = lazy(() => import('@/features/cart/pages/Cart').then(module => ({ default: module.Cart })));
 const Privacy = lazy(() => import('@/features/content/pages/Privacy').then(module => ({ default: module.Privacy })));
 const Terms = lazy(() => import('@/features/content/pages/Terms').then(module => ({ default: module.Terms })));
+const loadMotion = () => import('@/shared/lib/motionFeatures').then(module => module.default);
 
 function NotFound() {
   return <section className="min-h-screen bg-[#4a0001] px-4 py-20 text-center text-white">
@@ -40,7 +42,7 @@ function AnimatedRoutes() {
   const location = useLocation();
   return <Suspense fallback={<div className="min-h-[50vh] p-8 text-center text-white">Cargando…</div>}>
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+      <PageTransition key={location.pathname}><Routes location={location}>
         <Route path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/product/:id" element={<ProductDetail />} />
@@ -62,20 +64,20 @@ function AnimatedRoutes() {
           <Route path="/admin/add-product" element={<AddProduct />} />
         </Route>
         <Route path="*" element={<NotFound />} />
-      </Routes>
+      </Routes></PageTransition>
     </AnimatePresence>
   </Suspense>;
 }
 
 export default function App() {
   return <BrowserRouter>
-    <AuthProvider>
+    <MotionConfig reducedMotion="user"><LazyMotion features={loadMotion} strict><AuthProvider>
       <div className="flex min-h-screen flex-col">
         <a className="skip-link" href="#main-content">Saltar al contenido</a>
         <Navbar />
         <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><AnimatedRoutes /></main>
         <Footer />
       </div>
-    </AuthProvider>
+    </AuthProvider></LazyMotion></MotionConfig>
   </BrowserRouter>;
 }

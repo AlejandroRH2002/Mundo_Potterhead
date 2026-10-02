@@ -6,9 +6,11 @@ export default {
   ],
   theme: {
     extend: {
+      colors: { brand: { burgundy: 'var(--brand-bg)', gold: 'var(--brand-gold)', cream: 'var(--brand-cream)', ink: 'var(--brand-ink)' } },
       fontFamily: {
-        cinzel: ['Cinzel', 'serif'],
-        crimson: ['Crimson Text', 'serif'],
+        cinzel: ['var(--font-display)'],
+        crimson: ['var(--font-display)'],
+        sans: ['var(--font-body)'],
       },
       animation: {
         'shine': 'shine 3s infinite',
