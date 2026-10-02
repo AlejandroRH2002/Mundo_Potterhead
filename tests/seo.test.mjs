@@ -38,3 +38,9 @@ test('HTML transform removes unresolved placeholders and canonical when origin i
     if (previous === undefined) delete process.env.VITE_SITE_URL; else process.env.VITE_SITE_URL = previous;
   }
 });
+
+test('admin metadata uses specific management titles and keeps noindex', () => {
+ assert.equal(routeMetadata('/admin').title, 'Gestión de productos');
+ assert.equal(routeMetadata('/admin/usuarios').title, 'Gestión de usuarios');
+ assert.equal(routeMetadata('/admin/usuarios').noindex, true);
+});

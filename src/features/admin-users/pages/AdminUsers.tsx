@@ -1,10 +1,11 @@
+import { adminLabels } from '../../../../shared/adminLabels';
 import { Link } from 'react-router-dom';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 export function AdminUsers() {
   const users = useAdminUsers();
   return <section className="shop-page">
-    <Link className="shop-link" to="/admin">Volver a productos</Link>
-    <h1 className="shop-title">Administración de usuarios</h1>
+    <Link className="shop-link" to="/admin">{adminLabels.products}</Link>
+    <h1 className="shop-title">{adminLabels.usersTitle}</h1>
     {users.error && <div role="alert" className="shop-error">{users.error} <button className="shop-link" disabled={users.busy || users.loading} onClick={users.retry}>Reintentar listado</button></div>}
     <p role="status">{users.message}</p>
     <form className="shop-panel space-y-4" onSubmit={event => { event.preventDefault(); void users.create(); }}>

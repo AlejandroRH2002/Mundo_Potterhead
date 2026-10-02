@@ -1,10 +1,11 @@
+import { adminLabels } from '../../../../shared/adminLabels';
 import { Link } from 'react-router-dom';
 import { useProductEditor } from '../hooks/useProductEditor';
 import { categories, universes } from '@/features/catalog/services/productValidation';
 import { taxonomy, categoryLabels, universeLabels } from '../../../../shared/catalogTaxonomy.ts';
 export function ProductEditor({ editing = false }: { editing?: boolean }) {
   const editor = useProductEditor(editing);
-  return <section className="shop-page"><Link className="shop-link" to="/admin">← Volver al panel</Link>
+  return <section className="shop-page"><Link className="shop-link" to="/admin">← {adminLabels.products}</Link>
     <h1 className="shop-title">{editing ? 'Editar producto' : 'Nuevo producto'}</h1>
     {editor.error && <p role="alert" className="shop-error">{editor.error}</p>}
     {editor.loading ? <p role="status">Cargando producto…</p> : <form aria-busy={editor.saving || editor.uploading} className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
