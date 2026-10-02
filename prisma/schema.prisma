@@ -41,6 +41,8 @@ model Product {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   @@index([universe, category, subcategory])
+  @@index([createdAt, id])
+  @@index([isOnSale, price])
 }
 
 model Order {

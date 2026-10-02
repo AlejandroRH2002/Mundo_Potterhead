@@ -1,3 +1,4 @@
+import { serialQueue } from '../lib/catalogQueue.ts';
 import { Prisma, type PrismaClient, type Product as Row } from '@prisma/client';
 import type { Product } from '../../src/types/product.ts';
 import { productDraftSchema } from '../../shared/productSchema.ts';
@@ -18,17 +19,36 @@ function data(input: Omit<Product, 'id'>) {
     originalPrice: draft.originalPrice === undefined ? null : new Prisma.Decimal(draft.originalPrice.toFixed(2)), isOnSale: draft.isOnSale ?? false };
 }
 export function createDatabaseProducts(db: PrismaClient): ProductRepository {
+  const queue=serialQueue();
+  const facetsCache=new Map<string,{expires:number;value:Awaited<ReturnType<typeof catalogFacets>>}>();
+  const offersCache=new Map<string,{expires:number;value:Awaited<ReturnType<NonNullable<ProductRepository['search']>>>}>();
+  const invalidate=()=>{facetsCache.clear();offersCache.clear();};
   return {
-    async search(query) {
-      return db.$transaction(async tx => {
-        const where = catalogWhere(query);
-        const rows = await tx.$queryRaw<CatalogRow[]>(Prisma.sql`SELECT "id", "name", "description", "price", "category", "subcategory", "universe", "originalPrice", "isOnSale",
+    async search(query) { return queue(async()=>{
+      let stage='catalog.rows';
+      try {
+        const key=JSON.stringify(query),cachedOffer=offersCache.get(key);
+        if(query.onSale&&cachedOffer&&cachedOffer.expires>Date.now())return cachedOffer.value;
+        const where=catalogWhere(query);
+        const result=await db.$queryRaw<{items:CatalogRow[];total:bigint}[]>(Prisma.sql`WITH page AS (
+          SELECT row_number() OVER (ORDER BY ${catalogOrder(query)}) AS "_position", "id","name","description","price","category","subcategory","universe","originalPrice","isOnSale",
           CASE WHEN "imageUrl" LIKE 'data:%' THEN '/images/product-placeholder.svg' ELSE "imageUrl" END AS "imageUrl"
-          FROM "Product" ${where} ORDER BY ${catalogOrder(query)} LIMIT ${query.pageSize} OFFSET ${(query.page - 1) * query.pageSize}`);
-        const counts = await tx.$queryRaw<{ count: bigint }[]>(Prisma.sql`SELECT COUNT(*) AS count FROM "Product" ${where}`);
-        return { items: rows.map(product), total: Number(counts[0].count), page: query.page, pageSize: query.pageSize, facets: await catalogFacets(tx, query) };
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
-    },
+          FROM "Product" ${where} ORDER BY ${catalogOrder(query)} LIMIT ${query.pageSize} OFFSET ${(query.page-1)*query.pageSize})
+          SELECT COALESCE((SELECT jsonb_agg(to_jsonb(page)-'_position' ORDER BY "_position") FROM page),'[]'::jsonb) AS items,
+          (SELECT COUNT(*) FROM "Product" ${where}) AS total`);
+        stage='catalog.facets';
+        const facetKey=JSON.stringify({...query,page:undefined,pageSize:undefined,sort:undefined});
+        const cached=facetsCache.get(facetKey);
+        const facets=cached&&cached.expires>Date.now()?cached.value:await catalogFacets(db,query);
+        if(!cached||cached.expires<=Date.now()){if(facetsCache.size>=100)facetsCache.delete(facetsCache.keys().next().value!);facetsCache.set(facetKey,{expires:Date.now()+30_000,value:facets});}
+        const value={items:result[0].items.map(product),total:Number(result[0].total),page:query.page,pageSize:query.pageSize,facets};
+        if(query.onSale){if(offersCache.size>=100)offersCache.delete(offersCache.keys().next().value!);offersCache.set(key,{expires:Date.now()+30_000,value});}
+        return value;
+      } catch(error:unknown){
+        if(process.env.NODE_ENV==='development')console.warn(JSON.stringify({event:'catalog.diagnostic',stage,errorClass:error instanceof Prisma.PrismaClientKnownRequestError?'PrismaClientKnownRequestError':error instanceof Error?'Error':'Unknown',code:error instanceof Prisma.PrismaClientKnownRequestError?error.code:'UNKNOWN'}));
+        throw error;
+      }
+    }); },
     async list() {
       // CASE keeps large legacy data URLs out of both the DB result and JSON list.
       const rows = await db.$queryRaw<CatalogRow[]>`SELECT "id", "name", "description", "price", "category", "subcategory", "universe", "originalPrice", "isOnSale",
@@ -37,11 +57,11 @@ export function createDatabaseProducts(db: PrismaClient): ProductRepository {
       return rows.map(product);
     },
     async get(id) { const row = await db.product.findUnique({ where: { id } }); return row ? product(row) : null; },
-    async create(draft) { return product(await db.product.create({ data: data(draft) })); },
+    async create(draft) { const value=product(await db.product.create({ data: data(draft) }));invalidate();return value; },
     async update(id, draft) {
-      try { return product(await db.product.update({ where: { id }, data: data(draft) })); }
+      try { const value=product(await db.product.update({ where: { id }, data: data(draft) }));invalidate();return value; }
       catch (error: unknown) { if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') return null; throw error; }
     },
-    async remove(id) { return (await db.product.deleteMany({ where: { id } })).count > 0; },
+    async remove(id) { const removed=(await db.product.deleteMany({ where: { id } })).count > 0;invalidate();return removed; },
   };
 }

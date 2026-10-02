@@ -16,7 +16,11 @@ async function start() {
   const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   await db.$connect();
   const auth = await createDatabaseAuth(db, config.sessionSecret);
-  const health = createReadiness(async () => { await db.$queryRaw`SELECT 1`; });
+  // One additional connection per replica: probes cannot queue behind catalog traffic.
+  const probeUrl=new URL(config.databaseUrl);probeUrl.searchParams.set('connection_limit','1');
+  const probeDb=new PrismaClient({datasources:{db:{url:probeUrl.toString()}}});
+  await probeDb.$connect();
+  const health = createReadiness(async () => { await probeDb.$queryRaw`SELECT 1`; });
   const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
     limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
@@ -33,7 +37,7 @@ async function start() {
     const deadline = setTimeout(() => process.exit(1), 15_000); deadline.unref();
     setTimeout(() => server.close(() => {
       media?.close();
-      void maintenanceStopped.then(() => db.$disconnect()).then(() => {
+      void maintenanceStopped.then(() => Promise.all([db.$disconnect(),probeDb.$disconnect()])).then(() => {
         clearTimeout(deadline); audit({ event: 'shutdown' });
       }).catch(() => {
         audit({ event: 'failure', code: 'SHUTDOWN_FAILED' }); process.exitCode = 1;

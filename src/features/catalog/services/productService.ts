@@ -1,3 +1,4 @@
+import { deduplicatedRequests } from '@/shared/lib/deduplicate';
 import type { Product } from '@/types/product';
 import { requestJson } from '@/shared/lib/httpClient';
 import { isProduct, isProductList, validateDraft, type ProductDraft } from './productValidation';
@@ -9,7 +10,7 @@ function parseProduct(value: unknown): Product {
   if (!isProduct(value)) throw new Error('El producto recibido no es válido.');
   return value;
 }
-async function search(query: CatalogQuery, signal?: AbortSignal): Promise<CatalogPage> {
+async function loadSearch(query: CatalogQuery, signal?: AbortSignal): Promise<CatalogPage> {
   const value = await requestJson<unknown>(`/products?${serializeCatalogQuery(query)}`, { signal });
   if (!value || typeof value !== 'object' || !('items' in value) || !isProductList(value.items) ||
     !('total' in value) || !Number.isSafeInteger(value.total) || Number(value.total) < 0 ||
@@ -21,6 +22,8 @@ async function search(query: CatalogQuery, signal?: AbortSignal): Promise<Catalo
   }
   return value as CatalogPage;
 }
+const sharedSearch=deduplicatedRequests<CatalogPage>();
+function search(query:CatalogQuery,signal?:AbortSignal){const key=serializeCatalogQuery(query).toString();return sharedSearch(key,transport=>loadSearch(query,transport),signal);}
 export const productService = {
   search,
   subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },

@@ -30,3 +30,10 @@ test('catalog layout is fluid and map has no automatic third party load',()=>{
  const map=readFileSync('src/features/content/components/ContactMap.tsx','utf8');assert.match(map,/useState\(false\)/);assert.match(map,/if\(!query\)return null/);assert.match(map,/loaded\?<iframe/);assert.match(map,/encodeURIComponent\(query\)/);
  for(const path of ['src/features/catalog/components/CatalogFilters.tsx','src/features/catalog/components/FeaturedOffers.tsx','src/features/content/components/ContactMap.tsx'])assert.doesNotMatch(readFileSync(path,'utf8'),/\bw-\[\d+px\]|\bw-screen\b/);
 });
+
+test('identical requests share transport and cancelling one consumer keeps others alive',async()=>{
+ const {createTestViteServer}=await import('./fixtures/viteServer.mjs');const server=await createTestViteServer();
+ try{const {deduplicatedRequests}=await server.ssrLoadModule('/src/shared/lib/deduplicate.ts');const get=deduplicatedRequests();let calls=0,finish,transport;const load=signal=>{calls++;transport=signal;return new Promise(resolve=>{finish=resolve;});};const a=new AbortController(),b=new AbortController();const first=get('same',load,a.signal);const second=get('same',load,b.signal);await Promise.resolve();a.abort();await assert.rejects(first,{name:'AbortError'});assert.equal(calls,1);assert.equal(transport.aborted,false);finish('ok');assert.equal(await second,'ok');
+ const c=new AbortController();const last=get('other',load,c.signal);await Promise.resolve();c.abort();await assert.rejects(last,{name:'AbortError'});assert.equal(transport.aborted,true);
+ }finally{await server.close();}
+});

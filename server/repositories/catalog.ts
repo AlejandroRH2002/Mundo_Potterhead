@@ -28,9 +28,8 @@ export async function catalogFacets(db: Prisma.TransactionClient | PrismaClient,
   { field: 'category' as const, column: Prisma.sql`"category"`, ignore: ['category','subcategory'] },
   { field: 'subcategory' as const, column: Prisma.sql`"subcategory"`, ignore: ['subcategory'] },
  ];
- for (const spec of specs) {
-  const rows = await db.$queryRaw<{ value: string | null; count: bigint }[]>(Prisma.sql`SELECT ${spec.column} AS value, COUNT(*) AS count FROM "Product" ${catalogWhere(query, spec.ignore)} GROUP BY ${spec.column}`);
-  for (const row of rows) if (row.value != null) facets[spec.field][row.value] = Number(row.count);
- }
+ const parts=specs.map(spec=>Prisma.sql`SELECT ${spec.field}::text AS field, ${spec.column} AS value, COUNT(*) AS count FROM "Product" ${catalogWhere(query,spec.ignore)} GROUP BY ${spec.column}`);
+ const rows=await db.$queryRaw<{field:keyof Facets;value:string|null;count:bigint}[]>(Prisma.sql`${Prisma.join(parts,' UNION ALL ')}`);
+ for(const row of rows)if(row.value!=null)facets[row.field][row.value]=Number(row.count);
  return facets;
 }
