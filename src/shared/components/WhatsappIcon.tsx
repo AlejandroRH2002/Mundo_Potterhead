@@ -1,0 +1,1 @@
+export function WhatsappIcon() { return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M21 11.5a9 9 0 0 1-13 8L3 21l1.5-5a9 9 0 1 1 16.5-4.5Z"/><path d="M8 7c-2 3 3 8 6 9l2-2-3-2-1 1-2-2 1-1-2-3Z"/></svg>; }

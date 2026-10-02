@@ -6,3 +6,5 @@ interface ImportMetaEnv {
 }
 
 interface ImportMetaEnv { readonly VITE_SITE_URL?: string; }
+
+declare const __HAS_BANNER_2X__: boolean;

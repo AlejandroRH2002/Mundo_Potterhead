@@ -38,7 +38,7 @@ test('typography is local with one critical preload; motion is lazy and reduced-
 });
 
 test('hero keeps a single accessible title, responsive supplied banner and modal cart keeps the legal notice', () => {
- const hero=read('src/features/catalog/components/StoreHero.tsx');assert.equal((hero.match(/<(?:m\.)?h1\b/g)??[]).length,1);assert.match(hero,/<picture/);assert.match(hero,/<source media=/);assert.match(hero,/alt="" width=\{1920\} height=\{1080\} fetchPriority="high"/);assert.doesNotMatch(hero,/loading="lazy"/);
+ const hero=read('src/features/catalog/components/StoreHero.tsx');assert.equal((hero.match(/<(?:m\.)?h1\b/g)??[]).length,1);assert.match(hero,/<picture/);assert.match(hero,/<source media=/);assert.match(hero,/alt="" width=\{1280\} height=\{720\} fetchPriority="high"/);assert.doesNotMatch(hero,/loading="lazy"/);
  const drawer=read('src/features/cart/components/CartDrawer.tsx');assert.match(drawer,/<dialog/);assert.match(drawer,/showModal/);assert.match(drawer,/onCancel/);assert.match(drawer,/<Cart drawer/);
  const cart=read('src/features/cart/pages/Cart.tsx');assert.ok(cart.indexOf('REVISAR CON ASESOR LEGAL')<cart.indexOf('cart.checkout()'));assert.match(cart,/Total estimado/);
 });
