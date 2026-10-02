@@ -28,14 +28,14 @@ export function serializeCatalogQuery(query: CatalogQuery): URLSearchParams {
 }
 // UI accepts the existing offers=1 links. Invalid bookmarks are recovered by
 // clearing filters, while the API rejects invalid/unknown query parameters.
-export function parseCatalogUrl(params: URLSearchParams, universe: Product['universe']): CatalogQuery {
+export function parseCatalogUrl(params: URLSearchParams, legacyUniverse?: Product['universe']): CatalogQuery {
+ void legacyUniverse; // Old callers remain compatible; never select a default universe.
  const next = new URLSearchParams(params);
  if (next.get('offers') === '1') next.set('onSale', 'true');
- const allOffers = next.get('offers') === '1'; next.delete('offers');
+ next.delete('offers');
  const allUniverses = next.get('universe') === 'all';
  if (allUniverses) next.delete('universe');
- if (!next.has('universe') && !allOffers && !allUniverses) next.set('universe', universe);
- try { return parseCatalogQuery(next); } catch { return catalogQuerySchema.parse({ universe }); }
+ try { return parseCatalogQuery(next); } catch { return catalogQuerySchema.parse({}); }
 }
 export const discount = (product: Product): number => product.isOnSale && product.originalPrice && product.originalPrice > product.price ? (product.originalPrice - product.price) / product.originalPrice : 0;
 export function matchesCatalog(product: Product, query: CatalogQuery, ignore: string[] = []): boolean {

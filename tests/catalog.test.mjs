@@ -37,3 +37,5 @@ test('listing API validates, filters, sorts, paginates and returns cascading fac
   assert.equal(filterCatalog(repository.list(),parseCatalogQuery(new URLSearchParams('q=nada'))).total,0);
  } finally {await new Promise(resolve=>api.close(resolve));}
 });
+
+test('catalog without query never selects a universe, including invalid bookmarks',()=>{assert.equal(parseCatalogUrl(new URLSearchParams(),'harry-potter').universe,undefined);assert.equal(parseCatalogUrl(new URLSearchParams('category=invalid'),'harry-potter').universe,undefined);});

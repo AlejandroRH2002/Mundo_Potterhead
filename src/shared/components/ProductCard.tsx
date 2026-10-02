@@ -21,7 +21,7 @@ export function ProductCard({ product, priority = false, index = 0 }: { product:
     <Link className="product-image-link" to={`/product/${product.id}`}><img src={product.image} alt={product.name} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" width={600} height={400} className="w-full aspect-[3/2] object-cover" />{secondary && <img className="product-secondary" src={secondary} alt="" loading="lazy" decoding="async" width={600} height={400}/>} {isNew && !product.isOnSale && <span className="sale-badge">Nuevo</span>}{product.isOnSale && <span className="sale-badge">Oferta{percentage > 0 ? ` · −${percentage}%` : ''}</span>}</Link>
     <div className="p-5 flex flex-col flex-1">
       {label && <span className="subcategory-chip">{label}</span>}
-      <Link className="font-cinzel text-xl font-bold" to={`/product/${product.id}`}>{product.name}</Link>
+      <Link className="font-cinzel text-xl font-bold line-clamp-2" to={`/product/${product.id}`}>{product.name}</Link>
       <p className="line-clamp-2 my-3 product-description">{product.description}</p>
       <p className="availability-note">Disponibilidad por confirmar</p>
       <p className="text-xl font-bold mb-3">{money(product.price)} {product.isOnSale && product.originalPrice && <span className="text-sm text-gray-600 line-through">{money(product.originalPrice)}</span>}</p>

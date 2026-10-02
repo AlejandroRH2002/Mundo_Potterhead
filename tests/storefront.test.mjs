@@ -24,3 +24,9 @@ test('gallery and card media accept only valid available extra images',async()=>
  const {createTestViteServer}=await import('./fixtures/viteServer.mjs');const server=await createTestViteServer();
  try{const {productImages}=await server.ssrLoadModule('/src/shared/lib/productMedia.ts');const product={image:'/images/product-placeholder.svg'};assert.deepEqual(productImages(product),[product.image]);assert.deepEqual(productImages({...product,images:[product.image,'javascript:bad','https://example.invalid/second.webp']}),[product.image,'https://example.invalid/second.webp']);}finally{await server.close();}
 });
+
+test('catalog layout is fluid and map has no automatic third party load',()=>{
+ const css=readFileSync('src/index.css','utf8');assert.match(css,/catalog-layout\{display:grid;grid-template-columns:minmax\(0,1fr\)/);assert.match(css,/nav-menu-toggle\{display:none!important/);
+ const map=readFileSync('src/features/content/components/ContactMap.tsx','utf8');assert.match(map,/useState\(false\)/);assert.match(map,/if\(!query\)return null/);assert.match(map,/loaded\?<iframe/);assert.match(map,/encodeURIComponent\(query\)/);
+ for(const path of ['src/features/catalog/components/CatalogFilters.tsx','src/features/catalog/components/FeaturedOffers.tsx','src/features/content/components/ContactMap.tsx'])assert.doesNotMatch(readFileSync(path,'utf8'),/\bw-\[\d+px\]|\bw-screen\b/);
+});

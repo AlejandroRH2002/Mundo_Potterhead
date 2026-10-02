@@ -31,12 +31,11 @@ export function useCatalog(universe: Product['universe']) {
     for (const [name, value] of Object.entries(patch)) if (value === undefined || value === '') next.delete(name); else next.set(name, value);
     try {
       const normalized = serializeCatalogQuery(parseCatalogQuery(next));
-      if (!normalized.has('universe')) normalized.set('universe', 'all');
       setParams(normalized); setInputError('');
     }
     catch { setInputError('Revisa el rango de precios y los filtros seleccionados.'); }
   };
-  const reset = () => { setInputError(''); setParams(serializeCatalogQuery(parseCatalogQuery(new URLSearchParams({ universe })))); };
+  const reset = () => { setInputError(''); setParams(new URLSearchParams()); };
   const current = state.key === key;
   return { query: query as CatalogQuery, change, reset, loading: !current || state.loading, error: inputError || (current ? state.error : ''), items: current ? state.data?.items ?? [] : [], total: current ? state.data?.total ?? 0 : 0, facets: current ? state.data?.facets : undefined, offersOnly: query.onSale === true };
 }
