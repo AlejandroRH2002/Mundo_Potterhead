@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 export function AdminUsers() {
   const users = useAdminUsers();
-  return <section className="shop-page">
+  return <section className="shop-page admin-page">
     <Link className="shop-link" to="/admin">{adminLabels.products}</Link>
     <h1 className="shop-title">{adminLabels.usersTitle}</h1>
     {users.error && <div role="alert" className="shop-error">{users.error} <button className="shop-link" disabled={users.busy || users.loading} onClick={users.retry}>Reintentar listado</button></div>}
@@ -20,19 +20,19 @@ export function AdminUsers() {
       </fieldset>
     </form>
     {users.loading ? <p role="status">Cargando usuarios…</p> : !users.error && <>
-      {!users.data.users.length ? <p>No hay usuarios en esta página.</p> : <div className="overflow-x-auto">
-        <table className="w-full text-left"><caption className="sr-only">Usuarios y permisos</caption>
+      {!users.data.users.length ? <p>No hay usuarios en esta página.</p> : <div className="admin-table-scroll">
+        <table className="admin-table"><caption className="sr-only">Usuarios y permisos</caption>
           <thead><tr>{['Nombre', 'Correo', 'Rol', 'Estado', 'Acciones'].map(label => <th className="p-3" scope="col" key={label}>{label}</th>)}</tr></thead>
           <tbody>{users.data.users.map(user => <tr key={user.id} className="border-t border-white/30">
-            <th scope="row" className="p-3">{user.name || 'Sin nombre'}{user.id === users.ownId && ' (tu cuenta)'}</th><td className="p-3">{user.email}</td><td className="p-3">{user.role === 'admin' ? 'Administrador' : 'Cliente'}</td><td className="p-3">{user.isActive ? 'Activo' : 'Inactivo'}</td>
-            <td className="p-3 space-x-3">
+            <th scope="row" className="p-3"><span className="line-clamp-2 break-words">{user.name || 'Sin nombre'}{user.id === users.ownId && ' (tu cuenta)'}</span></th><td className="p-3">{user.email}</td><td className="p-3"><span className="admin-chip">{user.role === 'admin' ? 'Administrador' : 'Cliente'}</span></td><td className="p-3"><span className="admin-chip">{user.isActive ? 'Activo' : 'Inactivo'}</span></td>
+            <td className="p-3"><div className="admin-actions">
               <button className="shop-link disabled:opacity-50" disabled={users.busy || user.id === users.ownId} aria-label={(user.isActive ? 'Desactivar ' : 'Activar ') + (user.name || user.email)} onClick={() => void users.change(user, { isActive: !user.isActive })}>{user.isActive ? 'Desactivar' : 'Activar'}</button>
               <button className="shop-link disabled:opacity-50" disabled={users.busy || user.id === users.ownId} aria-label={'Cambiar rol de ' + (user.name || user.email)} onClick={() => void users.change(user, { role: user.role === 'admin' ? 'user' : 'admin' })}>Cambiar a {user.role === 'admin' ? 'Cliente' : 'Administrador'}</button>
-            </td>
+            </div></td>
           </tr>)}</tbody>
         </table>
       </div>}
-      <nav aria-label="Páginas de usuarios" className="flex gap-4 my-5">
+      <nav aria-label="Páginas de usuarios" className="admin-actions my-5">
         <button className="shop-button" disabled={users.busy || users.page <= 1} onClick={() => users.setPage(users.page - 1)}>Anterior</button>
         <span>Página {users.page} · {users.data.total} usuarios</span>
         <button className="shop-button" disabled={users.busy || users.page * users.data.pageSize >= users.data.total} onClick={() => users.setPage(users.page + 1)}>Siguiente</button>

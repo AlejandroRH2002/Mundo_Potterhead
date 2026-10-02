@@ -305,3 +305,29 @@ img{max-width:100%}.product-card h3{display:-webkit-box;-webkit-line-clamp:2;-we
 @media(min-width:1024px){.nav-search-shell{flex:0 1 clamp(10rem,18vw,18rem);margin-left:0}.nav-search-toggle{display:none!important}.nav-search-shell .nav-search{display:flex;position:static;padding:0;box-shadow:none;max-width:none}.navigation-links{font-size:.85rem}.site-nav .nav-brand span{max-width:10rem}}
 
 @media(max-width:1023px){.site-nav .nav-brand{flex:1;min-width:0}.nav-menu-toggle,.nav-search-shell{flex-shrink:0}.nav-search-shell{margin-left:0}}
+
+/* Admin keeps the storefront palette; mobile rows become cards. */
+.admin-page { min-width: 0; max-width: 100%; }
+.admin-page label, .admin-page fieldset { min-width: 0; }
+.admin-page input, .admin-page select, .admin-page textarea { min-width: 0; max-width: 100%; }
+.admin-page .shop-error { overflow-wrap: anywhere; }
+.admin-table-scroll { max-width: 100%; overflow-x: auto; }
+.admin-table { width: 100%; table-layout: fixed; text-align: left; }
+.admin-table th, .admin-table td { min-width: 0; padding: .8rem; overflow-wrap: anywhere; vertical-align: top; }
+.admin-table tbody tr { border-top: 1px solid var(--brand-line); }
+.admin-thumbnail { width: 12%; }
+.admin-thumbnail img { width: 5rem; max-width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: .5rem; }
+.admin-name { width: 34%; }
+.admin-preview { width: 10rem; max-width: 100%; aspect-ratio: 1; }
+.admin-actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.admin-actions > button, .admin-actions > a { min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; padding: .5rem .7rem; overflow-wrap: anywhere; }
+.admin-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .4rem; }
+.admin-chips > span, .admin-chip { display: inline-block; max-width: 100%; border: 1px solid var(--brand-line); border-radius: 1rem; padding: .15rem .5rem; font-size: .8rem; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+ .admin-table, .admin-table tbody { display: block; }
+ .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+ .admin-table tbody tr { display: grid; grid-template-columns: minmax(0,1fr); background: var(--brand-panel); border: 1px solid var(--brand-line); border-radius: .75rem; padding: .75rem; margin: 1rem 0; }
+ .admin-table th, .admin-table td { display: block; width: auto; padding: .35rem; }
+ .admin-page .shop-panel { padding: 1rem; }
+}
+@media (max-width: 360px) { .admin-actions { flex-direction: column; align-items: stretch; } }

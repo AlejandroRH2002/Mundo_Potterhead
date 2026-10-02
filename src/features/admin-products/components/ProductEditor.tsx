@@ -5,7 +5,7 @@ import { categories, universes } from '@/features/catalog/services/productValida
 import { taxonomy, categoryLabels, universeLabels } from '../../../../shared/catalogTaxonomy.ts';
 export function ProductEditor({ editing = false }: { editing?: boolean }) {
   const editor = useProductEditor(editing);
-  return <section className="shop-page"><Link className="shop-link" to="/admin">← {adminLabels.products}</Link>
+  return <section className="shop-page admin-page"><Link className="shop-link" to="/admin">← {adminLabels.products}</Link>
     <h1 className="shop-title">{editing ? 'Editar producto' : 'Nuevo producto'}</h1>
     {editor.error && <p role="alert" className="shop-error">{editor.error}</p>}
     {editor.loading ? <p role="status">Cargando producto…</p> : <form aria-busy={editor.saving || editor.uploading} className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
@@ -19,8 +19,8 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
       <label className="flex items-center gap-3"><input type="checkbox" name="isOnSale" checked={editor.draft.isOnSale ?? false} onChange={editor.change} /> Activar descuento</label>
       <label>Ruta o URL HTTPS de imagen<input className="shop-input" name="image" required value={editor.draft.image} onChange={editor.change} /></label>
       <label>Subir imagen<input className="shop-input" type="file" disabled={editor.uploading || editor.saving} accept="image/png,image/jpeg,image/webp" onChange={event => void editor.upload(event.target.files?.[0])} /></label>
-      <img src={editor.draft.image} alt="Vista previa del producto" className="h-40 w-40 rounded object-cover" />
-      <div className="self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
+      <img src={editor.draft.image} alt="Vista previa del producto" className="admin-preview rounded object-cover" />
+      <div className="admin-actions self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
     </form>}
   </section>;
 }
