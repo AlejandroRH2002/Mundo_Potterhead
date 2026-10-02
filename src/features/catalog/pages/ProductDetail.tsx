@@ -3,6 +3,7 @@ import { useProductDetail } from '../hooks/useCatalog';
 import { useAddToCart } from '@/features/cart/hooks/useCart';
 import { money } from '@/shared/lib/money';
 import { usePageMetadata } from '@/shared/lib/usePageMetadata';
+import { taxonomy } from '../../../../shared/catalogTaxonomy.ts';
 export function ProductDetail() {
   const detail = useProductDetail();
   const cart = useAddToCart();
@@ -15,9 +16,10 @@ export function ProductDetail() {
     <Link to="/" className="shop-link">← Volver al catálogo</Link>
     <article className="shop-panel grid gap-8 md:grid-cols-2">
       <img loading="eager" fetchPriority="high" decoding="async" width={1200} height={1200} className="w-full aspect-square rounded-lg object-contain" src={product.image} alt={product.name} />
-      <div><h1 className="shop-title">{product.name}</h1><p className="whitespace-pre-line">{product.description}</p>
+      <div>{product.subcategory && <span className="eyebrow">{taxonomy[product.category].find(item=>item.slug===product.subcategory)?.label}</span>}<h1 className="shop-title">{product.name}</h1><p className="whitespace-pre-line">{product.description}</p>
         <p className="text-3xl font-bold text-amber-300 my-5">{money(product.price)}</p>
         {product.isOnSale && product.originalPrice && <p className="line-through mb-4">{money(product.originalPrice)}</p>}
+        <p className="my-4">Disponibilidad por confirmar. Te ayudaremos a coordinar tu selección por WhatsApp.</p>
         <button className="shop-button" onClick={() => cart.add(product.id)}>Agregar al carrito</button>
         <Link className="shop-link ml-6" to="/cart">Ver carrito</Link>
         <p role="status" className="mt-4">{cart.message}</p>

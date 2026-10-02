@@ -1,4 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { m, useReducedMotion } from 'framer-motion';
 import { categories, universes, taxonomy, categoryLabels, universeLabels } from '../../../../shared/catalogTaxonomy.ts';
 import type { CatalogQuery, Facets } from '../../../../shared/catalogQuery.ts';
 type Props = { query: CatalogQuery; facets?: Facets; change: (patch: Record<string, string | undefined>) => void; reset: () => void };
@@ -8,7 +9,7 @@ function Fields({ query, facets, change, reset }: Props) {
   change({ q: String(values.get('q') ?? ''), minPrice: String(values.get('minPrice') ?? ''), maxPrice: String(values.get('maxPrice') ?? '') });
  };
  const count = (field: keyof Facets, slug: string) => facets?.[field][slug] ?? 0;
- return <form key={`${query.q}-${query.minPrice}-${query.maxPrice}`} onSubmit={submit} className="grid gap-4">
+ return <form key={`${query.q}-${query.minPrice}-${query.maxPrice}`} onSubmit={submit} className="catalog-filter-fields grid gap-4">
   <label>Universo<select className="shop-input" value={query.universe ?? ''} onChange={event => change({ universe: event.target.value })}><option value="">Todos los universos</option>{universes.map(slug => <option key={slug} value={slug}>{universeLabels[slug]} ({count('universe',slug)})</option>)}</select></label>
   <label>Categoría<select className="shop-input" value={query.category ?? ''} onChange={event => change({ category: event.target.value })}><option value="">Todas las categorías</option>{categories.map(slug => <option key={slug} value={slug}>{categoryLabels[slug]} ({count('category',slug)})</option>)}</select></label>
   <label>Subcategoría<select className="shop-input" disabled={!query.category} value={query.subcategory ?? ''} onChange={event => change({ subcategory: event.target.value })}><option value="">Todas las subcategorías</option>{query.category && taxonomy[query.category].map(item => <option key={item.slug} value={item.slug}>{item.label} ({count('subcategory',item.slug)})</option>)}</select></label>
@@ -21,6 +22,7 @@ function Fields({ query, facets, change, reset }: Props) {
  </form>;
 }
 export function CatalogFilters(props: Props) {
+ const reduce = useReducedMotion();
  const dialog = useRef<HTMLDialogElement>(null); const trigger = useRef<HTMLButtonElement>(null); const [open, setOpen] = useState(false);
  const close = () => { dialog.current?.close(); };
  const chips: { key: string; label: string }[] = [];
@@ -33,8 +35,8 @@ export function CatalogFilters(props: Props) {
  if (query.minPrice !== undefined) chips.push({ key: 'minPrice', label: `Desde $${query.minPrice}` });
  if (query.maxPrice !== undefined) chips.push({ key: 'maxPrice', label: `Hasta $${query.maxPrice}` });
  return <>
-  <div aria-label="Filtros activos" className="flex flex-wrap gap-2 mb-4">{chips.map(chip=><button type="button" className="shop-link" key={chip.key} aria-label={`Quitar filtro: ${chip.label}`} onClick={()=>props.change({[chip.key]:undefined})}>{chip.label} ×</button>)}</div>
-  <div className="hidden md:block shop-panel mb-6"><Fields {...props}/></div>
+  <div aria-label="Filtros activos" className="filter-chips">{chips.map(chip=><button type="button" className="shop-link" key={chip.key} aria-label={`Quitar filtro: ${chip.label}`} onClick={()=>props.change({[chip.key]:undefined})}>{chip.label} ×</button>)}</div>
+  <details className="hidden md:block catalog-filter-bar"><summary>Filtros y orden · ajusta tu selección</summary><Fields {...props}/></details>
   <button ref={trigger} type="button" className="shop-button md:hidden mb-4" aria-expanded={open} aria-controls="catalog-filter-dialog" onClick={()=>{dialog.current?.showModal();setOpen(true);}}>Filtros y orden</button>
   {/* Native modal dialog traps focus and makes the surrounding page inert. */}
   <dialog ref={dialog} id="catalog-filter-dialog" aria-labelledby="catalog-filter-title" className="catalog-filter-drawer m-0 ml-auto h-dvh max-h-none w-[min(90vw,24rem)] bg-slate-950 text-white p-5 backdrop:bg-black/70" onCancel={event=>{event.preventDefault();close();}} onClose={()=>{setOpen(false);trigger.current?.focus();}} onKeyDown={event=>{
@@ -45,7 +47,7 @@ export function CatalogFilters(props: Props) {
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
    }
   }}>
-   <h2 id="catalog-filter-title" className="text-xl mb-3">Filtrar catálogo</h2><button type="button" className="shop-link mb-4" onClick={close}>Cerrar filtros</button><Fields {...props}/>
+   <m.div initial={false} animate={{ x: open ? 0 : 64, opacity: open ? 1 : 0 }} transition={reduce ? {duration:0} : { type:'spring', stiffness:300, damping:32 }}><h2 id="catalog-filter-title" className="text-xl mb-3">Filtrar catálogo</h2><button type="button" className="shop-link mb-4" onClick={close}>Cerrar filtros</button><Fields {...props}/></m.div>
   </dialog>
  </>;
 }
