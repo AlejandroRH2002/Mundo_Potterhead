@@ -1,5 +1,15 @@
 # Mundo Potterhead
 
+## Revisión visual del escaparate
+
+Tokens burdeos/dorado/crema en `src/index.css` y Tailwind; Cinzel y DM Sans autoalojadas con licencias OFL en `public/fonts`. No había assets de marca en `public/brand`: la portada usa texto real y SVG ornamentales originales, con variantes desktop/móvil, sin personajes. Sustituirlos por los assets autorizados requiere revisar recorte, dimensiones y tratamiento del h1 si el nombre aparece dentro de la imagen.
+
+Animaciones mediante `LazyMotion` con `domAnimation` diferido, transform/opacity y movimiento reducido. La reorganización de tarjetas usa FLIP y `AnimatePresence`, sin cargar `domMax`. El carrito lateral se carga al abrirlo y reutiliza la vista y el checkout existentes; `/cart` sigue disponible. La API no expone stock: se muestra disponibilidad por confirmar, sin inventar estados agotados.
+
+Antes de dar el visto bueno, revisar manualmente en escritorio y móvil: portada/CTAs/categorías, ofertas, catálogo/facetas/chips/paginación, skeletons/errores/vacío, detalle de producto, alta rápida y contador, drawer y `/cart` (cantidades, total, aviso legal, WhatsApp), footer/legales/contacto, login/perfil y formularios admin. Usar Tab/Shift+Tab/Escape, zoom 200%, lector de pantalla y movimiento reducido. Verificar que los diálogos devuelvan el foco y que la barra fija no tape los controles; comprobar CLS con DevTools y la carga local de fuentes. Los tests verifican contraste de los tokens sobre fondos sólidos; no sustituyen esta revisión renderizada.
+
+Referencia anterior al rediseño: chunk principal 79,70 kB gzip. El límite acordado permite como máximo +60 KiB gzip; las cifras del build se obtienen de su salida, sin inspeccionar archivos generados.
+
 SPA React/TypeScript/Vite y API Node independiente con PostgreSQL/Prisma. Usuarios, hashes scrypt, sesiones, límites de intentos y catálogo se guardan en PostgreSQL. Las implementaciones en memoria existen únicamente como fixtures de pruebas.
 
 ## Arranque local

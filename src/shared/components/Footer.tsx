@@ -1,93 +1,15 @@
 import { Link } from 'react-router-dom';
-
 export function Footer() {
-  const currentYear = new Date().getFullYear();
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  };
-
-  return (
-    <footer className="bg-[#740001] text-white py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="grid md:grid-cols-3 gap-8 mb-8">
-          <div>
-            <h3 className="text-xl font-cinzel font-bold text-[#FDB813] mb-4">Mundo Potterhead</h3>
-            <p className="text-[#FDB813]/80 text-sm">
-              Tu destino mágico para productos exclusivos del mundo de Harry Potter y otros universos fantásticos.
-            </p>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-cinzel font-bold text-[#FDB813] mb-4">Enlaces Rápidos</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link 
-                  to="/" 
-                  onClick={scrollToTop}
-                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
-                >
-                  Inicio
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/contact" 
-                  onClick={scrollToTop}
-                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
-                >
-                  Contacto
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/?category=accessories" 
-                  onClick={scrollToTop}
-                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
-                >
-                  Productos
-                </Link>
-              </li>
-            </ul>
-          </div>
-          
-          <div>
-            <h3 className="text-xl font-cinzel font-bold text-[#FDB813] mb-4">Legal</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link 
-                  to="/privacy" 
-                  onClick={scrollToTop}
-                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
-                >
-                  Política de Privacidad
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  to="/terms" 
-                  onClick={scrollToTop}
-                  className="text-[#FDB813]/80 hover:text-[#FDB813] transition-colors"
-                >
-                  Términos y Condiciones
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-        
-        <div className="border-t border-[#FDB813]/20 pt-8 text-center">
-          <p className="text-[#FDB813]/80 text-sm">
-            © {currentYear} Mundo Potterhead. Todos los derechos reservados.
-          </p>
-          <p className="text-[#FDB813]/60 text-xs mt-2">
-            HARRY POTTER, personajes, nombres y todos los elementos relacionados son marcas registradas de Warner Bros. Entertainment Inc. Derechos de autor © JK Rowling.
-          </p>
-        </div>
-      </div>
-    </footer>
-  );
+ const name = import.meta.env.VITE_LEGAL_NAME?.trim();
+ const email = import.meta.env.VITE_LEGAL_EMAIL?.trim();
+ const validEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+ const phone = import.meta.env.VITE_WHATSAPP_NUMBER ?? '';
+ const validPhone = /^[1-9]\d{7,14}$/.test(phone);
+ return <footer className="site-footer"><div className="footer-inner"><div className="footer-grid">
+  <div><div className="footer-brand"><span className="brand-monogram" aria-hidden="true">mp</span><h2>Mundo Potterhead</h2></div><p>Para quienes encuentran magia en los pequeños detalles. Tu selección, tu historia.</p><p className="mt-4">Catálogo y cotizaciones por WhatsApp. Sin cobros en el sitio.</p></div>
+  <div><h3>Descubre</h3><ul><li><Link to="/#catalogo">Catálogo</Link></li><li><Link to="/?offers=1#catalogo">Ofertas</Link></li><li><Link to="/otros-universos">Otros universos</Link></li><li>{validPhone ? <a href={'https://wa.me/'+phone} target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp ↗</a> : <Link to="/contact">Contacto</Link>}</li></ul></div>
+  <div><h3>Información</h3><ul><li><Link to="/privacy">Aviso de privacidad</Link></li><li><Link to="/terms">Términos de la cotización</Link></li><li><Link to="/contact">Ayuda y contacto</Link></li></ul>
+   {/* REVISAR CON ASESOR LEGAL */}
+   <p className="mt-4">Responsable: {name || 'Pendiente de configurar antes de publicar.'}</p><p>{validEmail ? <a href={'mailto:'+email}>{email}</a> : 'Contacto legal pendiente de configurar.'}</p>
+  </div></div><div className="footer-bottom"><p>© {new Date().getFullYear()} Mundo Potterhead</p><p>La disponibilidad y el envío se confirman antes de aceptar la cotización.</p></div></div></footer>;
 }

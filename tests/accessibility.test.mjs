@@ -23,3 +23,22 @@ test('base text palette has at least 4.5:1 contrast (not a rendered-page audit)'
     assert.ok((Math.max(a,b) + 0.05) / (Math.min(a,b) + 0.05) >= 4.5);
   }
 });
+
+test('new theme text tokens meet AA contrast on their intended solid surfaces', () => {
+ const css=read('src/index.css');const token=name=>{const match=css.match(new RegExp('--brand-'+name+': #([a-f0-9]{6})'));assert.ok(match,name);return match[1];};
+ for(const [foreground,background] of [['cream','bg'],['gold','bg'],['muted','bg'],['cream','panel'],['gold','panel'],['ink','cream'],['ink-muted','cream'],['ink','gold']]) {
+  const a=luminance(token(foreground)),b=luminance(token(background));assert.ok((Math.max(a,b)+.05)/(Math.min(a,b)+.05)>=4.5,foreground+'/'+background);
+ }
+});
+
+test('typography is local with one critical preload; motion is lazy and reduced-motion aware', () => {
+ const css=read('src/index.css'),html=read('index.html');assert.equal((html.match(/as="font"/g)??[]).length,1);assert.match(css,/font-display: swap/);assert.doesNotMatch(css,/url\(['"]?https?:/);
+ assert.match(read('src/app/App.tsx'),/LazyMotion features={loadMotion} strict/);assert.match(read('src/app/App.tsx'),/reducedMotion="user"/);assert.match(read('src/shared/lib/motionFeatures.ts'),/domAnimation/);
+ assert.doesNotMatch(read('src/shared/components/PageTransition.tsx'),/filter:|background:/);assert.match(css,/prefers-reduced-motion: reduce/);
+});
+
+test('hero has one real h1, responsive eager decorative art and modal cart keeps the legal notice', () => {
+ const hero=read('src/features/catalog/components/StoreHero.tsx');assert.equal((hero.match(/<h1\b/g)??[]).length,1);assert.match(hero,/<picture/);assert.match(hero,/<source media=/);assert.match(hero,/alt="" width="1080" height="640" fetchPriority="high"/);assert.doesNotMatch(hero,/loading="lazy"/);
+ const drawer=read('src/features/cart/components/CartDrawer.tsx');assert.match(drawer,/<dialog/);assert.match(drawer,/showModal/);assert.match(drawer,/onCancel/);assert.match(drawer,/<Cart drawer/);
+ const cart=read('src/features/cart/pages/Cart.tsx');assert.ok(cart.indexOf('REVISAR CON ASESOR LEGAL')<cart.indexOf('cart.checkout()'));assert.match(cart,/Total estimado/);
+});

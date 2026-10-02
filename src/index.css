@@ -141,3 +141,7 @@ h1, h2, h3 { text-wrap: balance; }
 .discount-strip { min-height: 184px; }
 @media (max-width: 767px) { .discount-strip { min-height: 320px; align-content: center; } }
 @media (min-width: 768px) and (max-width: 1023px) { :root { --nav-height: 8.5rem; } }
+
+.cart-dialog, .catalog-filter-drawer { overscroll-behavior: contain; }
+
+.cart-dialog, .catalog-filter-drawer { overflow-x: hidden; }
