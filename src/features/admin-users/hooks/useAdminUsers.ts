@@ -10,6 +10,9 @@ export function useAdminUsers() {
   const [revision, setRevision] = useState(0);
   const [data, setData] = useState<UserList>({ users: [], total: 0, page: 1, pageSize: 20 });
   const [draft, setDraft] = useState<CreateUser>(blank);
+  const [formOpen, setFormOpen] = useState(true);
+  const closeForm = () => { if (locked.current) return; setDraft(blank); setFormOpen(false); };
+  const openForm = () => { setDraft(blank); setFormOpen(true); };
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const locked = useRef(false);
@@ -34,12 +37,12 @@ export function useAdminUsers() {
   };
   const create = async () => {
     if (!window.confirm('¿Crear esta cuenta con rol ' + (draft.role === 'admin' ? 'Administrador' : 'Cliente') + '?')) return;
-    await perform(async () => { await userService.create(draft); setDraft(blank); });
+    await perform(async () => { await userService.create(draft); setDraft(blank); setFormOpen(false); });
   };
   const change = async (target: ManagedUser, patch: ChangeUser) => {
     const action = patch.role ? 'cambiar su rol a ' + (patch.role === 'admin' ? 'Administrador' : 'Cliente') : patch.isActive ? 'activar su cuenta' : 'desactivar su cuenta';
     if (!window.confirm('¿Confirmas ' + action + ' para ' + (target.name || target.email) + '? Los cambios de rol o desactivación cierran sus sesiones.')) return;
     await perform(() => userService.change(target.id, patch));
   };
-  return { data, draft, setDraft, page, setPage, loading, busy, error, message, create, change, ownId: user?.id, retry: () => setRevision(value => value + 1) };
+  return { formOpen, closeForm, openForm, data, draft, setDraft, page, setPage, loading, busy, error, message, create, change, ownId: user?.id, retry: () => setRevision(value => value + 1) };
 }

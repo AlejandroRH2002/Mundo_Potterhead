@@ -1,3 +1,4 @@
+import { InitialPassword } from '../components/InitialPassword';
 import { adminLabels } from '../../../../shared/adminLabels';
 import { Link } from 'react-router-dom';
 import { useAdminUsers } from '../hooks/useAdminUsers';
@@ -8,17 +9,19 @@ export function AdminUsers() {
     <h1 className="shop-title">{adminLabels.usersTitle}</h1>
     {users.error && <div role="alert" className="shop-error">{users.error} <button className="shop-link" disabled={users.busy || users.loading} onClick={users.retry}>Reintentar listado</button></div>}
     <p role="status">{users.message}</p>
-    <form className="shop-panel space-y-4" onSubmit={event => { event.preventDefault(); void users.create(); }}>
+    {!users.formOpen && <button className="shop-button" onClick={users.openForm}>Crear usuario</button>}
+    {users.formOpen && <form className="shop-panel space-y-4" onSubmit={event => { event.preventDefault(); void users.create(); }}>
       <h2 className="text-xl font-bold">Crear usuario</h2>
-      <fieldset disabled={users.busy} className="grid gap-4 md:grid-cols-2">
+      <p id="account-delivery-note">El correo es el identificador de acceso: no se verifica ni se envían correos. Entrega la contraseña a la persona por un canal seguro.</p>
+      <fieldset disabled={users.busy} aria-describedby="account-delivery-note" className="grid gap-4 md:grid-cols-2">
         <legend className="sr-only">Datos de la nueva cuenta</legend>
         <label>Nombre<input className="shop-input" required maxLength={150} value={users.draft.name} onChange={event => users.setDraft({ ...users.draft, name: event.target.value })} /></label>
         <label>Correo<input className="shop-input" required type="email" maxLength={254} autoComplete="off" value={users.draft.email} onChange={event => users.setDraft({ ...users.draft, email: event.target.value })} /></label>
-        <label>Contraseña inicial (mínimo 20 caracteres)<input className="shop-input" required type="password" minLength={20} maxLength={256} autoComplete="new-password" value={users.draft.password} onChange={event => users.setDraft({ ...users.draft, password: event.target.value })} /></label>
+        <InitialPassword value={users.draft.password} onChange={password => users.setDraft({ ...users.draft, password })} />
         <label>Rol<select className="shop-input" value={users.draft.role} onChange={event => users.setDraft({ ...users.draft, role: event.target.value === 'admin' ? 'admin' : 'user' })}><option value="user">Cliente</option><option value="admin">Administrador</option></select></label>
-        <button className="shop-button" type="submit">{users.busy ? 'Guardando…' : 'Crear usuario'}</button>
+        <div className="admin-actions md:col-span-2"><button className="shop-button" type="submit">{users.busy ? 'Guardando…' : 'Crear usuario'}</button><button className="shop-link" type="button" onClick={users.closeForm}>Cancelar y limpiar</button></div>
       </fieldset>
-    </form>
+    </form>}
     {users.loading ? <p role="status">Cargando usuarios…</p> : !users.error && <>
       {!users.data.users.length ? <p>No hay usuarios en esta página.</p> : <div className="admin-table-scroll">
         <table className="admin-table"><caption className="sr-only">Usuarios y permisos</caption>
