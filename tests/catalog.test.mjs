@@ -45,4 +45,16 @@ test('concurrent database listings serialize consumers and aggregate facets once
  const db={$queryRaw:async sql=>{active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,4));active--;if(sql.text.includes('UNION ALL')){facets++;return [{field:'category',value:'clothing',count:1n}];}return [{items:[{...draft,id:'fixture',imageUrl:draft.image,originalPrice:null,isOnSale:false}],total:1n}];}};
  const repository=createDatabaseProducts(db);const q=parseCatalogQuery(new URLSearchParams());const pages=await Promise.all(Array.from({length:6},()=>repository.search(q)));
  assert.equal(pages.length,6);assert.equal(max,1);assert.equal(facets,1);assert.equal(pages[0].facets.category.clothing,1);
+ const auth=await createAuth([]);const api=createApi({auth,products:repository,origin:'http://localhost:5173',logger:()=>{}});await new Promise(resolve=>api.listen(0,'127.0.0.1',resolve));
+ try{const responses=await Promise.all(Array.from({length:6},()=>fetch('http://127.0.0.1:'+api.address().port+'/api/products')));assert.ok(responses.every(r=>r.status===200));assert.equal(max,1);assert.equal(facets,1);}finally{await new Promise(resolve=>api.close(resolve));}
+});
+
+test('search includes controlled category, universe and subcategory labels',()=>{
+ const products=[{...draft,id:'x'}];for(const q of ['suéteres','ropa','Harry Potter'])assert.equal(filterCatalog(products,parseCatalogQuery(new URLSearchParams({q}))).total,1);
+ const sql=catalogWhere(parseCatalogQuery(new URLSearchParams({q:'suéteres'})));assert.ok(sql.values.includes('sueteres'));assert.match(sql.text,/subcategory/);
+});
+
+test('development diagnostics never include SQL, parameters or private error messages',async()=>{
+ const {databaseDiagnostic}=await import('../server/lib/databaseDiagnostic.ts');const {Prisma}=await import('@prisma/client');const previous=process.env.NODE_ENV,old=console.warn,records=[];console.warn=value=>records.push(value);
+ try{const error=new Prisma.PrismaClientKnownRequestError('PRIVATE SQL EMAIL',{code:'P2028',clientVersion:'test',meta:{secret:'PRIVATE'}});process.env.NODE_ENV='production';databaseDiagnostic(error,'catalog.rows');assert.equal(records.length,0);process.env.NODE_ENV='development';databaseDiagnostic(error,'catalog.rows');const entry=JSON.parse(records[0]);assert.equal(entry.code,'P2028');assert.equal(entry.errorClass,'PrismaClientKnownRequestError');assert.doesNotMatch(records[0],/PRIVATE|SQL|EMAIL|meta/);}finally{console.warn=old;if(previous===undefined)delete process.env.NODE_ENV;else process.env.NODE_ENV=previous;}
 });

@@ -1,3 +1,4 @@
+import { matchesSearch } from './catalogSearch.ts';
 import { z } from 'zod';
 import { categories, universes, belongsToCategory } from './catalogTaxonomy.ts';
 import type { Product } from '../src/types/product.ts';
@@ -44,7 +45,7 @@ export function matchesCatalog(product: Product, query: CatalogQuery, ignore: st
   (ignore.includes('subcategory') || !query.subcategory || product.subcategory === query.subcategory) &&
   (query.onSale === undefined || Boolean(product.isOnSale) === query.onSale) &&
   (query.minPrice === undefined || product.price >= query.minPrice) && (query.maxPrice === undefined || product.price <= query.maxPrice) &&
-  (!query.q || `${product.name} ${product.description}`.toLocaleLowerCase('es').includes(query.q.toLocaleLowerCase('es')));
+  (!query.q || matchesSearch(product,query.q));
 }
 // Used by repository fixtures; production filtering/pagination runs in SQL.
 export function filterCatalog(products: Product[], query: CatalogQuery): CatalogPage {

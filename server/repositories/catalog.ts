@@ -1,3 +1,4 @@
+import { taxonomySearch } from '../../shared/catalogSearch.ts';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { CatalogQuery, Facets } from '../../shared/catalogQuery.ts';
 export function catalogWhere(query: CatalogQuery, ignore: string[] = []): Prisma.Sql {
@@ -11,7 +12,12 @@ export function catalogWhere(query: CatalogQuery, ignore: string[] = []): Prisma
  if (query.q) {
   // Escape LIKE metacharacters so search remains literal, not a wildcard input.
   const pattern = '%' + query.q.replace(/[\\%_]/g, value => '\\' + value) + '%';
-  clauses.push(Prisma.sql`("name" ILIKE ${pattern} OR COALESCE("description", '') ILIKE ${pattern})`);
+  const alternatives=[Prisma.sql`"name" ILIKE ${pattern}`,Prisma.sql`COALESCE("description", '') ILIKE ${pattern}`];
+  const terms=taxonomySearch(query.q);
+  if(terms.category.length)alternatives.push(Prisma.sql`"category" IN (${Prisma.join(terms.category)})`);
+  if(terms.universe.length)alternatives.push(Prisma.sql`"universe" IN (${Prisma.join(terms.universe)})`);
+  if(terms.subcategory.length)alternatives.push(Prisma.sql`"subcategory" IN (${Prisma.join(terms.subcategory)})`);
+  clauses.push(Prisma.sql`(${Prisma.join(alternatives,' OR ')})`);
  }
  return clauses.length ? Prisma.sql`WHERE ${Prisma.join(clauses, ' AND ')}` : Prisma.empty;
 }

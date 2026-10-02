@@ -37,3 +37,11 @@ test('identical requests share transport and cancelling one consumer keeps other
  const c=new AbortController();const last=get('other',load,c.signal);await Promise.resolve();c.abort();await assert.rejects(last,{name:'AbortError'});assert.equal(transport.aborted,true);
  }finally{await server.close();}
 });
+
+test('search URL preserves filters and sort, resets page, and clears blank q',async()=>{
+ const {createTestViteServer}=await import('./fixtures/viteServer.mjs');const server=await createTestViteServer();
+ try{const {catalogSearchUrl}=await server.ssrLoadModule('/src/shared/lib/catalogSearchUrl.ts');const link=new URL(catalogSearchUrl('?universe=harry-potter&category=clothing&subcategory=sueteres&sort=precio-desc&page=3&onSale=true','suéter azul'),'https://example.invalid');assert.equal(link.searchParams.get('category'),'clothing');assert.equal(link.searchParams.get('subcategory'),'sueteres');assert.equal(link.searchParams.get('sort'),'precio-desc');assert.equal(link.searchParams.get('page'),'1');assert.equal(link.searchParams.get('q'),'suéter azul');assert.equal(link.searchParams.get('onSale'),'true');assert.equal(link.hash,'#catalog-results');assert.equal(new URL(catalogSearchUrl(link.search,'  '),'https://example.invalid').searchParams.has('q'),false);
+ }finally{await server.close();}
+ const component=readFileSync('src/shared/components/CatalogSearch.tsx','utf8');assert.match(component,/aria-label="Buscar" title="Buscar"><Search/);assert.match(component,/enterKeyHint="search" autoComplete="off"/);assert.match(component,/aria-expanded={open}/);assert.match(component,/Limpiar búsqueda/);assert.doesNotMatch(readFileSync('src/features/catalog/components/CatalogPage.tsx','utf8'),/type="search"/);
+ assert.equal(scrollIntent(page('/contact'),page('/','?q=tazas','#catalog-results'),'PUSH',false),'results');
+});

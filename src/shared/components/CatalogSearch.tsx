@@ -1,0 +1,11 @@
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Search, X } from 'lucide-react';
+import { Button } from './Button';
+import { catalogSearchUrl } from '../lib/catalogSearchUrl';
+export function CatalogSearch(){
+ const location=useLocation(),navigate=useNavigate();const [text,setText]=useState(new URLSearchParams(location.search).get('q')??'');const [open,setOpen]=useState(false);const input=useRef<HTMLInputElement>(null),trigger=useRef<HTMLButtonElement>(null);const id=useId();
+ useEffect(()=>setText(new URLSearchParams(location.search).get('q')??''),[location.search]);
+ const submit=(e:FormEvent)=>{e.preventDefault();navigate(catalogSearchUrl(location.search,text));setOpen(false);};
+ return <div className="nav-search-shell"><button ref={trigger} type="button" className="button-icon nav-search-toggle" aria-label="Abrir búsqueda" title="Buscar" aria-expanded={open} aria-controls={id} onClick={()=>{setOpen(v=>!v);if(!open)requestAnimationFrame(()=>input.current?.focus());}}><Search size={20} aria-hidden="true"/></button><form id={id} className={'nav-search '+(open?'search-open':'')} onSubmit={submit} role="search" onKeyDown={e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();setOpen(false);trigger.current?.focus();}}}><label htmlFor={id+'-input'} className="sr-only">Buscar productos en el catálogo</label><div className="search-input-wrap"><input ref={input} id={id+'-input'} type="search" name="q" placeholder="Buscar suéteres, tazas, peluches…" maxLength={150} enterKeyHint="search" autoComplete="off" value={text} onChange={e=>setText(e.target.value)} aria-describedby={id+'-help'}/>{text&&<button type="button" className="search-clear" aria-label="Limpiar búsqueda" onClick={()=>{setText('');input.current?.focus();}}><X size={16} aria-hidden="true"/></button>}</div><Button variant="secondary" size="icon" type="submit" aria-label="Buscar" title="Buscar"><Search size={20} aria-hidden="true"/></Button><p id={id+'-help'} className="sr-only">Busca por nombre, descripción o etiquetas de universo, categoría y subcategoría. Conserva los filtros activos al confirmar.</p></form></div>;
+}

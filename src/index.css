@@ -297,3 +297,11 @@ img{max-width:100%}.product-card h3{display:-webkit-box;-webkit-line-clamp:2;-we
 .map-preview{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1rem;background:repeating-linear-gradient(35deg,#e9dfcc 0 2px,transparent 2px 40px),repeating-linear-gradient(125deg,#e9dfcc 0 2px,#f6f0e5 2px 40px)}.map-preview>span{font-size:clamp(3rem,8vw,5rem)}
 @media(min-width:1024px){.nav-menu-toggle{display:none!important}.catalog-layout{grid-template-columns:minmax(12rem,15rem) minmax(0,1fr)}.catalog-sidebar{display:block;position:sticky;top:calc(var(--nav-height) + 1rem);align-self:start;max-height:calc(100svh - var(--nav-height) - 2rem);overflow-y:auto}.mobile-filter-trigger{display:none}.offer-arrows{display:flex;gap:.5rem}.navigation-links{flex:1;justify-content:flex-end;gap:.65rem}.nav-search{flex:1;max-width:15rem}.nav-brand{flex-shrink:1}.nav-brand span{font-size:clamp(.85rem,1.2vw,1.05rem)}}
 @media(max-width:639px){.contact-enter .p-8{padding:1rem}.contact-enter .gap-12{gap:1.5rem}.catalog-results nav{flex-wrap:wrap}.catalog-toolbar>*{max-width:100%}.nav-brand span{font-size:.85rem}}
+/* One URL-backed search field, outside the collapsible navigation links. */
+.nav-search-shell{min-width:0;margin-left:auto}.nav-search-shell .nav-search{display:none}
+.nav-search-shell .search-open{display:flex;position:absolute;left:0;right:0;top:100%;max-width:none;background:var(--brand-bg);padding:.8rem;box-shadow:0 .5rem 1rem #0005;z-index:51}
+.search-input-wrap{min-width:0;flex:1;position:relative}.nav-search-shell input{padding-right:2.75rem;width:100%;min-height:44px;appearance:none}.nav-search-shell input::-webkit-search-cancel-button{display:none}
+.search-clear{position:absolute;right:0;top:0;width:2.75rem;height:2.75rem;display:flex;align-items:center;justify-content:center}.nav-search-shell .button-size-icon{flex-shrink:0;width:2.75rem;height:2.75rem;padding:0}
+@media(min-width:1024px){.nav-search-shell{flex:0 1 clamp(10rem,18vw,18rem);margin-left:0}.nav-search-toggle{display:none!important}.nav-search-shell .nav-search{display:flex;position:static;padding:0;box-shadow:none;max-width:none}.navigation-links{font-size:.85rem}.site-nav .nav-brand span{max-width:10rem}}
+
+@media(max-width:1023px){.site-nav .nav-brand{flex:1;min-width:0}.nav-menu-toggle,.nav-search-shell{flex-shrink:0}.nav-search-shell{margin-left:0}}
