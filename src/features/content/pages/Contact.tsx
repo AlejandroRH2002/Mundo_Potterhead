@@ -3,7 +3,7 @@ import { Phone, MapPin, Facebook } from 'lucide-react';
 export function Contact() {
   return (
     <div className="contact-enter">
-      <div className="bg-magical min-h-screen">
+      <div className="bg-magical min-h-svh">
         <div className="content-wrapper py-16">
           <div className="max-w-6xl mx-auto px-4">
             <h1 className="text-4xl font-cinzel font-bold text-center text-yellow-300 mb-12">

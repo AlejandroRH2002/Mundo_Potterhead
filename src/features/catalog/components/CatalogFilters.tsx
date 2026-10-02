@@ -39,7 +39,7 @@ export function CatalogFilters(props: Props) {
   <details className="hidden md:block catalog-filter-bar"><summary>Filtros y orden · ajusta tu selección</summary><Fields {...props}/></details>
   <button ref={trigger} type="button" className="shop-button md:hidden mb-4" aria-expanded={open} aria-controls="catalog-filter-dialog" onClick={()=>{dialog.current?.showModal();setOpen(true);}}>Filtros y orden</button>
   {/* Native modal dialog traps focus and makes the surrounding page inert. */}
-  <dialog ref={dialog} id="catalog-filter-dialog" aria-labelledby="catalog-filter-title" className="catalog-filter-drawer m-0 ml-auto h-dvh max-h-none w-[min(90vw,24rem)] bg-slate-950 text-white p-5 backdrop:bg-black/70" onCancel={event=>{event.preventDefault();close();}} onClose={()=>{setOpen(false);trigger.current?.focus();}} onKeyDown={event=>{
+  <dialog ref={dialog} id="catalog-filter-dialog" aria-labelledby="catalog-filter-title" className="catalog-filter-drawer m-0 ml-auto h-svh max-h-none w-[min(90vw,24rem)] bg-slate-950 text-white p-5 backdrop:bg-black/70" onCancel={event=>{event.preventDefault();close();}} onClose={()=>{setOpen(false);trigger.current?.focus();}} onKeyDown={event=>{
    if(event.key==='Escape'){event.preventDefault();close();}
    if(event.key==='Tab'){
     const elements=Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href]')).filter(element=>element.getClientRects().length>0);
@@ -47,7 +47,7 @@ export function CatalogFilters(props: Props) {
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
    }
   }}>
-   <m.div initial={false} animate={{ x: open ? 0 : 64, opacity: open ? 1 : 0 }} transition={reduce ? {duration:0} : { type:'spring', stiffness:300, damping:32 }}><h2 id="catalog-filter-title" className="text-xl mb-3">Filtrar catálogo</h2><button type="button" className="shop-link mb-4" onClick={close}>Cerrar filtros</button><Fields {...props}/></m.div>
+   <m.div initial={false} animate={{ x: open ? 0 : 64, opacity: open ? 1 : 0 }} transition={reduce ? {duration:0.14} : { type:'spring', stiffness:300, damping:32 }}><h2 id="catalog-filter-title" className="text-xl mb-3">Filtrar catálogo</h2><button type="button" className="shop-link mb-4" onClick={close}>Cerrar filtros</button><Fields {...props}/></m.div>
   </dialog>
  </>;
 }

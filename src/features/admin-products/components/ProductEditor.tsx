@@ -19,7 +19,7 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
       <label>Ruta o URL HTTPS de imagen<input className="shop-input" name="image" required value={editor.draft.image} onChange={editor.change} /></label>
       <label>Subir imagen<input className="shop-input" type="file" disabled={editor.uploading || editor.saving} accept="image/png,image/jpeg,image/webp" onChange={event => void editor.upload(event.target.files?.[0])} /></label>
       <img src={editor.draft.image} alt="Vista previa del producto" className="h-40 w-40 rounded object-cover" />
-      <div className="self-end"><button className="shop-button" disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
+      <div className="self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
     </form>}
   </section>;
 }
