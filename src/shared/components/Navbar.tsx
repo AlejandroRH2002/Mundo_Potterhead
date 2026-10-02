@@ -1,11 +1,15 @@
+import { useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { m, useReducedMotion } from 'framer-motion';
 import { BrandMark } from './BrandMark';
 import { useNavigation } from '@/app/useNavigation';
+const MobileCartSummary = lazy(()=>import('@/features/cart/components/MobileCartSummary').then(module=>({default:module.MobileCartSummary})));
 const CartDrawer = lazy(() => import('@/features/cart/components/CartDrawer').then(module => ({ default: module.CartDrawer })));
 export function Navbar() {
   const nav = useNavigation();
+  const {pathname}=useLocation();const [mobile,setMobile]=useState(false);
+  useEffect(()=>{const media=window.matchMedia('(max-width: 767px)');const update=()=>setMobile(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
   const navigation = useRef<HTMLElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   useEffect(()=>{
@@ -33,5 +37,5 @@ export function Navbar() {
       </m.div>
       {nav.error && <p role="alert">{nav.error}</p>}
     </div>
-  </nav>{drawer && <Suspense fallback={<p className="sr-only" role="status">Abriendo carrito…</p>}><CartDrawer onClose={closeDrawer}/></Suspense>}</>;
+  </nav>{drawer && <Suspense fallback={<p className="sr-only" role="status">Abriendo carrito…</p>}><CartDrawer onClose={closeDrawer}/></Suspense>}{mobile && nav.count>0 && !drawer && !pathname.startsWith('/product/') && pathname!=='/cart' && <Suspense fallback={null}><MobileCartSummary onOpen={()=>setDrawer(true)}/></Suspense>}</>;
 }

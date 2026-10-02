@@ -1,3 +1,5 @@
+import { Button } from '@/shared/components/Button';
+import { WhatsappIcon } from '@/shared/components/WhatsappIcon';
 import { Link } from 'react-router-dom';
 import { useCart } from '../hooks/useCart';
 import { money } from '@/shared/lib/money';
@@ -27,7 +29,7 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
       <p className="my-3">Coordinaremos disponibilidad, envío y pago por WhatsApp. El envío no está incluido.</p>
       {/* REVISAR CON ASESOR LEGAL */}
       <p className="mb-4 text-sm">Este carrito es una cotización, no una compra. Confirmaremos precios, disponibilidad y envío por WhatsApp. Consulta los <Link className="shop-link" to="/terms">términos</Link> y el <Link className="shop-link" to="/privacy">aviso de privacidad</Link> antes de continuar.</p>
-      <button className="shop-button" aria-busy={cart.sending} disabled={cart.sending || cart.loading || cart.missing.length > 0} onClick={() => void cart.checkout()}>{cart.sending ? 'Preparando pedido…' : 'Enviar pedido por WhatsApp'}</button>
+      <Button loading={cart.sending} disabled={cart.loading || cart.missing.length > 0} onClick={() => void cart.checkout()}><WhatsappIcon/> Cotizar por WhatsApp</Button>
       <button className="mt-4 shop-link" onClick={cart.clear}>Vaciar carrito</button>
     </div>}
   </section>;
