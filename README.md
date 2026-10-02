@@ -224,3 +224,7 @@ React Router DOM 7.18.4 conserva los imports y BrowserRouter/Routes existentes. 
 ### Actualización de Vite 6
 
 Vite 6.4.3 y plugin-react 4.7.0 usan esbuild 0.25.12 también en el árbol anidado. Se revisó la [migración oficial desde Vite 5](https://v6.vite.dev/guide/migration): no hay Sass, PostCSS TS ni conditions personalizados que adaptar. El escaneo de dependencias se limita a index.html para no recorrer backups node_modules.previous-*; los tests desactivan discovery/entries y mantienen middlewareMode/HMR sin listener. Alias con fileURLToPath y transformación HTML SEO se conservan.
+
+## Servidores de desarrollo: solo loopback
+
+Vite y preview escuchan únicamente en 127.0.0.1; fs.strict=true limita acceso al proyecto y bloquea secretos, servidor y backups. pnpm dev verifica el mismo socket IPv4 y conserva http://localhost:5173 para coincidir con APP_ORIGIN local. No exponer dev/preview a la red, no añadir --host ni usar túneles públicos; producción usa Pages y el backend independiente. Preview no reemplaza un servidor de producción ni cambia el origen autorizado de la API. Las políticas de pnpm 11 se conservan, sin relajar minimumReleaseAge/allowBuilds; packageManager sigue 11.21.0.

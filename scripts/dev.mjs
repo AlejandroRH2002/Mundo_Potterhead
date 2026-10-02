@@ -43,7 +43,7 @@ try {
   // Match the IPv4 proxy target even when API_HOST was configured as localhost.
   process.env.API_HOST = '127.0.0.1';
   await freePort('127.0.0.1', config.port);
-  await freePort('localhost', 5173);
+  await freePort('127.0.0.1', 5173);
   launch(['server/index.ts']);
   let ready = false;
   for (let attempt = 0; attempt < 60 && !stopping; attempt++) {

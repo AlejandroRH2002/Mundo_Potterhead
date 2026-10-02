@@ -43,10 +43,10 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: { entries: ['index.html'] },
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
-      host: 'localhost', port: 5173, strictPort: true,
+      host: '127.0.0.1', port: 5173, strictPort: true,
       proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } },
-      fs: { deny: ['.env', '.env.*', '**/*.pem', '**/*.crt', '**/.git/**', '**/server/**', '**/dist-server/**', '**/prisma/**', '**/tests/**'] },
+      fs: { strict: true, allow: [root], deny: ['.env', '.env.*', '**/*.pem', '**/*.crt', '**/.git/**', '**/server/**', '**/dist-server/**', '**/prisma/**', '**/tests/**', '**/node_modules.previous*/**'] },
     },
-    preview: { proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } } },
+    preview: { host: '127.0.0.1', strictPort: true, proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } } },
   };
 });

@@ -8,3 +8,8 @@ test('internal paths reject external, encoded separators and controls including 
 });
 
 test('a single literal backslash and real control characters are rejected',()=>{assert.equal(safeInternalPath('/'+String.fromCharCode(92)+'evil.com'),'/');assert.equal(safeInternalPath('/x'+String.fromCharCode(10)+'y'),'/');});
+
+test('dev and preview bind only loopback and confine filesystem access',async()=>{
+ const {readFileSync}=await import('node:fs');const config=readFileSync('vite.config.ts','utf8');assert.match(config,/host: '127.0.0.1', port: 5173/);assert.match(config,/strict: true, allow: \[root\]/);assert.match(config,/preview: { host: '127.0.0.1'/);assert.doesNotMatch(config,/host: '0.0.0.0'/);
+ const dev=readFileSync('scripts/dev.mjs','utf8');assert.match(dev,/freePort\('127.0.0.1', 5173\)/);assert.doesNotMatch(dev,/--host/);
+});
