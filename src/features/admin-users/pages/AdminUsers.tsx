@@ -23,7 +23,7 @@ export function AdminUsers() {
       </fieldset>
     </form>}
     {users.loading ? <p role="status">Cargando usuarios…</p> : !users.error && <>
-      {!users.data.users.length ? <p>No hay usuarios en esta página.</p> : <div className="admin-table-scroll">
+      {!users.data.users.length ? <p>No hay usuarios en esta página.</p> : <div className="admin-table-scroll overflow-x-auto">
         <table className="admin-table"><caption className="sr-only">Usuarios y permisos</caption>
           <thead><tr>{['Nombre', 'Correo', 'Rol', 'Estado', 'Acciones'].map(label => <th className="p-3" scope="col" key={label}>{label}</th>)}</tr></thead>
           <tbody>{users.data.users.map(user => <tr key={user.id} className="border-t border-white/30">

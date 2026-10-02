@@ -11,7 +11,7 @@ export function AdminDashboard() {
     {admin.error && <p className="shop-error" role="alert">{admin.error}</p>}
     {admin.loading && <p role="status">Cargando productos…</p>}
     {!admin.loading && !admin.filtered.length && <p>No hay productos que coincidan con la búsqueda.</p>}
-    <div className="admin-table-scroll"><table className="admin-table"><caption className="sr-only">{adminLabels.products}</caption>
+    <div className="admin-table-scroll overflow-x-auto"><table className="admin-table"><caption className="sr-only">{adminLabels.products}</caption>
       <thead><tr><th scope="col">Imagen</th><th scope="col">Producto</th><th scope="col">Precio y etiquetas</th><th scope="col">Acciones</th></tr></thead>
       <tbody>{admin.filtered.map(product => <tr key={product.id}>
         <td className="admin-thumbnail"><img src={product.image} alt={product.name} loading="lazy" decoding="async" width={80} height={80} /></td>
