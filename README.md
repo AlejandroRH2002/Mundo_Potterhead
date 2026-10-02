@@ -216,3 +216,7 @@ Diagnóstico local: el catálogo fallaba con P2028 en adquisición de transacci�
 ## Destinos de navegación
 
 `safeInternalPath` valida destinos internos (incluida decodificación repetida) de retorno de login, IDs de API/carrito, migas de pan, categorías y búsqueda. WhatsApp conserva su salida externa deliberada con número validado y mensaje codificado; mapas validan su origen y consultas. La app usa createRoot y BrowserRouter: no hay hydrateRoot, deserializeErrors ni SSR de producción. Los ssrLoadModule de tests son cargas de módulos, no hidratación de páginas.
+
+### Actualización de Router 7
+
+React Router DOM 7.18.4 conserva los imports y BrowserRouter/Routes existentes. La [guía oficial v6 → v7](https://github.com/remix-run/react-router/blob/react-router%407.18.4/docs/upgrading/v6.md) requiere React 18 y Node 20 como mínimos; React 18.3/Node 24 cumplen. No hay rutas multi-segmento con splat ni enlaces relativos, data routers, loaders/actions o hidratación; sus flags no aplican. React.lazy permanece en ámbito de módulo para las transiciones. Scroll/foco y AnimatePresence siguen centralizados; revisar manualmente navegación, Atrás/Adelante y carga diferida tras desplegar.
