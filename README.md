@@ -212,3 +212,7 @@ El listado no usa transacciones interactivas: filas y total comparten una senten
 La búsqueda única de la navbar conserva filtros/orden al confirmar y reinicia página 1. `q` busca nombre/descripción (ILIKE) y etiquetas/slugs controlados de universo, categoría y subcategoría (comparación de etiquetas sin acentos). Vacío elimina q. No se implementa autocompletado; la búsqueda solo se envía al confirmar. Prueba de carga de solo lectura: `node --env-file=.env scripts/check-catalog-http.mjs`.
 
 Diagnóstico local: el catálogo fallaba con P2028 en adquisición de transacción interactiva (~2000 ms, maxWait predeterminado de Prisma), antes de ejecutar filas/facetas. Tras quitar esa adquisición y precalentar la conexión exclusiva de readiness: 24/24 HTTP 200 en cuatro rondas, listados 7–172 ms y readiness 2–49 ms. No había migraciones previas pendientes; únicamente quedan los nuevos índices por aplicar. No se ejecutaron migraciones ni integración.
+
+## Destinos de navegación
+
+`safeInternalPath` valida destinos internos (incluida decodificación repetida) de retorno de login, IDs de API/carrito, migas de pan, categorías y búsqueda. WhatsApp conserva su salida externa deliberada con número validado y mensaje codificado; mapas validan su origen y consultas. La app usa createRoot y BrowserRouter: no hay hydrateRoot, deserializeErrors ni SSR de producción. Los ssrLoadModule de tests son cargas de módulos, no hidratación de páginas.

@@ -1,3 +1,4 @@
+import { safeInternalPath } from '@/shared/lib/safeInternalPath';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../services/authContext';
@@ -19,13 +20,12 @@ export function useLogin() {
       let target = '/';
       if (state && typeof state === 'object' && 'from' in state) {
         const from = state.from;
-        if (from && typeof from === 'object' && 'pathname' in from && typeof from.pathname === 'string' &&
-            /^\/(?!\/)[^\\\\]*$/.test(from.pathname)) {
+        if (from && typeof from === 'object' && 'pathname' in from && typeof from.pathname === 'string') {
           target = from.pathname;
           if ('search' in from && typeof from.search === 'string' && from.search.startsWith('?')) target += from.search;
         }
       }
-      navigate(target, { replace: true });
+      navigate(safeInternalPath(target), { replace: true });
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setPassword(''); setBusy(false); }
   };

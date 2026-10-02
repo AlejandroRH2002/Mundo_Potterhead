@@ -1,3 +1,4 @@
+import { safeInternalPath } from '@/shared/lib/safeInternalPath';
 import { m, useReducedMotion } from 'framer-motion';
 import { BrandMark } from '@/shared/components/BrandMark';
 import { buttonClasses } from '@/shared/lib/buttonStyles';
@@ -17,6 +18,6 @@ export function StoreHero() {
    <m.div className="hero-brand" {...entrance(0.5)}><BrandMark/></m.div><span className="hero-glint" aria-hidden="true"/>
   </section>
   <ul className="trust-strip" aria-label="Cómo funciona la cotización">{trustPoints.map(point=><li key={point.text}><span aria-hidden="true">{point.icon}</span>{point.text}</li>)}</ul>
-  <section className="category-section" aria-labelledby="category-title"><div className="section-heading"><p className="eyebrow">Tu próxima pieza favorita</p><h2 id="category-title">Explora por categoría</h2></div><div className="category-grid">{categories.map((category,index)=><m.div key={category} initial={{opacity:0,y:reduce?0:24}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:0.2}} transition={{duration:reduce?0.14:0.45,delay:reduce?0:index*0.08}}><Link key={category} to={`/?category=${category}#catalogo`} className="category-tile"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><path d={paths[category]}/></svg><span>{categoryLabels[category]}</span><span aria-hidden="true">↗</span></Link></m.div>)}</div></section>
+  <section className="category-section" aria-labelledby="category-title"><div className="section-heading"><p className="eyebrow">Tu próxima pieza favorita</p><h2 id="category-title">Explora por categoría</h2></div><div className="category-grid">{categories.map((category,index)=><m.div key={category} initial={{opacity:0,y:reduce?0:24}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:0.2}} transition={{duration:reduce?0.14:0.45,delay:reduce?0:index*0.08}}><Link key={category} to={safeInternalPath(`/?category=${category}#catalogo`)} className="category-tile"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true"><path d={paths[category]}/></svg><span>{categoryLabels[category]}</span><span aria-hidden="true">↗</span></Link></m.div>)}</div></section>
  </>;
 }

@@ -1,3 +1,4 @@
+import { safeInternalPath } from '@/shared/lib/safeInternalPath';
 import { Button } from '@/shared/components/Button';
 import { WhatsappIcon } from '@/shared/components/WhatsappIcon';
 import { Link } from 'react-router-dom';
@@ -17,7 +18,7 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
     </div>)}
     {cart.lines.map(line => <article className="shop-panel flex flex-wrap items-center gap-5" key={line.productId}>
       <img loading="lazy" decoding="async" width={96} height={96} className="h-24 w-24 rounded object-cover" src={line.product.image} alt={line.product.name} />
-      <div className="flex-1"><Link className="shop-link" to={`/product/${line.productId}`}>{line.product.name}</Link><p>{money(line.product.price)} por unidad</p></div>
+      <div className="flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link><p>{money(line.product.price)} por unidad</p></div>
       <label>Cantidad
         <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value))} aria-label={`Cantidad de ${line.product.name}`} />
       </label>
