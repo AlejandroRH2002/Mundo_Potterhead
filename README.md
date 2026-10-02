@@ -171,7 +171,7 @@ El hook actualiza metadatos por ruta y producto, pero los crawlers que no ejecut
 
 ## Accesibilidad: alcance de la revisión
 
-Se comprobaron nombres, etiquetas y alt en el código, foco visible, enlace de salto, orden DOM del carrito/editor y contraste de la paleta base. El borrado usa confirmación nativa del navegador; no hay modal propio. Se respeta movimiento reducido. El mapa abre un enlace externo y las fuentes usan el sistema, sin cargas automáticas de Google. Pendiente: recorrido real con teclado (incluido foco tras eliminar), lector de pantalla, zoom, menú móvil y contraste de todas las composiciones temáticas. Las pruebas estáticas no certifican accesibilidad.
+Se comprobaron nombres, etiquetas y alt en el código, foco visible, enlace de salto, orden DOM del carrito/editor y contraste de la paleta base. El borrado usa confirmación nativa del navegador; no hay modal propio. Se respeta movimiento reducido. El mapa se inserta en la página de contacto con carga diferida de Google; las fuentes son locales. Pendiente: recorrido real con teclado (incluido foco tras eliminar), lector de pantalla, zoom, menú móvil y contraste de todas las composiciones temáticas. Las pruebas estáticas no certifican accesibilidad.
 
 ## Administración de usuarios
 
@@ -201,7 +201,7 @@ Medición desde la salida de Vite, sin leer dist: index-1V6mypez.js 242.73 KiB; 
 
 ## Mapa opcional y catálogo sin selección implícita
 
-Sin parámetros el catálogo muestra todos los universos. Los enlaces filtrados usan query params explícitos. `VITE_MAP_QUERY` configura la dirección pública; vacío oculta el mapa. `VITE_MAP_EMBED_URL` es opcional y admite únicamente HTTPS de www.google.com bajo /maps/embed; sin él se genera una inserción a partir de la dirección. No hay solicitudes a Google hasta pulsar «Ver mapa». Reconstruye tras cambiar estas variables. La CSP actual pertenece solo a la API JSON, no al documento frontend; no se amplía. Si el hosting aplica CSP al HTML, permite `frame-src https://www.google.com`.
+Sin parámetros el catálogo muestra todos los universos. Los enlaces filtrados usan query params explícitos. El mapa solo se monta en `/contact` (ruta actual de contacto), directamente en un recuadro con carga diferida al acercarse al viewport. `VITE_MAP_EMBED_URL` tiene prioridad: solo admite HTTPS de www.google.com con ruta /maps/embed o sus subrutas. `VITE_MAP_QUERY` aporta la dirección pública en texto y, sin embed válido, genera `https://www.google.com/maps?q=<consulta codificada>&output=embed`: este formato no es oficial y puede dejar de funcionar. Sin configuración utilizable se consulta por WhatsApp, sin inventar dirección. Google puede recibir datos técnicos cuando se carga el mapa. Reconstruye tras cambiar estas variables. La CSP actual pertenece solo a la API JSON; `_headers` no establece CSP del frontend y no requiere cambios. Si el hosting aplica CSP al HTML, permite `frame-src https://www.google.com`.
 
 Comprobación de esta revisión: lint y 60 tests pasan; el build completo vuelve a generar Prisma sin EPERM. La API local estaba detenida en tres comprobaciones consecutivas; iniciar `pnpm dev:api` y repetir listado/readiness para diagnosticar el 500/503 anterior. No se modificaron pool/timeouts ni se infirió una causa sin evidencia. Revisar manualmente portada, catálogo sin filtros/con filtros/ofertas, drawer de filtros, navbar, detalle/carrito, footer/contacto/mapa y tablas/formularios admin en 320/360/390/768/1024/1440 px, con teclado y Atrás/Adelante; las pruebas estáticas no comprueban el layout renderizado.
 

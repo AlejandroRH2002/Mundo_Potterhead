@@ -25,9 +25,9 @@ test('gallery and card media accept only valid available extra images',async()=>
  try{const {productImages}=await server.ssrLoadModule('/src/shared/lib/productMedia.ts');const product={image:'/images/product-placeholder.svg'};assert.deepEqual(productImages(product),[product.image]);assert.deepEqual(productImages({...product,images:[product.image,'javascript:bad','https://example.invalid/second.webp']}),[product.image,'https://example.invalid/second.webp']);}finally{await server.close();}
 });
 
-test('catalog layout is fluid and map has no automatic third party load',()=>{
+test('catalog layout is fluid and contact map renders a lazy iframe directly',()=>{
  const css=readFileSync('src/index.css','utf8');assert.match(css,/catalog-layout\{display:grid;grid-template-columns:minmax\(0,1fr\)/);assert.match(css,/nav-menu-toggle\{display:none!important/);
- const map=readFileSync('src/features/content/components/ContactMap.tsx','utf8');assert.match(map,/useState\(false\)/);assert.match(map,/if\(!query\)return null/);assert.match(map,/loaded\?<iframe/);assert.match(map,/encodeURIComponent\(query\)/);
+ const map=readFileSync('src/features/content/components/ContactMap.tsx','utf8');assert.match(map,/<iframe/);assert.match(map,/loading="lazy"/);assert.match(map,/allowFullScreen={false}/);assert.doesNotMatch(map,/Ver mapa|useState/);assert.match(map,/encodeURIComponent\(query\)/);
  for(const path of ['src/features/catalog/components/CatalogFilters.tsx','src/features/catalog/components/FeaturedOffers.tsx','src/features/content/components/ContactMap.tsx'])assert.doesNotMatch(readFileSync(path,'utf8'),/\bw-\[\d+px\]|\bw-screen\b/);
 });
 
@@ -44,4 +44,11 @@ test('search URL preserves filters and sort, resets page, and clears blank q',as
  }finally{await server.close();}
  const component=readFileSync('src/shared/components/CatalogSearch.tsx','utf8');assert.match(component,/aria-label="Buscar" title="Buscar"><Search/);assert.match(component,/enterKeyHint="search" autoComplete="off"/);assert.match(component,/aria-expanded={open}/);assert.match(component,/Limpiar búsqueda/);assert.doesNotMatch(readFileSync('src/features/catalog/components/CatalogPage.tsx','utf8'),/type="search"/);
  assert.equal(scrollIntent(page('/contact'),page('/','?q=tazas','#catalog-results'),'PUSH',false),'results');
+});
+
+import { validMapEmbedUrl } from '../src/features/content/components/mapUrl.ts';
+test('map embeds allow only HTTPS Google embed paths',()=>{
+ for(const url of ['https://www.google.com/maps/embed?pb=example','https://www.google.com/maps/embed/v1/place?key=example']) assert.equal(validMapEmbedUrl(url),url);
+ for(const url of [undefined,'','http://www.google.com/maps/embed','https://evil.com/maps/embed','https://www.google.com.evil.com/maps/embed','https://www.google.com/maps/embed-evil','https://www.google.com/maps','https://user:pass@www.google.com/maps/embed','https://www.google.com:8443/maps/embed']) assert.equal(validMapEmbedUrl(url),null);
+ const app=readFileSync('src/app/App.tsx','utf8');assert.match(app,/<Route path="\/contact" element={<Contact \/>} \/>/);
 });
