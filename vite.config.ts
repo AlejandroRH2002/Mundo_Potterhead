@@ -1,13 +1,14 @@
-import { defineConfig, loadEnv } from 'vite'
-import react from '@vitejs/plugin-react'
-import { discoveryFiles, siteOrigin } from './shared/seo'
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react';
+import { fileURLToPath } from 'node:url';
+import { discoveryFiles, siteOrigin } from './shared/seo';
 
+const root = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig(({ mode }) => {
-  const publicEnv = loadEnv(mode, process.cwd(), 'VITE_');
+  const publicEnv = loadEnv(mode, root, 'VITE_');
   const allowed = new Set(['VITE_WHATSAPP_NUMBER', 'VITE_API_URL', 'VITE_LEGAL_NAME', 'VITE_LEGAL_EMAIL', 'VITE_SITE_URL']);
   for (const key of Object.keys(publicEnv)) {
-    if (!allowed.has(key)) throw new Error(`Variable pública no autorizada: ${key}. Los secretos pertenecen al entorno del servidor.`);
+    if (!allowed.has(key)) throw new Error('Variable pública no autorizada: ' + key + '. Los secretos pertenecen al entorno del servidor.');
   }
   const apiUrl = publicEnv.VITE_API_URL ?? '/api';
   if (apiUrl !== '/api') {
@@ -17,15 +18,19 @@ export default defineConfig(({ mode }) => {
   }
   const site = siteOrigin(publicEnv.VITE_SITE_URL);
   const discovery = discoveryFiles(site);
-  const port = Number(loadEnv(mode, process.cwd(), 'API_PORT').API_PORT ?? 3001);
+  const port = Number(loadEnv(mode, root, 'API_PORT').API_PORT ?? 3001);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('API_PORT inválido.');
   return {
+    root,
     plugins: [react(), {
       name: 'site-metadata',
       transformIndexHtml(html) {
-        const escaped = (site ?? '').replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');
-        return html.replaceAll('__SITE_URL__', escaped).replaceAll('__ROBOTS__', site ? 'index, follow' : 'noindex, nofollow')
-          .replace(/\s*<(?:link rel="canonical" href="\/"|meta property="og:(?:url|image)" content="\/(?:favicon.jpg)?")\s*\/>/g, site ? 'plugins: [react()],' : '');
+        const escaped = (site ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const normalized = html.replace(/\r\n?/g, '\n');
+        const filtered = site ? normalized : normalized
+          .replace(/^[ \t]*<link\b[^>]*\brel="canonical"[^>]*>[ \t]*\n?/gm, '')
+          .replace(/^[ \t]*<meta\b[^>]*\bproperty="og:(?:url|image)"[^>]*>[ \t]*\n?/gm, '');
+        return filtered.replace(/__SITE_URL__/g, escaped).replace(/__ROBOTS__/g, site ? 'index, follow' : 'noindex, nofollow');
       },
       generateBundle() {
         this.emitFile({ type: 'asset', fileName: 'robots.txt', source: discovery.robots });
@@ -35,12 +40,10 @@ export default defineConfig(({ mode }) => {
     envPrefix: 'VITE_',
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
-      host: 'localhost',
-      port: 5173,
-      strictPort: true,
-      proxy: { '/api': { target: `http://127.0.0.1:${port}`, changeOrigin: false } },
+      host: 'localhost', port: 5173, strictPort: true,
+      proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } },
       fs: { deny: ['.env', '.env.*', '**/*.pem', '**/*.crt', '**/.git/**', '**/server/**', '**/dist-server/**', '**/prisma/**', '**/tests/**'] },
     },
-    preview: { proxy: { '/api': { target: `http://127.0.0.1:${port}`, changeOrigin: false } } },
+    preview: { proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } } },
   };
-})
+});

@@ -1,13 +1,13 @@
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
+import { createTestViteServer } from './fixtures/viteServer.mjs';
 import { createProductRepository } from './fixtures/memoryProducts.ts';
 import { validateDraft } from '../src/features/catalog/services/productValidation.ts';
 
 const stored = new Map();
 globalThis.window = new EventTarget();
 globalThis.localStorage = { getItem: key => stored.get(key) ?? null, setItem: (key, value) => { stored.set(key, value); }, removeItem: key => { stored.delete(key); } };
-const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+const server = await createTestViteServer();
 after(() => server.close());
 const load = path => server.ssrLoadModule('/src/' + path);
 const { cartService, resolveCart, whatsappOrder } = await load('features/cart/services/cartService.ts');

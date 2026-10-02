@@ -17,15 +17,22 @@ test('discovery files contain only static public pages; private routes are noind
 });
 
 test('HTML transform removes unresolved placeholders and canonical when origin is unset', async () => {
-  const { createServer } = await import('vite');
+  const { createTestViteServer } = await import('./fixtures/viteServer.mjs');
   const { readFile } = await import('node:fs/promises');
   const previous = process.env.VITE_SITE_URL;
   process.env.VITE_SITE_URL = '';
-  const server = await createServer({ server: { middlewareMode: true }, appType: 'custom' });
+  const server = await createTestViteServer();
   try {
-    const html = await server.transformIndexHtml('/', await readFile('index.html', 'utf8'));
-    assert.doesNotMatch(html, /__SITE_URL__|__ROBOTS__|rel="canonical"|property="og:url"|property="og:image"/);
-    assert.match(html, /noindex, nofollow/);
+    const source = (await readFile('index.html', 'utf8')).replace(/\r\n?/g, '\n');
+    const versions = [source, source.replace(/\n/g, '\r\n'), source.replace(/\n/g, (_, offset) => offset % 2 ? '\r\n' : '\n')];
+    for (const input of versions) {
+      const html = await server.transformIndexHtml('/', input);
+      assert.doesNotMatch(html, /__SITE_URL__|__ROBOTS__|rel="canonical"|property="og:url"|property="og:image"/);
+      assert.match(html, /noindex, nofollow/);
+      assert.doesNotMatch(html, /\r/);
+    }
+    const provider = await server.ssrLoadModule('/src/features/auth/services/AuthProvider.tsx');
+    assert.equal(typeof provider.AuthProvider, 'function');
   } finally {
     await server.close();
     if (previous === undefined) delete process.env.VITE_SITE_URL; else process.env.VITE_SITE_URL = previous;

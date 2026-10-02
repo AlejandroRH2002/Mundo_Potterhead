@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
+import { createTestViteServer } from './fixtures/viteServer.mjs';
 import { createApi } from '../server/http/app.ts';
 import { createAuth } from './fixtures/memoryAuth.ts';
 import { createProductRepository } from './fixtures/memoryProducts.ts';
@@ -15,7 +15,7 @@ test('catalog listing substitutes legacy inline data without changing the stored
   finally { await new Promise(resolve=>api.close(resolve)); }
 });
 test('canvas compression caps dimensions, requests WebP at 0.8 and releases the bitmap', async () => {
-  const server=await createServer({server:{middlewareMode:true},appType:'custom'});
+  const server=await createTestViteServer();
   const originalDocument=globalThis.document, originalBitmap=globalThis.createImageBitmap;
   let closed=0; const canvas={width:0,height:0,getContext:()=>({drawImage:()=>{}}),toBlob:(callback,type,quality)=>{assert.equal(type,'image/webp');assert.equal(quality,0.8);callback(new Blob(['encoded'],{type}));}};
   globalThis.document={createElement:()=>canvas}; globalThis.createImageBitmap=async()=>({width:2400,height:1600,close:()=>{closed++;}});
