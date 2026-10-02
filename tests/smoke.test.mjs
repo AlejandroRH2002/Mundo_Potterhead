@@ -23,3 +23,7 @@ test('cookie verifier rejects missing attributes, Domain and a missing Host pref
   assert.equal(loginCookieAttributes(valid),true);
   for(const value of [valid.replace('; Secure',''),valid.replace('; HttpOnly',''),valid.replace('__Host-',''),valid+'; Domain=shop.test.invalid']) assert.equal(loginCookieAttributes(value),false);
 });
+
+test('Pages smoke checks proxied health by default and always checks proxied admin',async()=>{
+ for(const apiUrl of [undefined,'https://api.test.invalid']){const calls=[];const result=await runSmoke({url:'https://shop.pages.dev',apiUrl},async url=>{calls.push(url);if(url.includes('/health/ready'))return Response.json({status:'ok'});if(url.endsWith('/api/admin/users'))return Response.json({message:'unauthorized'},{status:401});return new Response('<html/>',{headers:{'Content-Type':'text/html'}});});assert.equal(result.exitCode,2);assert.equal(calls[0],apiUrl?apiUrl+'/health/ready':'https://shop.pages.dev/api/health/ready');assert.ok(calls.includes('https://shop.pages.dev/api/admin/users'));}
+});

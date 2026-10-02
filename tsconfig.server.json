@@ -3,7 +3,8 @@
     "composite": true,
     "target": "ES2022",
     "lib": [
-      "ES2023"
+      "ES2023",
+      "DOM"
     ],
     "module": "ESNext",
     "moduleResolution": "bundler",
@@ -32,6 +33,7 @@
     "src/features/catalog/services/productValidation.ts",
     "src/features/catalog/mocks/**/*.ts",
     "shared/**/*.ts",
-    "server/**/*.ts"
+    "server/**/*.ts",
+    "functions/**/*.ts"
   ]
 }

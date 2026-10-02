@@ -12,9 +12,9 @@ export async function runSmoke({ url, apiUrl }, request = fetch) {
   const checks = [];
   async function get(base, path) { return request(base + path, { method: 'GET', redirect: 'manual', credentials: 'omit', signal: AbortSignal.timeout(10_000) }); }
   async function check(name, operation) { try { checks.push({ name, status: await operation() ? 'pass' : 'fail' }); } catch { checks.push({ name, status:'fail' }); } }
-  await check('API readiness', async () => { const response = await get(api,'/health/ready'); return response.status===200 && response.headers.get('content-type')?.includes('application/json') && (await response.json()).status==='ok'; });
+  await check('API readiness', async () => { const response = await get(api,apiUrl ? '/health/ready' : '/api/health/ready'); return response.status===200 && response.headers.get('content-type')?.includes('application/json') && (await response.json()).status==='ok'; });
   await check('Frontend HTML 200', async () => { const response=await get(frontend,'/'); return response.status===200 && response.headers.get('content-type')?.includes('text/html'); });
-  await check('API admin sin sesión', async () => [401,403].includes((await get(api,'/api/admin/users')).status));
+  await check('API admin sin sesión', async () => [401,403].includes((await get(frontend,'/api/admin/users')).status));
   try {
     const response=await get(frontend,'/admin');
     const denied=[401,403].includes(response.status);

@@ -2,11 +2,12 @@ import { inferSubcategory } from '../../shared/catalogTaxonomy.ts';
 import { PrismaClient } from '@prisma/client';
 import { readConfig } from '../config.ts';
 import { productDraftSchema } from '../../shared/productSchema.ts';
-import { products } from '../../src/features/catalog/mocks/products.ts';
-import { otherUniversesProducts } from '../../src/features/catalog/mocks/otherUniverses.ts';
+import { assertLocalSeed } from '../lib/localSeed.ts';
 
 // Explicit development seed only. Never runs at API startup or during migration.
-if (process.env.NODE_ENV === 'production') throw new Error('Development seed disabled in production.');
+assertLocalSeed(process.env);
+const {products}=await import('../../src/features/catalog/mocks/products.ts');
+const {otherUniversesProducts}=await import('../../src/features/catalog/mocks/otherUniverses.ts');
 const config = readConfig(process.env);
 const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
 try {
