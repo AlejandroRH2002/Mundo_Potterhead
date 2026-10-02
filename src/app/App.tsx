@@ -4,6 +4,7 @@ import { AnimatePresence, LazyMotion, MotionConfig } from 'framer-motion';
 import { PageTransition } from '@/shared/components/PageTransition';
 import { AuthProvider } from '@/features/auth/services/AuthProvider';
 import { Navbar } from '@/shared/components/Navbar';
+import { BrandMark } from '@/shared/components/BrandMark';
 import { Footer } from '@/shared/components/Footer';
 import { Home } from '@/features/catalog/pages/Home';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -40,7 +41,7 @@ function RouteMetadata() {
 
 function AnimatedRoutes() {
   const location = useLocation();
-  return <Suspense fallback={<div className="min-h-[50vh] p-8 text-center text-white">Cargando…</div>}>
+  return <Suspense fallback={<div className="page-loading" role="status"><BrandMark/><p>Cargando…</p></div>}>
     <AnimatePresence mode="wait">
       <PageTransition key={location.pathname}><Routes location={location}>
         <Route path="/" element={<Home />} />
