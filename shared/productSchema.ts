@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const categories = ['accessories', 'clothing', 'footwear', 'toys', 'bags'] as const;
-export const universes = ['harry-potter', 'otros-universos'] as const;
+import { categories, universes, belongsToCategory } from './catalogTaxonomy.ts';
+export { categories, universes } from './catalogTaxonomy.ts';
 export function validImage(value: string): boolean {
   return /^\/(?!\/)[^\s\\]+$/.test(value) || /^https:\/\/[^\s]+$/.test(value) || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
 }
@@ -14,8 +14,11 @@ export const productDraftSchema = z.object({
   isOnSale: z.boolean().optional(),
   image: z.string().trim().max(2_800_000).refine(validImage, 'Imagen no válida.'),
   category: z.enum(categories),
+  subcategory: z.string().max(80).nullable().optional(),
   universe: z.enum(universes),
 }).strip().superRefine((draft, context) => {
+  if (draft.subcategory != null && !belongsToCategory(draft.category, draft.subcategory))
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['subcategory'], message: 'La subcategoría no pertenece a la categoría seleccionada.' });
   if (draft.originalPrice !== undefined && draft.originalPrice <= draft.price)
     context.addIssue({ code: z.ZodIssueCode.custom, path: ['originalPrice'], message: 'El precio anterior debe superar el precio actual.' });
   if (draft.isOnSale && draft.originalPrice === undefined)
