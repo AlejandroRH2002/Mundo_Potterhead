@@ -11,8 +11,9 @@ const empty: ProductDraft = { name: '', description: '', price: 0, image: '', ca
 const sanitizeImageSource = (value: string) => {
   const source = value.trim();
   if (!source) return '';
-  if (source.startsWith('/')) return source;
+  if (/[\u0000-\u001F\u007F\s]/.test(source)) return '';
   if (source.startsWith('blob:')) return source;
+  if (source.startsWith('/')) return source.startsWith('//') ? '' : source;
   try {
     const url = new URL(source);
     return url.protocol === 'https:' ? url.toString() : '';
