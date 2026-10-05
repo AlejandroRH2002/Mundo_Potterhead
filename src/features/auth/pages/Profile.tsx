@@ -1,7 +1,7 @@
 import { useProfile } from '../hooks/useProfile';
 export function Profile() {
   const profile = useProfile();
-  return <section className="shop-page"><h1 className="shop-title">Mi perfil</h1>
+  return <section className="shop-page profile-page"><h1 className="shop-title">Mi perfil</h1>
     <p className="mb-4">Rol: {profile.user?.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
     <form className="shop-panel space-y-4" onSubmit={event => { event.preventDefault(); void profile.save(); }}>
       <label className="block">Nombre<input className="shop-input" required value={profile.name} onChange={event => profile.setName(event.target.value)} /></label>

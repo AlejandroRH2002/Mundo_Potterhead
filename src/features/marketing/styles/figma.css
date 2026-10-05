@@ -188,3 +188,21 @@
 .figma-storefront .cart-page .state-panel { padding: 2rem; border: 1px solid var(--figma-line); border-radius: 1rem; text-align: center; }
 .figma-storefront .cart-page .state-panel .shop-button { margin-top: 1rem; }
 @media(max-width:359px) { .figma-storefront .cart-line { grid-template-columns: 4rem minmax(0,1fr); gap: .75rem; }.figma-storefront .cart-line > img { width: 4rem; height: 4rem; }.figma-storefront .cart-line > label { grid-column: 1 / -1; }.figma-storefront .cart-line > button { grid-column: 2; }.figma-storefront .cart-dialog .shop-page { padding: 1rem; } }
+
+/* Administration follows the same visual language as the public storefront. */
+.figma-storefront .admin-page, .figma-storefront .profile-page { --brand-panel: #fff; --brand-raised: #f1ebe5; width: 100%; padding-block: clamp(1.5rem,4vw,3rem); }
+.figma-storefront .admin-page .shop-panel, .figma-storefront .profile-page .shop-panel { background: #fff; color: var(--figma-ink); border: 1px solid var(--figma-line); border-radius: 1rem; box-shadow: 0 8px 24px #2a090d08; }
+.figma-storefront .admin-page .shop-title, .figma-storefront .profile-page .shop-title { color: var(--figma-burgundy); margin-block: 1rem 1.5rem; }
+.figma-storefront .admin-page h2 { font-size: 1.35rem; line-height: 1.2; }
+.figma-storefront .admin-page label, .figma-storefront .profile-page label { font-weight: 600; }
+.figma-storefront .admin-page .shop-input, .figma-storefront .profile-page .shop-input { margin-top: .5rem; border-radius: .65rem; background: #fff; }
+.figma-storefront .admin-page .shop-input:read-only, .figma-storefront .profile-page .shop-input:read-only { background: var(--figma-canvas); }
+.figma-storefront .admin-table-scroll { background: #fff; border: 1px solid var(--figma-line); border-radius: 1rem; margin-block: 1.5rem; }
+.figma-storefront .admin-table thead { background: var(--figma-canvas); color: var(--figma-burgundy); }
+.figma-storefront .admin-table tbody tr:hover { background: #faf7f2; }
+.figma-storefront .admin-chip, .figma-storefront .admin-chips > span { background: var(--figma-canvas); color: var(--figma-burgundy); border-color: var(--figma-line); }
+.figma-storefront .admin-page .shop-error, .figma-storefront .profile-page .shop-error { background: #fff2f3; color: #851b28; border-color: #e5bcc3; }
+.figma-storefront button.shop-link, .figma-storefront .admin-actions > a.shop-link, .figma-storefront .admin-page > a.shop-link, .figma-storefront .admin-page > div > a.shop-link, .figma-storefront .cart-page > a.shop-link, .figma-storefront .cart-dialog > div > div > a.shop-link, .figma-storefront .product-detail-actions > a.shop-link { color: var(--figma-burgundy); border: 1px solid var(--figma-burgundy); border-radius: .65rem; padding: .55rem .9rem; min-height: 2.75rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; text-decoration: none; background: #fff; }
+.figma-storefront button.shop-link:hover:not(:disabled), .figma-storefront .admin-actions > a.shop-link:hover { background: #f5e9e9; }
+.figma-storefront .profile-page { max-width: 48rem; }
+@media(max-width:767px) { .figma-storefront .admin-table-scroll { background: transparent; border: 0; }.figma-storefront .admin-table tbody tr { background: #fff; border-color: var(--figma-line); box-shadow: 0 6px 16px #2a090d08; } }

@@ -338,3 +338,8 @@ img{max-width:100%}.product-card h3{display:-webkit-box;-webkit-line-clamp:2;-we
 /* Programmatic route focus announces navigation without framing static text.
    Interactive keyboard focus retains the existing focus-visible treatment. */
 .route-focus-target[tabindex="-1"]:focus { outline: none; box-shadow: none; }
+
+/* Action buttons have a visible boundary; navigation links remain links. */
+button.shop-link { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .55rem .9rem; gap: .5rem; border: 1px solid currentColor; border-radius: .65rem; font-weight: 600; text-decoration: none; background: transparent; transition: background-color .15s ease; }
+button.shop-link:hover:not(:disabled) { background: #ffffff14; }
+button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
