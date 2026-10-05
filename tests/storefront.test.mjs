@@ -60,3 +60,9 @@ test('collections anchors are handled and mobile search stays inside the navigat
  assert.match(readFileSync('src/shared/components/CatalogSearch.tsx','utf8'),/aria-label="Cerrar búsqueda"/);
  const theme=readFileSync('src/features/marketing/styles/figma.css','utf8');assert.match(theme,/flex: 0 0 1\.5rem/);assert.match(theme,/white-space: nowrap; overflow-x: auto/);
 });
+
+test('explore opens the filtered catalog and contact email wraps at the domain boundary',()=>{
+ const worlds=readFileSync('src/features/catalog/pages/WorldsLanding.tsx','utf8');assert.match(worlds,/to="\/otros-universos\?universe=otros-universos#catalogo">Explorar colecciones/);
+ const contact=readFileSync('src/features/content/pages/Contact.tsx','utf8');assert.match(contact,/className="contact-email"/);assert.match(contact,/<wbr\/>/);
+ const css=readFileSync('src/features/marketing/styles/figma.css','utf8');assert.match(css,/\.contact-email > span \{ display: inline-block; white-space: nowrap/);
+});

@@ -233,3 +233,10 @@
 .figma-contact-details p > span { min-width: 0; flex: 1; overflow-wrap: break-word; }
 .figma-contact-details p > a { min-width: 0; max-width: 100%; white-space: nowrap; overflow-x: auto; overflow-wrap: normal; }
 #universos { scroll-margin-top: calc(var(--nav-height,5rem) + 1rem); }
+
+/* Break long emails at the domain boundary, never leave one letter orphaned. */
+.figma-storefront .figma-contact-details p { min-width: 0; }
+.figma-storefront .figma-contact-details p > a { flex: 1; }
+.figma-storefront .figma-contact-details p > .contact-email { white-space: normal; word-break: normal; overflow-wrap: normal; }
+.figma-storefront .contact-email > span { display: inline-block; white-space: nowrap; }
+@media (max-width: 420px) { .figma-storefront .figma-contact-details { padding: 1.25rem; } }
