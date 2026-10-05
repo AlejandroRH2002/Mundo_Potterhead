@@ -19,7 +19,7 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
       <label className="flex items-center gap-3"><input type="checkbox" name="isOnSale" checked={editor.draft.isOnSale ?? false} onChange={editor.change} /> Activar descuento</label>
       <label>Ruta o URL HTTPS de imagen (opcional)<input className="shop-input" name="image" value={editor.draft.image} onChange={editor.change} /></label>
       <label>Subir imagen (opcional)<input className="shop-input" type="file" disabled={editor.uploading || editor.saving} accept="image/png,image/jpeg,image/webp" onChange={event => void editor.upload(event.target.files?.[0])} /></label>
-      <img src={editor.draft.image || '/images/product-placeholder.svg'} alt="Vista previa del producto" className="admin-preview rounded object-cover" />
+      <img src={editor.preview || '/images/product-placeholder.svg'} alt="Vista previa del producto" className="admin-preview rounded object-contain" />
       <div className="admin-actions self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
     </form>}
   </section>;

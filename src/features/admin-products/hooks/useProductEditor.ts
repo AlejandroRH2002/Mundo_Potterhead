@@ -1,4 +1,5 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { createImagePreview } from '../services/imagePreview';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { productService, type ProductDraft } from '@/features/catalog/services/productService';
 import { uploadProductImage } from '../services/mediaService';
@@ -10,6 +11,10 @@ export function useProductEditor(editing: boolean) {
   const id = params.id ?? search.get('id') ?? undefined;
   const navigate = useNavigate();
   const [draft, setDraft] = useState<ProductDraft>(empty);
+  const [preview, setPreview] = useState('');
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -36,17 +41,18 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'price' || name === 'originalPrice') setDraft(current => ({ ...current, [name]: value === '' && name === 'originalPrice' ? undefined : Number(value) }));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
-    else setDraft(current => ({ ...current, [name]: value }));
+    else { if (name === 'image') setPreview(''); setDraft(current => ({ ...current, [name]: value })); }
   };
   const upload = async (file?: File) => {
     if (!file) return;
     setError('');
     try {
+      setPreview(createImagePreview(file));
       setUploading(true);
       const image = await uploadProductImage(file);
-      setDraft(current => ({ ...current, image }));
-    } catch (cause: unknown) { setError(errorMessage(cause)); }
-    finally { setUploading(false); }
+      if (mounted.current) setDraft(current => ({ ...current, image }));
+    } catch (cause: unknown) { if (mounted.current) { setPreview(''); setError(errorMessage(cause)); } }
+    finally { if (mounted.current) setUploading(false); }
   };
   const save = async () => {
     if (saving || uploading || !ready) return;
@@ -61,5 +67,5 @@ export function useProductEditor(editing: boolean) {
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
   };
-  return { draft, loading, saving, uploading, ready, error, change, upload, save };
+  return { preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
 }

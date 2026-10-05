@@ -18,3 +18,11 @@ test('initial password stays ephemeral and is cleared on close or successful cre
  const source=readFileSync('src/features/admin-users/hooks/useAdminUsers.ts','utf8');assert.match(source,/closeForm.*setDraft\(blank\)/);assert.match(source,/await userService.create\(draft\); setDraft\(blank\); setFormOpen\(false\)/);
  const field=readFileSync('src/features/admin-users/components/InitialPassword.tsx','utf8');assert.match(field,/aria-live="polite"/);assert.match(field,/navigator.clipboard.writeText/);assert.doesNotMatch(source+field,/localStorage|sessionStorage|console\.|URLSearchParams/);
 });
+
+import { createImagePreview } from '../src/features/admin-products/services/imagePreview.ts';
+test('PNG/JPG file previews use local blob URLs and release them when replaced or unmounted', () => {
+ for(const type of ['image/png','image/jpeg']) {const url=createImagePreview(new File(['preview'],'selected',{type}));assert.match(url,/^blob:/);URL.revokeObjectURL(url);}
+ assert.throws(()=>createImagePreview(new File(['x'],'invalid',{type:'text/plain'})));
+ const hook=readFileSync('src/features/admin-products/hooks/useProductEditor.ts','utf8');assert.match(hook,/setPreview\(createImagePreview\(file\)\)/);assert.match(hook,/URL.revokeObjectURL\(preview\)/);
+ const view=readFileSync('src/features/admin-products/components/ProductEditor.tsx','utf8');assert.match(view,/src={editor.preview/);
+});
