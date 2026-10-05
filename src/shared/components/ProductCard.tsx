@@ -26,7 +26,7 @@ export function ProductCard({ product, priority = false, index = 0 }: { product:
       <p className="line-clamp-2 my-3 product-description">{product.description}</p>
       <p className="availability-note">Disponibilidad por confirmar</p>
       <p className="text-xl font-bold mb-3">{money(product.price)} {product.isOnSale && product.originalPrice && <span className="text-sm text-gray-600 line-through">{money(product.originalPrice)}</span>}</p>
-      <Button aria-label={`Añadir ${product.name} a mi cotización`} className="quick-add mt-auto" onClick={() => { cart.add(product.id); setNotice(true); setNoticeVersion(value=>value+1); }}>Añadir a mi cotización</Button>
+      <Button aria-label={`Añadir ${product.name} a mi cotización`} className="quick-add mt-auto" onClick={() => { cart.add(product.id, product.image); setNotice(true); setNoticeVersion(value=>value+1); }}>Añadir a mi cotización</Button>
       <p role="status" aria-live="polite" className="cart-feedback text-sm mt-2">{cart.message === 'Producto agregado al carrito.' && !notice ? '' : cart.message}</p>
     </div>
   </m.article>;
