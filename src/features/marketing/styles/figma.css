@@ -131,3 +131,5 @@
 .figma-storefront .figma-collection:hover { box-shadow: 0 0 0 3px #d5a62e; }
 .figma-storefront .catalog-filter-drawer::backdrop { background: #17131590; }
 .figma-storefront .shop-button:disabled { background: #d3c4a9; border-color: #d3c4a9; color: #544038; }
+
+@media (max-width: 767px) { .figma-selection .figma-product-grid > :nth-child(n+3) { display: none; } }
