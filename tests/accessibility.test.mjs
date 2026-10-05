@@ -34,7 +34,7 @@ test('new theme text tokens meet AA contrast on their intended solid surfaces', 
 test('typography is local with one critical preload; motion is lazy and reduced-motion aware', () => {
  const css=read('src/index.css'),html=read('index.html');assert.equal((html.match(/as="font"/g)??[]).length,1);assert.match(css,/font-display: swap/);assert.doesNotMatch(css,/url\(['"]?https?:/);
  assert.match(read('src/app/App.tsx'),/LazyMotion features={loadMotion} strict/);assert.match(read('src/app/App.tsx'),/reducedMotion="user"/);assert.match(read('src/shared/lib/motionFeatures.ts'),/domAnimation/);
- assert.doesNotMatch(read('src/shared/components/PageTransition.tsx'),/filter:|background:/);assert.match(css,/prefers-reduced-motion: reduce/);
+ const transition=read('src/shared/components/PageTransition.tsx');assert.match(transition,/if \(reduce\) return <div/);assert.match(transition,/filter: 'none'/);assert.doesNotMatch(transition,/scene-curtain|background:|window\.innerWidth|matchMedia/);assert.match(css,/prefers-reduced-motion: reduce/);
 });
 
 test('hero keeps a single accessible title, responsive supplied banner and modal cart keeps the legal notice', () => {

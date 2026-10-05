@@ -345,12 +345,4 @@ button.shop-link:hover:not(:disabled) { background: #ffffff14; }
 button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 
 .page-transition { position: relative; min-width: 0; }
-.page-transition-gold { position: absolute; top: 0; inset-inline: 0; height: 2px; pointer-events: none; transform-origin: center; background: linear-gradient(90deg,transparent,#d5a62e,#f3d982,#d5a62e,transparent); z-index: 1; }
-@media(prefers-reduced-motion:reduce) { .page-transition-gold { display: none; } }
 
-/* Scene curtain covers route changes; navigation remains above it. */
-.scene-curtain { position: fixed; inset: 0; z-index: 45; pointer-events: none; background: linear-gradient(115deg,#2a090d 0%,#65111a 60%,#2a090d 100%); border-inline: 2px solid #d5a62e; display: grid; place-items: center; overflow: hidden; }
-.scene-curtain::before, .scene-curtain::after { content: ''; position: absolute; inset: 12% 8%; border: 1px solid #d5a62e70; border-radius: 50%; transform: rotate(-12deg); }
-.scene-curtain::after { inset: 16% 12%; transform: rotate(12deg); }
-.scene-curtain-ornament { color: #f3d982; font-size: clamp(3rem,9vw,7rem); line-height: 1; }
-@media(prefers-reduced-motion:reduce) { .scene-curtain { display: none; } }
