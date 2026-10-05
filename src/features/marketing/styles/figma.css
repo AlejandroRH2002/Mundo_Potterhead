@@ -135,3 +135,18 @@
 .figma-storefront .shop-button:disabled { background: #d3c4a9; border-color: #d3c4a9; color: #544038; }
 
 @media (max-width: 767px) { .figma-selection .figma-product-grid > :nth-child(n+3) { display: none; } }
+
+/* Product detail shares the public storefront skin and existing behavior. */
+.figma-storefront .product-detail-page .shop-panel { background: #fff; color: var(--figma-ink); border: 1px solid var(--figma-line); border-radius: 1rem; padding: clamp(1rem,3vw,2.5rem); margin-top: 1.25rem; align-items: start; }
+.figma-storefront .product-detail-page .shop-panel > * { min-width: 0; overflow-wrap: anywhere; }
+.figma-storefront .product-detail-info .shop-title { font-size: clamp(2rem,4vw,3.5rem); line-height: 1.05; margin-block: 1rem; }
+.figma-storefront .product-detail-price { color: var(--figma-burgundy); }
+.figma-storefront .product-gallery > img { background: var(--figma-canvas); max-height: 38rem; object-fit: contain; }
+.figma-storefront .product-gallery > p { color: var(--figma-muted); }
+.figma-storefront .gallery-thumbnails button { background: #fff; border-color: var(--figma-line); }
+.figma-storefront .gallery-thumbnails button[aria-pressed=true] { outline-color: var(--figma-burgundy); }
+.figma-storefront .product-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.figma-storefront .product-detail-actions .shop-link { margin-left: 0; }
+.figma-storefront .product-detail-page .mobile-product-cta { background: #fff; color: var(--figma-ink); border-color: var(--figma-line); }
+.figma-storefront .product-detail-page .mobile-product-cta small { color: var(--figma-muted); }
+@media(max-width:359px) { .figma-storefront .product-detail-actions > * { width: 100%; text-align: center; } }
