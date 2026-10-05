@@ -24,6 +24,8 @@
 .figma-storefront .announcement { background: var(--figma-dark); color: #f3d982; min-height: 2.125rem; padding-block: .2rem; font-size: .7rem; }
 .figma-storefront .announcement button { color: #f3d982; }
 .figma-storefront .site-nav { color: var(--figma-ink); background: #fff; border-color: var(--figma-line); box-shadow: none; }
+/* Keep the light navigation skin after the global scroll rule changes state. */
+.figma-storefront .site-nav.is-scrolled { background: #fff; color: var(--figma-ink); border-color: var(--figma-line); }
 .figma-storefront .site-nav > div { max-width: 90rem; padding-inline: clamp(1.125rem,4.45vw,4rem); gap: 1.5rem; min-height: 5.375rem; }
 .figma-storefront .nav-brand { color: var(--figma-burgundy); font-family: var(--font-display); }
 .figma-storefront .nav-brand > span { font-size: 1.5rem; line-height: 1; }
