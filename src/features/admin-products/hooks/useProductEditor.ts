@@ -8,6 +8,18 @@ import { productService, type ProductDraft } from '@/features/catalog/services/p
 import { uploadProductImage } from '../services/mediaService';
 import { errorMessage } from '@/shared/lib/money';
 const empty: ProductDraft = { name: '', description: '', price: 0, image: '', category: 'accessories', universe: 'harry-potter', isOnSale: false };
+const sanitizeImageSource = (value: string) => {
+  const source = value.trim();
+  if (!source) return '';
+  if (source.startsWith('/')) return source;
+  if (source.startsWith('blob:')) return source;
+  try {
+    const url = new URL(source);
+    return url.protocol === 'https:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
+};
 export function useProductEditor(editing: boolean) {
   const params = useParams<{ id: string }>();
   const [search] = useSearchParams();
@@ -102,5 +114,5 @@ export function useProductEditor(editing: boolean) {
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
   };
-  return { gallery, setPrimary, removeImage, priceInput, originalPriceInput, preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
+  return { gallery, setPrimary, removeImage, priceInput, originalPriceInput, preview: sanitizeImageSource(preview || draft.image), draft, loading, saving, uploading, ready, error, change, upload, save };
 }
