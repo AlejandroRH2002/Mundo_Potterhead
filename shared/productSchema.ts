@@ -14,6 +14,7 @@ export const productDraftSchema = z.object({
   originalPrice: money.optional(),
   isOnSale: z.boolean().optional(),
   image: z.preprocess(value => value == null || (typeof value === 'string' && !value.trim()) ? productPlaceholder : value, z.string().trim().max(2_800_000).refine(validImage, 'Imagen no válida.')),
+  images: z.array(z.string().trim().max(2048).refine(value => validImage(value) && !value.startsWith('data:'), 'Usa una imagen alojada, no Base64.')).max(7, 'Puedes añadir hasta 8 imágenes contando la principal.').optional(),
   category: z.enum(categories),
   subcategory: z.string().max(80).nullable().optional(),
   universe: z.enum(universes),

@@ -229,6 +229,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
           if (!parsed.success) throw new HttpError(400, 'Datos de producto inválidos.');
           const draft = parsed.data;
           if (!allowInlineImages && draft.image !== productPlaceholder && !draft.image.startsWith('https://')) throw new HttpError(400, 'En producción se requiere una imagen alojada por HTTPS.');
+          if (!allowInlineImages && draft.images?.some(image => !image.startsWith('https://'))) throw new HttpError(400, 'Las imágenes adicionales requieren HTTPS en producción.');
           const product = id ? await products.update(id, draft) : await products.create(draft);
           if (!product) throw new HttpError(404, 'Producto no encontrado.');
           json(response, id ? 200 : 201, product); return;
