@@ -88,3 +88,11 @@ En Cloudflare → R2 → bucket usado por Render → Settings → CORS Policy, c
 Esta plantilla no se aplica automáticamente al desplegar. Si ya hay reglas válidas para otros entornos autorizados, conservarlas. Si persiste, comprobar OPTIONS/PUT en Network: 403 puede indicar caducidad o permisos S3; un fallo en media/complete exige revisar el log de Render sin copiar secretos.
 
 Referencia: https://developers.cloudflare.com/r2/buckets/cors/
+
+## Catálogo 500 después de incorporar la galería
+
+Readiness 200 comprueba conexión; no garantiza que las migraciones estén aplicadas. La migración 20261005000000_product_gallery añade Product.images sin borrar productos. Si Render registra DATABASE_SCHEMA_OUTDATED, aplicar pnpm db:migrate en el runner autorizado con NODE_ENV=production y DIRECT_DATABASE_URL correspondiente a la misma base y esquema usados por DATABASE_URL de Render. Un migrate deploy local no demuestra que Neon haya sido actualizado. No copiar conexiones en capturas; no usar reset, db push ni seed como reparación. Tras aplicar, comprobar /api/products y guardar/reabrir una galería.
+
+### Siguiente fase: existencias por modelo
+
+Una galería contiene fotos, no inventario. Para indicar tres unidades de un diseño y dos de otro, cada modelo necesitará identificador estable, nombre, imagen asociada y stock; las tallas requerirán variantes de ese modelo. Las líneas del carrito y el mensaje de WhatsApp deberán conservar modelo/talla y validar cantidades contra stock. En este flujo de cotización no se descontará inventario automáticamente al abrir WhatsApp, porque no confirma una venta; el administrador actualizará existencias tras confirmar la operación. Esta fase todavía no está implementada.

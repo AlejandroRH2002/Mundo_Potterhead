@@ -249,7 +249,13 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         (error instanceof Prisma.PrismaClientKnownRequestError && ['P1001', 'P1002', 'P2024'].includes(error.code))) {
         status = 503; message = 'Servicio temporalmente no disponible.';
       }
-      if (!(error instanceof HttpError)) logger({ event: 'failure', requestId, route, status, code: status === 503 ? 'DATABASE_UNAVAILABLE' : 'REQUEST_FAILED' });
+      const prismaCode = error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined;
+      const missingColumn = prismaCode === 'P2022' || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2010' && error.meta?.code === '42703');
+      if (missingColumn) {
+        status = 503;
+        message = 'El esquema de la base de datos no está actualizado. El administrador debe aplicar las migraciones pendientes en la base de la API.';
+      }
+      if (!(error instanceof HttpError)) logger({ event: 'failure', requestId, route, status, code: missingColumn ? 'DATABASE_SCHEMA_OUTDATED' : prismaCode && /^P\d{4}$/.test(prismaCode) ? prismaCode : status === 503 ? 'DATABASE_UNAVAILABLE' : 'REQUEST_FAILED' });
       if (!response.headersSent) json(response, status, { message });
       else response.end();
     });
