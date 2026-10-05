@@ -346,3 +346,9 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 
 .page-transition { position: relative; min-width: 0; }
 
+
+.nav-search-close { display: none; }
+@media (max-width: 1023px) {
+ .site-nav .nav-search-shell .search-open { top: .5rem; left: .75rem; right: .75rem; padding: .25rem; border-radius: 2rem; min-height: 3.5rem; align-items: center; z-index: 52; }
+ .site-nav .search-open .nav-search-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 2.75rem; min-height: 2.75rem; }
+}

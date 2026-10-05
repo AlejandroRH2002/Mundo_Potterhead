@@ -227,3 +227,9 @@
  .figma-storefront .gallery-thumbnails img { transition: transform .16s ease; }
  .figma-storefront .gallery-thumbnails button:hover img { transform: scale(1.04); }
 }
+
+/* Keep contact icons from consuming the text column. */
+.figma-contact-details p > .figma-icon { width: 1.5rem; height: 1.5rem; object-fit: contain; flex: 0 0 1.5rem; }
+.figma-contact-details p > span { min-width: 0; flex: 1; overflow-wrap: break-word; }
+.figma-contact-details p > a { min-width: 0; max-width: 100%; white-space: nowrap; overflow-x: auto; overflow-wrap: normal; }
+#universos { scroll-margin-top: calc(var(--nav-height,5rem) + 1rem); }

@@ -52,3 +52,11 @@ test('map embeds allow only HTTPS Google embed paths',()=>{
  for(const url of [undefined,'','http://www.google.com/maps/embed','https://evil.com/maps/embed','https://www.google.com.evil.com/maps/embed','https://www.google.com/maps/embed-evil','https://www.google.com/maps','https://user:pass@www.google.com/maps/embed','https://www.google.com:8443/maps/embed']) assert.equal(validMapEmbedUrl(url),null);
  const app=readFileSync('src/app/App.tsx','utf8');assert.match(app,/<Route path="\/contact" element={<Contact \/>} \/>/);
 });
+
+test('collections anchors are handled and mobile search stays inside the navigation',()=>{
+ assert.equal(scrollIntent(page('/otros-universos'),page('/otros-universos','','#universos'),'PUSH',false),'anchor');
+ assert.equal(scrollIntent(page('/otros-universos'),page('/otros-universos','','#universos'),'POP',true),'restore');
+ const css=readFileSync('src/index.css','utf8');assert.match(css,/\.site-nav \.nav-search-shell \.search-open \{ top: \.5rem/);
+ assert.match(readFileSync('src/shared/components/CatalogSearch.tsx','utf8'),/aria-label="Cerrar búsqueda"/);
+ const theme=readFileSync('src/features/marketing/styles/figma.css','utf8');assert.match(theme,/flex: 0 0 1\.5rem/);assert.match(theme,/white-space: nowrap; overflow-x: auto/);
+});

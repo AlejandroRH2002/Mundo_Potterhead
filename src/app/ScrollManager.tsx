@@ -15,12 +15,12 @@ export function ScrollManager() {
    frame=0;const route=main?.querySelector('[data-route-key="'+CSS.escape(location.key)+'"]');if(!route)return;
    if(intent==='restore'&&saved&&!applied){window.scrollTo({left:saved.x,top:saved.y,behavior:'auto'});applied=Math.abs(window.scrollY-saved.y)<2;}
    else if(!applied&&intent!=='restore'){
-    const target=intent==='catalog'?document.getElementById('catalogo'):intent==='results'?document.getElementById('catalog-results'):undefined;
-    if(target)target.scrollIntoView({behavior:'auto',block:'start'});else if(intent==='top')window.scrollTo({top:0,left:0,behavior:'auto'});
+    const target=intent==='catalog'?document.getElementById('catalogo'):intent==='results'?document.getElementById('catalog-results'):intent==='anchor'?document.getElementById('universos'):undefined;
+    if(target)target.scrollIntoView({behavior:'auto',block:'start'});else if(intent==='anchor')return;else if(intent==='top')window.scrollTo({top:0,left:0,behavior:'auto'});
     applied=true;
    }
-   if(!focused && (intent==='top'||intent==='catalog'||intent==='restore'&&pathChanged)){
-    const target=intent==='catalog'?document.getElementById('catalogo'):route.querySelector<HTMLElement>('h1');
+   if(!focused && (intent==='top'||intent==='catalog'||intent==='anchor'||intent==='restore'&&pathChanged)){
+    const target=intent==='catalog'?document.getElementById('catalogo'):intent==='anchor'?document.getElementById('universos'):route.querySelector<HTMLElement>('h1');
     const focus=target&&target.getBoundingClientRect().width>2?target:main;if(focus){focus.setAttribute('tabindex','-1');focus.classList.add('route-focus-target');focus.focus({preventScroll:true});focused=true;}
    }
   };
