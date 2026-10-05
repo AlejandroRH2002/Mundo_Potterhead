@@ -1,0 +1,86 @@
+// Source: Figma wcFDwnHoXVd0Xn9qkwK0TB; static slots only. Product imagery remains API supplied.
+export const figmaAssets = {
+  "homeDesktop": {
+    "imgEscena": "/brand/figma/546f7.jpg",
+    "imgImagen": "/brand/figma/3c82d.jpg",
+    "imgImagen1": "/brand/figma/98e83.jpg",
+    "imgImagen2": "/brand/figma/0df9d.jpg",
+    "imgImagen3": "/brand/figma/c041c.jpg",
+    "imgImagen4": "/brand/figma/64e14.jpg",
+    "imgSearch": "/brand/figma/b3a1a.svg",
+    "imgUserRound": "/brand/figma/470ee.svg",
+    "imgShoppingBag": "/brand/figma/a2864.svg",
+    "imgCantidad": "/brand/figma/c9258.svg",
+    "imgArrowRight": "/brand/figma/5003d.svg",
+    "imgTruck": "/brand/figma/bcbd5.svg",
+    "imgShieldCheck": "/brand/figma/14071.svg",
+    "imgSparkles": "/brand/figma/61074.svg",
+    "imgGift": "/brand/figma/6afc4.svg",
+    "imgArrowRight1": "/brand/figma/a4475.svg"
+  },
+  "homeMobile": {
+    "imgEscena": "/brand/figma/53474.jpg",
+    "imgImagen": "/brand/figma/424f5.jpg",
+    "imgImagen1": "/brand/figma/b7e06.jpg",
+    "imgImagen2": "/brand/figma/3e9e2.jpg",
+    "imgImagen3": "/brand/figma/aa40e.jpg",
+    "imgMenu": "/brand/figma/39472.svg",
+    "imgSearch": "/brand/figma/77f50.svg",
+    "imgShoppingBag": "/brand/figma/2bb6a.svg",
+    "imgArrowRight": "/brand/figma/5003d.svg",
+    "imgTruck": "/brand/figma/bcbd5.svg",
+    "imgShieldCheck": "/brand/figma/14071.svg",
+    "imgSparkles": "/brand/figma/61074.svg",
+    "imgGift": "/brand/figma/6afc4.svg"
+  },
+  "worldsDesktop": {
+    "imgImagen": "/brand/figma/2c1bc.jpg",
+    "imgImagen1": "/brand/figma/b552f.jpg",
+    "imgImagen2": "/brand/figma/c0667.jpg",
+    "imgImagen3": "/brand/figma/95a7d.jpg",
+    "imgImagen4": "/brand/figma/89776.jpg",
+    "imgImagen5": "/brand/figma/5f7e5.jpg",
+    "imgImagen6": "/brand/figma/df50f.jpg",
+    "imgSearch": "/brand/figma/b3a1a.svg",
+    "imgUserRound": "/brand/figma/470ee.svg",
+    "imgShoppingBag": "/brand/figma/a2864.svg",
+    "imgCantidad": "/brand/figma/c9258.svg",
+    "imgArrowDown": "/brand/figma/0adaf.svg"
+  },
+  "worldsMobile": {
+    "imgImagen": "/brand/figma/cc5a8.jpg",
+    "imgImagen1": "/brand/figma/fe7f8.jpg",
+    "imgImagen2": "/brand/figma/0f175.jpg",
+    "imgImagen3": "/brand/figma/aa537.jpg",
+    "imgImagen4": "/brand/figma/251f6.jpg",
+    "imgImagen5": "/brand/figma/d63d8.jpg",
+    "imgImagen6": "/brand/figma/e7143.jpg",
+    "imgMenu": "/brand/figma/39472.svg",
+    "imgSearch": "/brand/figma/77f50.svg",
+    "imgShoppingBag": "/brand/figma/2bb6a.svg"
+  },
+  "contactDesktop": {
+    "imgSearch": "/brand/figma/b3a1a.svg",
+    "imgUserRound": "/brand/figma/470ee.svg",
+    "imgShoppingBag": "/brand/figma/a2864.svg",
+    "imgCantidad": "/brand/figma/c9258.svg",
+    "imgSend": "/brand/figma/457b8.svg",
+    "imgMail": "/brand/figma/2a539.svg",
+    "imgPhone": "/brand/figma/2f6c0.svg",
+    "imgClock": "/brand/figma/6b95f.svg",
+    "imgMapPin": "/brand/figma/716ff.svg",
+    "imgPackageSearch": "/brand/figma/a9caf.svg"
+  },
+  "contactMobile": {
+    "imgMenu": "/brand/figma/39472.svg",
+    "imgSearch": "/brand/figma/77f50.svg",
+    "imgShoppingBag": "/brand/figma/2bb6a.svg",
+    "imgMail": "/brand/figma/0a776.svg",
+    "imgPhone": "/brand/figma/a58d9.svg",
+    "imgClock": "/brand/figma/578d1.svg",
+    "imgPackageSearch": "/brand/figma/3a33d.svg",
+    "imgSend": "/brand/figma/457b8.svg",
+    "imgMinus": "/brand/figma/54d6f.svg",
+    "imgPlus": "/brand/figma/5c655.svg"
+  }
+} as const;
