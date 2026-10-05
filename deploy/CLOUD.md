@@ -79,3 +79,12 @@ Configurar un monitor externo HTTP GET a **https://<api>.onrender.com/health/liv
 - [R2 public buckets: r2.dev para desarrollo](https://developers.cloudflare.com/r2/buckets/public-buckets/).
 - [Prisma con Neon: despertar y timeouts](https://docs.prisma.io/docs/orm/v6/overview/databases/neon); se usa solo la explicación TCP/timeouts, no el adapter ni configuración de Prisma 6.
 - [Render gratuito y suspensión](https://render.com/docs/free), [health checks y plazo de 5 s](https://render.com/docs/health-checks).
+## Diagnóstico de subida desde Pages
+
+Si el navegador muestra «Subida a R2 bloqueada o sin respuesta», revisar primero Red/Network: el error puede ser CORS, conexión o una autorización firmada caducada. No compartir URLs firmadas.
+
+En Cloudflare → R2 → bucket usado por Render → Settings → CORS Policy, pegar el contenido de deploy/r2-cors-pages.json (formato array del dashboard, distinto de CORSRules de AWS). Autoriza únicamente PUT con Content-Type desde https://mundo-potterhead.pages.dev, sin barra final. Guardar y esperar hasta 30 segundos de propagación; volver a seleccionar la imagen para obtener una autorización nueva. No cambiar la privacidad del bucket ni publicar _pending/.
+
+Esta plantilla no se aplica automáticamente al desplegar. Si ya hay reglas válidas para otros entornos autorizados, conservarlas. Si persiste, comprobar OPTIONS/PUT en Network: 403 puede indicar caducidad o permisos S3; un fallo en media/complete exige revisar el log de Render sin copiar secretos.
+
+Referencia: https://developers.cloudflare.com/r2/buckets/cors/

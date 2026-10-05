@@ -1,0 +1,17 @@
+[
+  {
+    "AllowedOrigins": [
+      "https://mundo-potterhead.pages.dev"
+    ],
+    "AllowedMethods": [
+      "PUT"
+    ],
+    "AllowedHeaders": [
+      "Content-Type"
+    ],
+    "ExposeHeaders": [
+      "ETag"
+    ],
+    "MaxAgeSeconds": 300
+  }
+]
