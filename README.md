@@ -72,3 +72,9 @@ Los textos legales requieren revisión por un asesor; los datos del responsable 
 ## Revisión manual
 
 Revisar inicio, catálogo, detalle, carrito y formularios en móvil/escritorio; navegación al hacer scroll, teclado, foco, movimiento reducido, carga real de imágenes y cotización por WhatsApp. Las compilaciones no sustituyen esa revisión.
+
+### Galería por producto
+
+El administrador puede añadir hasta ocho imágenes en una misma ficha, elegir la principal y quitar imágenes de la galería. El detalle ofrece miniaturas y el catálogo usa la principal. Las fotos pueden mostrar distintos modelos; esta galería no añade todavía selección de modelo/talla ni identifica variantes en WhatsApp. Quitar una foto de la ficha no elimina el objeto de R2.
+
+Migración incremental: 20261005000000_product_gallery. Aplicar con pnpm db:migrate desde el runner autorizado antes de desplegar el backend actualizado. Los productos existentes conservan imageUrl y empiezan sin imágenes adicionales; no hay reset ni migración automática desde la aplicación.

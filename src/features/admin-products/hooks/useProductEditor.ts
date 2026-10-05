@@ -1,3 +1,5 @@
+import { productImages } from '@/shared/lib/productMedia';
+import { productPlaceholder } from '../../../../shared/productSchema';
 import { normalizePriceInput } from '../services/priceInput';
 import { createImagePreview } from '../services/imagePreview';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -48,15 +50,39 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
     else { if (name === 'image') { setPreview(''); setUploadFailure(''); } setDraft(current => ({ ...current, [name]: value })); }
   };
-  const upload = async (file?: File) => {
-    if (!file) return;
+  const gallery = productImages({ ...draft, id: id ?? '' }).filter(image => image !== productPlaceholder && !!image);
+  const setPrimary = (image: string) => {
+    if (uploading || saving) return;
+    setPreview('');
+    setDraft(current => ({ ...current, image, images: productImages({ ...current, id: id ?? '' }).filter(url => url !== image && url !== productPlaceholder).slice(0, 7) }));
+  };
+  const removeImage = (image: string) => {
+    if (uploading || saving) return;
+    setPreview('');
+    setDraft(current => {
+      const remaining = productImages({ ...current, id: id ?? '' }).filter(url => url !== image && url !== productPlaceholder);
+      const primary = current.image === image ? remaining.shift() ?? '' : current.image;
+      return { ...current, image: primary, images: remaining.filter(url => url !== primary) };
+    });
+  };
+  const upload = async (files: File[] = []) => {
+    if (!files.length || uploading || saving) return;
     setError('');
     try {
+      if (gallery.length + files.length > 8) throw new Error('Puedes guardar hasta 8 imágenes por producto.');
       setUploadFailure('');
-      setPreview(createImagePreview(file));
+      setPreview(createImagePreview(files[0]));
       setUploading(true);
-      const image = await uploadProductImage(file);
-      if (mounted.current) setDraft(current => ({ ...current, image }));
+      for (const file of files) {
+        const image = await uploadProductImage(file);
+        if (!mounted.current) return;
+        setDraft(current => {
+          const existing = productImages({ ...current, id: id ?? '' }).filter(url => url !== productPlaceholder && !!url);
+          const all = [...new Set([...existing, image])];
+          return { ...current, image: all[0], images: all.slice(1) };
+        });
+      }
+      setPreview('');
     } catch (cause: unknown) { if (mounted.current) { const message = errorMessage(cause); setUploadFailure(message); setError(message); } }
     finally { if (mounted.current) setUploading(false); }
   };
@@ -76,5 +102,5 @@ export function useProductEditor(editing: boolean) {
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
   };
-  return { priceInput, originalPriceInput, preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
+  return { gallery, setPrimary, removeImage, priceInput, originalPriceInput, preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
 }

@@ -206,3 +206,8 @@
 .figma-storefront button.shop-link:hover:not(:disabled), .figma-storefront .admin-actions > a.shop-link:hover { background: #f5e9e9; }
 .figma-storefront .profile-page { max-width: 48rem; }
 @media(max-width:767px) { .figma-storefront .admin-table-scroll { background: transparent; border: 0; }.figma-storefront .admin-table tbody tr { background: #fff; border-color: var(--figma-line); box-shadow: 0 6px 16px #2a090d08; } }
+
+.admin-gallery { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,12rem),1fr)); gap: 1rem; }
+.admin-gallery-item { min-width: 0; padding: .75rem; border: 1px solid var(--brand-line); border-radius: .75rem; }
+.admin-gallery-item > img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: .5rem; background: #f8f3ea; margin-bottom: .75rem; }
+.admin-gallery-item button[aria-pressed=true] { background: #65111a; color: #fff; }
