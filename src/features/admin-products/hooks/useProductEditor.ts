@@ -60,7 +60,10 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'originalPrice') setOriginalPriceInput(normalizePriceInput(value));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
-    else { if (name === 'image') { setPreview(''); setUploadFailure(''); } setDraft(current => ({ ...current, [name]: value })); }
+    else if (name === 'image') { setPreview(''); setUploadFailure(''); setDraft(current => ({ ...current, image: value })); }
+    else if (name === 'name') setDraft(current => ({ ...current, name: value }));
+    else if (name === 'description') setDraft(current => ({ ...current, description: value }));
+    else if (name === 'universe') setDraft(current => ({ ...current, universe: value as ProductDraft['universe'] }));
   };
   const gallery = productImages({ ...draft, id: id ?? '' }).filter(image => image !== productPlaceholder && !!image);
   const setPrimary = (image: string) => {
