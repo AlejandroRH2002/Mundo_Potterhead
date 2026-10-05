@@ -5,6 +5,7 @@ export { categories, universes } from './catalogTaxonomy.ts';
 export function validImage(value: string): boolean {
   return /^\/(?!\/)[^\s\\]+$/.test(value) || /^https:\/\/[^\s]+$/.test(value) || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
 }
+export const productPlaceholder = '/images/product-placeholder.svg';
 const money = z.number().finite().min(0.01).max(1000000).transform(value => Math.round(value * 100) / 100);
 export const productDraftSchema = z.object({
   name: z.string().trim().min(1).max(150),
@@ -12,7 +13,7 @@ export const productDraftSchema = z.object({
   price: money,
   originalPrice: money.optional(),
   isOnSale: z.boolean().optional(),
-  image: z.string().trim().max(2_800_000).refine(validImage, 'Imagen no válida.'),
+  image: z.preprocess(value => value == null || (typeof value === 'string' && !value.trim()) ? productPlaceholder : value, z.string().trim().max(2_800_000).refine(validImage, 'Imagen no válida.')),
   category: z.enum(categories),
   subcategory: z.string().max(80).nullable().optional(),
   universe: z.enum(universes),

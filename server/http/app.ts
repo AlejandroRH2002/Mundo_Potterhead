@@ -11,7 +11,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import type { Auth } from '../security/auth.ts';
 import { createLoginLimiter } from '../security/rateLimit.ts';
 import type { ProductRepository } from './products.ts';
-import { productDraftSchema } from '../../shared/productSchema.ts';
+import { productDraftSchema, productPlaceholder } from '../../shared/productSchema.ts';
 import { parseCatalogQuery, filterCatalog } from '../../shared/catalogQuery.ts';
 
 class HttpError extends Error { status: number; constructor(status: number, message: string) { super(message); this.status = status; } }
@@ -210,7 +210,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
           const parsed = productDraftSchema.safeParse(value);
           if (!parsed.success) throw new HttpError(400, 'Datos de producto inválidos.');
           const draft = parsed.data;
-          if (!allowInlineImages && !draft.image.startsWith('https://')) throw new HttpError(400, 'En producción se requiere una imagen alojada por HTTPS.');
+          if (!allowInlineImages && draft.image !== productPlaceholder && !draft.image.startsWith('https://')) throw new HttpError(400, 'En producción se requiere una imagen alojada por HTTPS.');
           const product = id ? await products.update(id, draft) : await products.create(draft);
           if (!product) throw new HttpError(404, 'Producto no encontrado.');
           json(response, id ? 200 : 201, product); return;

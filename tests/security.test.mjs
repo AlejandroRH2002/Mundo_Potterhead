@@ -127,3 +127,26 @@ test('internal failures and readiness failures expose no private details', async
     assert.equal(JSON.stringify(events).includes(privateDetail), false);
   } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+test('optional product image uses placeholder and retains existing images with production validation', async () => {
+ const repository = createProductRepository([]);
+ const server = createApi({ auth, products: repository, origin, allowInlineImages: false, logger: () => {} });
+ await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+ try {
+  const loginResponse = await fetch('http://127.0.0.1:' + server.address().port + '/api/auth/login', { method: 'POST', headers: { Origin: origin, 'X-Requested-With': 'MundoPotterhead', 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'admin@test.invalid', password }) });
+  assert.equal(loginResponse.status, 200);
+  const cookie = loginResponse.headers.get('set-cookie').split(';')[0];
+  const endpoint = 'http://127.0.0.1:' + server.address().port + '/api/products';
+  const request = (path,method,payload) => fetch(endpoint+path,{method,headers:{Cookie:cookie,Origin:origin,'X-Requested-With':'MundoPotterhead','Content-Type':'application/json'},body:JSON.stringify(payload)});
+  for(const image of [undefined,null,'','   ']) {
+   const response=await request('','POST',{...draft,image});assert.equal(response.status,201);
+   const product=await response.json();assert.equal(product.image,'/images/product-placeholder.svg');
+   assert.equal((await fetch(endpoint+'/'+product.id)).status,200);
+  }
+  const existing=await (await request('','POST',{...draft,image:'https://images.example.invalid/product.webp'})).json();
+  const edited=await request('/'+existing.id,'PUT',{...draft,price:125,image:existing.image});assert.equal(edited.status,200);assert.equal((await edited.json()).image,existing.image);
+  const cleared=await request('/'+existing.id,'PUT',{...draft,image:''});assert.equal(cleared.status,200);assert.equal((await cleared.json()).image,'/images/product-placeholder.svg');
+  for(const image of ['javascript:alert(1)','/private-image.png','data:image/png;base64,YQ==']) assert.equal((await request('','POST',{...draft,image})).status,400);
+  const listed=await (await fetch(endpoint)).json();assert.ok((Array.isArray(listed) ? listed : listed.items).every(product=>typeof product.image==='string'));
+ } finally { await new Promise(resolve => server.close(resolve)); }
+});

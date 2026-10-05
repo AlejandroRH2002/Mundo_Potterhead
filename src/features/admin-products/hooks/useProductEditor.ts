@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { productService, type ProductDraft } from '@/features/catalog/services/productService';
 import { uploadProductImage } from '../services/mediaService';
 import { errorMessage } from '@/shared/lib/money';
-const empty: ProductDraft = { name: '', description: '', price: 0, image: '/images/product-placeholder.svg', category: 'accessories', universe: 'harry-potter', isOnSale: false };
+const empty: ProductDraft = { name: '', description: '', price: 0, image: '', category: 'accessories', universe: 'harry-potter', isOnSale: false };
 export function useProductEditor(editing: boolean) {
   const params = useParams<{ id: string }>();
   const [search] = useSearchParams();

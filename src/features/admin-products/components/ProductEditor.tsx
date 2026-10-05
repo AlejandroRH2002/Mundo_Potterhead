@@ -17,9 +17,9 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
       <label>Universo<select className="shop-input" name="universe" value={editor.draft.universe} onChange={editor.change}>{universes.map(universe => <option key={universe} value={universe}>{universeLabels[universe]}</option>)}</select></label>
       <label>Precio anterior (opcional)<input className="shop-input" name="originalPrice" type="number" min="0.01" max="1000000" step="0.01" value={editor.draft.originalPrice ?? ''} onChange={editor.change} /></label>
       <label className="flex items-center gap-3"><input type="checkbox" name="isOnSale" checked={editor.draft.isOnSale ?? false} onChange={editor.change} /> Activar descuento</label>
-      <label>Ruta o URL HTTPS de imagen<input className="shop-input" name="image" required value={editor.draft.image} onChange={editor.change} /></label>
-      <label>Subir imagen<input className="shop-input" type="file" disabled={editor.uploading || editor.saving} accept="image/png,image/jpeg,image/webp" onChange={event => void editor.upload(event.target.files?.[0])} /></label>
-      <img src={editor.draft.image} alt="Vista previa del producto" className="admin-preview rounded object-cover" />
+      <label>Ruta o URL HTTPS de imagen (opcional)<input className="shop-input" name="image" value={editor.draft.image} onChange={editor.change} /></label>
+      <label>Subir imagen (opcional)<input className="shop-input" type="file" disabled={editor.uploading || editor.saving} accept="image/png,image/jpeg,image/webp" onChange={event => void editor.upload(event.target.files?.[0])} /></label>
+      <img src={editor.draft.image || '/images/product-placeholder.svg'} alt="Vista previa del producto" className="admin-preview rounded object-cover" />
       <div className="admin-actions self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
     </form>}
   </section>;
