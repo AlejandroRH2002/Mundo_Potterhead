@@ -21,7 +21,7 @@ export function ScrollManager() {
    }
    if(!focused && (intent==='top'||intent==='catalog'||intent==='restore'&&pathChanged)){
     const target=intent==='catalog'?document.getElementById('catalogo'):route.querySelector<HTMLElement>('h1');
-    const focus=target&&target.getBoundingClientRect().width>2?target:main;if(focus){focus.setAttribute('tabindex','-1');focus.focus({preventScroll:true});focused=true;}
+    const focus=target&&target.getBoundingClientRect().width>2?target:main;if(focus){focus.setAttribute('tabindex','-1');focus.classList.add('route-focus-target');focus.focus({preventScroll:true});focused=true;}
    }
   };
   const schedule=()=>{if(!frame)frame=requestAnimationFrame(execute);};schedule();
