@@ -1,3 +1,4 @@
+import { catalogImage } from './productImage.ts';
 import { matchesSearch } from './catalogSearch.ts';
 import { z } from 'zod';
 import { categories, universes, belongsToCategory } from './catalogTaxonomy.ts';
@@ -57,5 +58,5 @@ export function filterCatalog(products: Product[], query: CatalogQuery): Catalog
  const items = products.filter(product => matchesCatalog(product, query));
  if (query.sort === 'novedad') items.reverse(); // Fixture insertion order approximates creation time.
  else items.sort((a, b) => (query.sort === 'precio-asc' ? a.price-b.price : query.sort === 'precio-desc' ? b.price-a.price : discount(b)-discount(a)) || a.id.localeCompare(b.id));
- return { items: items.slice((query.page-1)*query.pageSize, query.page*query.pageSize).map(product => ({ ...product, image: product.image.startsWith('data:') ? '/images/product-placeholder.svg' : product.image })), total: items.length, page: query.page, pageSize: query.pageSize, facets };
+ return { items: items.slice((query.page-1)*query.pageSize, query.page*query.pageSize).map(product => ({ ...product, image: catalogImage(product.id, product.image) })), total: items.length, page: query.page, pageSize: query.pageSize, facets };
 }

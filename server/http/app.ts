@@ -1,7 +1,8 @@
+import { catalogImage } from '../../shared/productImage.ts';
 import { createUserSchema, changeUserSchema, userPageSchema } from '../../shared/userSchema.ts';
 import { UserManagementError, type UserRepository } from '../repositories/users.ts';
 import { randomUUID } from 'node:crypto';
-import { MediaValidationError, type MediaStorage } from '../media.ts';
+import { imageMime, MediaValidationError, type MediaStorage } from '../media.ts';
 import { uploadInputSchema, completeUploadSchema } from '../../shared/mediaSchema.ts';
 import { Prisma } from '@prisma/client';
 import { isIP } from 'node:net';
@@ -181,6 +182,23 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         if (typeof value.name !== 'string' || !value.name.trim() || value.name.length > 150 || value.email !== user.email) throw new HttpError(400, 'Solo puedes cambiar el nombre. El correo de acceso se administra en el servidor.');
         json(response, 200, { user: await auth.updateName(user.id, value.name.trim()) }); return;
       }
+      if (/^\/api\/products\/[^/]+\/image$/.test(path)) {
+        route = '/api/products/:id/image';
+        if (!['GET', 'HEAD'].includes(method)) throw new HttpError(405, 'Operación no permitida.');
+        let id: string;
+        try { id = decodeURIComponent(path.slice('/api/products/'.length, -'/image'.length)); }
+        catch { throw new HttpError(400, 'Identificador inválido.'); }
+        const product = await products.get(id);
+        const match = product?.image.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+        if (!match || match[2].length > 2_800_000) throw new HttpError(404, 'Imagen no encontrada.');
+        const bytes = Buffer.from(match[2], 'base64');
+        let mime: string;
+        try { mime = imageMime(bytes); } catch { throw new HttpError(404, 'Imagen no válida.'); }
+        if (mime !== match[1]) throw new HttpError(404, 'Imagen no válida.');
+        response.writeHead(200, { 'Content-Type': mime, 'Content-Length': bytes.length });
+        response.end(method === 'HEAD' ? undefined : bytes);
+        return;
+      }
       if (path === '/api/products' || /^\/api\/products\/[^/]+$/.test(path)) {
         let id: string | undefined;
         try { id = path === '/api/products' ? undefined : decodeURIComponent(path.slice('/api/products/'.length)); }
@@ -191,11 +209,11 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
             try { query = parseCatalogQuery(new URL(request.url ?? '/', 'http://localhost').searchParams); }
             catch { throw new HttpError(400, 'Filtros de catálogo inválidos. Revisa categoría, subcategoría, precios y paginación.'); }
             const page = products.search ? await products.search(query) : filterCatalog(await products.list(), query);
-            json(response, 200, { ...page, items: page.items.map(item => ({ ...item, image: item.image.startsWith('data:') ? '/images/product-placeholder.svg' : item.image })) }); return;
+            json(response, 200, { ...page, items: page.items.map(item => ({ ...item, image: catalogImage(item.id, item.image) })) }); return;
           }
           const result = await products.get(id);
           if (!result) throw new HttpError(404, 'Producto no encontrado.');
-          json(response, 200, Array.isArray(result) ? result.map(item => ({ ...item, image: item.image.startsWith('data:') ? '/images/product-placeholder.svg' : item.image })) : result); return;
+          json(response, 200, Array.isArray(result) ? result.map(item => ({ ...item, image: catalogImage(item.id, item.image) })) : result); return;
         }
         // Check authorization before parsing input or accessing mutation handlers.
         if (!user) throw new HttpError(401, 'Inicia sesión para continuar.');

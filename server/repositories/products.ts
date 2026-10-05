@@ -33,7 +33,7 @@ export function createDatabaseProducts(db: PrismaClient): ProductRepository {
         const where=catalogWhere(query);
         const result=await db.$queryRaw<{items:CatalogRow[];total:bigint}[]>(Prisma.sql`WITH page AS (
           SELECT row_number() OVER (ORDER BY ${catalogOrder(query)}) AS "_position", "id","name","description","price","category","subcategory","universe","originalPrice","isOnSale",
-          CASE WHEN "imageUrl" LIKE 'data:%' THEN '/images/product-placeholder.svg' ELSE "imageUrl" END AS "imageUrl"
+          CASE WHEN "imageUrl" LIKE 'data:%' THEN '/api/products/' || "id" || '/image' ELSE "imageUrl" END AS "imageUrl"
           FROM "Product" ${where} ORDER BY ${catalogOrder(query)} LIMIT ${query.pageSize} OFFSET ${(query.page-1)*query.pageSize})
           SELECT COALESCE((SELECT jsonb_agg(to_jsonb(page)-'_position' ORDER BY "_position") FROM page),'[]'::jsonb) AS items,
           (SELECT COUNT(*) FROM "Product" ${where}) AS total`);
@@ -53,7 +53,7 @@ export function createDatabaseProducts(db: PrismaClient): ProductRepository {
     async list() {
       // CASE keeps large legacy data URLs out of both the DB result and JSON list.
       const rows = await db.$queryRaw<CatalogRow[]>`SELECT "id", "name", "description", "price", "category", "subcategory", "universe", "originalPrice", "isOnSale",
-        CASE WHEN "imageUrl" LIKE 'data:%' THEN '/images/product-placeholder.svg' ELSE "imageUrl" END AS "imageUrl"
+        CASE WHEN "imageUrl" LIKE 'data:%' THEN '/api/products/' || "id" || '/image' ELSE "imageUrl" END AS "imageUrl"
         FROM "Product" ORDER BY "createdAt" ASC, "id" ASC`;
       return rows.map(product);
     },

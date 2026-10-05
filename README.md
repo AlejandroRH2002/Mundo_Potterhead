@@ -193,7 +193,7 @@ La migración valida firmas y MIME, genera claves deterministas, confirma la sub
 
 Producción requiere MEDIA_STORAGE=s3, S3_ENDPOINT, S3_REGION, S3_BUCKET, S3_PUBLIC_BASE_URL y SESSION_SECRET. Configura credenciales privadas mediante IAM o AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY; S3_FORCE_PATH_STYLE es opcional. El CDN debe servir solo products/, sin _pending/. Los originales del editor se decodifican y comprimen a WebP (lado máximo 1200 px, calidad 0.8); el navegador debe soportar canvas/WebP. Las imágenes animadas se convierten en una imagen fija.
 
-El listado no devuelve Base64: los datos antiguos muestran un placeholder hasta migrarse. El detalle consulta un único producto. Primera imagen con prioridad; las demás se cargan lazy, con dimensiones reservadas y decoding async. Verifica una carga real PUT + confirmación, lectura CDN, CORS y permisos en staging; no se ejecutaron operaciones sobre el bucket real.
+El listado no devuelve Base64: las imágenes antiguas se sirven por /api/products/:id/image sin modificar la BD. El detalle consulta un único producto. Primera imagen con prioridad; las demás se cargan lazy, con dimensiones reservadas y decoding async. Verifica una carga real PUT + confirmación, lectura CDN, CORS y permisos en staging; no se ejecutaron operaciones sobre el bucket real.
 
 ## Medición del bundle (fase 4)
 

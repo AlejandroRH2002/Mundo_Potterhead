@@ -11,7 +11,7 @@ test('catalog listing substitutes legacy inline data without changing the stored
   const repository=createProductRepository([]); const product=repository.create({name:'Fixture',description:'Test',price:1,category:'accessories',universe:'harry-potter',image});
   const auth=await createAuth([{id:'a',name:'A',email:'a@test.invalid',password:randomBytes(32).toString('hex'),role:'admin'}]);
   const api=createApi({auth,products:repository,origin:'http://localhost:5173',logger:()=>{}}); await new Promise(resolve=>api.listen(0,'127.0.0.1',resolve));
-  try { const response=await fetch('http://127.0.0.1:'+api.address().port+'/api/products'); const list=await response.json(); assert.equal(list.items[0].image,'/images/product-placeholder.svg'); assert.equal(repository.get(product.id).image,image); }
+  try { const response=await fetch('http://127.0.0.1:'+api.address().port+'/api/products'); const list=await response.json(); assert.equal(list.items[0].image,'/api/products/'+encodeURIComponent(product.id)+'/image'); assert.equal(repository.get(product.id).image,image); }
   finally { await new Promise(resolve=>api.close(resolve)); }
 });
 test('canvas compression caps dimensions, requests WebP at 0.8 and releases the bitmap', async () => {

@@ -23,5 +23,18 @@ export async function uploadProductImage(file: File): Promise<string> {
   const response = await fetch(url, { method: policy.method, headers: policy.headers, body: file, credentials: 'omit', signal: AbortSignal.timeout(120_000) });
   if (!response.ok) throw new Error('No se pudo subir la imagen. Inténtalo de nuevo.');
   const completed = completedUploadSchema.parse(await requestJson<unknown>('/media/complete', { method: 'POST', body: JSON.stringify({ ticket: policy.ticket }) }));
+  // Do not report success while the public bucket route is unavailable.
+  await new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    const timer = window.setTimeout(() => finish(false), 20_000);
+    const finish = (ok: boolean) => {
+      window.clearTimeout(timer); image.onload = null; image.onerror = null;
+      if (ok) resolve();
+      else reject(new Error('La imagen se subió, pero no puede verse públicamente. Revisa PRODUCT_IMAGES en Pages y S3_PUBLIC_BASE_URL en Render.'));
+    };
+    image.onload = () => finish(true);
+    image.onerror = () => finish(false);
+    image.src = completed.publicUrl;
+  });
   return completed.publicUrl;
 }
