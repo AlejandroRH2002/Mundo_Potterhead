@@ -12,7 +12,9 @@ const MobileCartSummary = lazy(()=>import('@/features/cart/components/MobileCart
 const CartDrawer = lazy(() => import('@/features/cart/components/CartDrawer').then(module => ({ default: module.CartDrawer })));
 export function Navbar() {
   const nav = useNavigation();
-  const {pathname}=useLocation();const [mobile,setMobile]=useState(false);
+  const {pathname, search, hash}=useLocation();
+  const catalogActive = pathname.startsWith('/product/') || (pathname === '/' && (!!search || ['#catalogo', '#catalog-results'].includes(hash)));
+  const [mobile,setMobile]=useState(false);
   useEffect(()=>{const media=window.matchMedia('(max-width: 767px)');const update=()=>setMobile(media.matches);update();media.addEventListener('change',update);return()=>media.removeEventListener('change',update);},[]);
   const navigation = useRef<HTMLElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -36,7 +38,7 @@ export function Navbar() {
       <CatalogSearch/>
       <Link className="figma-mobile-cart" to="/cart" aria-label={`Carrito, ${nav.count} productos`} aria-haspopup="dialog" aria-expanded={drawer} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();trigger.current=event.currentTarget;setDrawer(true);}}}><FigmaIcon src={figmaAssets.homeMobile.imgShoppingBag}/><span className="sr-only">Carrito</span><span className="cart-count" aria-hidden="true">{nav.count}</span></Link>
       <m.div id="navigation-links" className={`navigation-links ${nav.open ? 'is-open' : ''}`} initial={false} animate={reduce?{opacity:nav.open?1:0.99}:{y:nav.open?0:-12,opacity:nav.open?1:0.99}} transition={reduce?{duration:0.14}:{type:'spring',stiffness:260,damping:26}}>
-        <Link to="/" aria-current={pathname==='/'?'page':undefined}>Inicio</Link><Link to="/#catalogo">Productos</Link><Link to="/otros-universos" aria-current={pathname==='/otros-universos'?'page':undefined}>Otros universos</Link><Link to="/contact" aria-current={pathname==='/contact'?'page':undefined}>Contacto</Link>
+        <Link to="/" aria-current={pathname==='/'&&!catalogActive?'page':undefined}>Inicio</Link><Link to="/#catalogo" aria-current={catalogActive?'page':undefined}>Productos</Link><Link to="/otros-universos" aria-current={pathname==='/otros-universos'?'page':undefined}>Otros universos</Link><Link to="/contact" aria-current={pathname==='/contact'?'page':undefined}>Contacto</Link>
         <Link ref={trigger} className="shop-link" to="/cart" aria-label={`Carrito, ${nav.count} productos`} aria-haspopup="dialog" aria-expanded={drawer} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();trigger.current=event.currentTarget;setDrawer(true);}}}><FigmaIcon src={figmaAssets.homeDesktop.imgShoppingBag}/><span className="sr-only">Carrito</span> <m.span key={nav.count} className="cart-count" initial={{opacity:reduce?0.55:1,scale:reduce?1:0.7}} animate={{opacity:1,scale:1}} transition={reduce?{duration:0.14}:{type:'spring',stiffness:460,damping:12}} aria-hidden="true">{nav.count}</m.span></Link>
         {nav.user?.role === 'admin' && <><Link to="/admin">{adminLabels.products}</Link><Link to="/admin/usuarios">{adminLabels.users}</Link></>}
         {nav.user ? <><Link to="/profile">{nav.user.name || 'Mi perfil'}</Link><button aria-busy={nav.busy} disabled={nav.busy} onClick={() => void nav.logout()}>Cerrar sesión</button></> : <Link to="/login">Ingresar</Link>}
