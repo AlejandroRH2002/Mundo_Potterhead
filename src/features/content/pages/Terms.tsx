@@ -3,7 +3,7 @@ import { LegalContact } from '../components/LegalContact';
 
 // REVISAR CON ASESOR LEGAL
 export function Terms() {
-  return <section className="shop-page space-y-5">
+  return <section className="shop-page legal-page space-y-5">
     <h1 className="shop-title">Términos de la cotización</h1>
     <LegalContact />
     <h2 className="text-xl font-bold">Catálogo y carrito</h2>
