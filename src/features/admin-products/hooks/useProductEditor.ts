@@ -11,7 +11,7 @@ const empty: ProductDraft = { name: '', description: '', price: 0, image: '', ca
 const sanitizeImageSource = (value: string) => {
   const source = value.trim();
   if (!source) return '';
-  if (/[\u0000-\u001F\u007F\s]/.test(source)) return '';
+  if (/\s/.test(source) || Array.from(source).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '';
   if (source.startsWith('blob:')) return source;
   if (source.startsWith('/')) return source.startsWith('//') ? '' : source;
   try {
