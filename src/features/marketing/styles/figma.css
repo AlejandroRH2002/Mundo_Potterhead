@@ -218,3 +218,12 @@
 .figma-storefront .legal-page .shop-panel { background: #fff; color: var(--figma-ink); border: 1px solid var(--figma-line); border-left: 3px solid var(--figma-gold); border-radius: .9rem; padding: clamp(1rem,3vw,1.75rem); overflow-wrap: anywhere; }
 .figma-storefront .legal-page h2 { color: var(--figma-burgundy); font-size: 1.6rem; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--figma-line); line-height: 1.2; }
 .figma-storefront .legal-page > .shop-link { display: inline-flex; min-height: 2.75rem; align-items: center; border: 1px solid var(--figma-burgundy); border-radius: .65rem; padding: .55rem 1rem; background: #fff; text-decoration: none; }
+
+/* Small feedback transitions help identify actions without moving surrounding layout. */
+@media(prefers-reduced-motion:no-preference) {
+ .figma-storefront :is(.shop-button,.button-outline,button.shop-link) { transition: transform .16s ease, opacity .16s ease; }
+ .figma-storefront :is(.shop-button,.button-outline,button.shop-link):hover:not(:disabled) { transform: translateY(-1px); }
+ .figma-storefront :is(.shop-button,.button-outline,button.shop-link):active:not(:disabled) { transform: scale(.98); }
+ .figma-storefront .gallery-thumbnails img { transition: transform .16s ease; }
+ .figma-storefront .gallery-thumbnails button:hover img { transform: scale(1.04); }
+}
