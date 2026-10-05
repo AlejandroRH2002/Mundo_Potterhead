@@ -21,7 +21,7 @@ export function useProductEditor(editing: boolean) {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadFailed, setUploadFailed] = useState(false);
+  const [uploadFailure, setUploadFailure] = useState('');
   const [ready, setReady] = useState(!editing);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -46,25 +46,25 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'originalPrice') setOriginalPriceInput(normalizePriceInput(value));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
-    else { if (name === 'image') { setPreview(''); setUploadFailed(false); } setDraft(current => ({ ...current, [name]: value })); }
+    else { if (name === 'image') { setPreview(''); setUploadFailure(''); } setDraft(current => ({ ...current, [name]: value })); }
   };
   const upload = async (file?: File) => {
     if (!file) return;
     setError('');
     try {
-      setUploadFailed(false);
+      setUploadFailure('');
       setPreview(createImagePreview(file));
       setUploading(true);
       const image = await uploadProductImage(file);
       if (mounted.current) setDraft(current => ({ ...current, image }));
-    } catch (cause: unknown) { if (mounted.current) { setUploadFailed(true); setError(errorMessage(cause)); } }
+    } catch (cause: unknown) { if (mounted.current) { const message = errorMessage(cause); setUploadFailure(message); setError(message); } }
     finally { if (mounted.current) setUploading(false); }
   };
   const save = async () => {
     if (saving || uploading || !ready) return;
     setSaving(true); setError('');
     try {
-      if (uploadFailed) throw new Error('La imagen no se pudo publicar. Vuelve a subirla antes de guardar.');
+      if (uploadFailure) throw new Error(uploadFailure);
       if (!draft.subcategory) throw new Error('Selecciona una subcategoría para este producto.');
       if (!priceInput.trim()) throw new Error('Indica el precio del producto.');
       const payload: ProductDraft = { ...draft, price: Number(priceInput), originalPrice: originalPriceInput.trim() ? Number(originalPriceInput) : undefined };
