@@ -11,7 +11,14 @@ const empty: ProductDraft = { name: '', description: '', price: 0, image: '', ca
 const sanitizeImageSource = (value: string) => {
   const source = value.trim();
   if (!source) return '';
+  if (source.includes('\\')) return '';
   if (/\s/.test(source) || Array.from(source).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '';
+  try {
+    const decoded = decodeURIComponent(source);
+    if (/\s/.test(decoded) || Array.from(decoded).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '';
+  } catch {
+    return '';
+  }
   if (source.startsWith('blob:')) return source;
   if (source.startsWith('/')) return source.startsWith('//') ? '' : source;
   try {
