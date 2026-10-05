@@ -1,3 +1,4 @@
+import { StorefrontShell } from '@/features/marketing/components/StorefrontShell';
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import { AnimatePresence, LazyMotion, MotionConfig } from 'framer-motion';
@@ -75,12 +76,12 @@ function AnimatedRoutes() {
 export default function App() {
   return <BrowserRouter>
     <MotionConfig reducedMotion="user"><LazyMotion features={loadMotion} strict><AuthProvider>
-      <div className="flex min-h-screen flex-col">
+      <StorefrontShell>
         <a className="skip-link" href="#main-content">Saltar al contenido</a>
         <Announcement /><Navbar />
         <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><ScrollManager/><AnimatedRoutes /></main>
         <Footer />
-      </div>
+      </StorefrontShell>
     </AuthProvider></LazyMotion></MotionConfig>
   </BrowserRouter>;
 }

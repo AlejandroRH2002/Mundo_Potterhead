@@ -20,7 +20,7 @@ export function ProductCard({ product, priority = false, index = 0 }: { product:
   const label = taxonomy[product.category].find(item => item.slug === product.subcategory)?.label;
   return <m.article className="product-card" initial={{ opacity: 0, y: reduce ? 0 : 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: reduce ? 0.14 : 0.45, delay: reduce ? 0 : (index % 3)*0.09 }} whileHover={reduce ? undefined : { y: -4 }}>
     <Link className="product-image-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}><img src={product.image} alt={product.name} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" width={600} height={400} className="w-full aspect-[3/2] object-cover" />{secondary && <img className="product-secondary" src={secondary} alt="" loading="lazy" decoding="async" width={600} height={400}/>} {isNew && !product.isOnSale && <span className="sale-badge">Nuevo</span>}{product.isOnSale && <span className="sale-badge">Oferta{percentage > 0 ? ` · −${percentage}%` : ''}</span>}</Link>
-    <div className="p-5 flex flex-col flex-1">
+    <div className="p-5 flex flex-col flex-1"><p className="product-universe">{product.universe==='harry-potter'?'Harry Potter':'Otros universos'}</p>
       {label && <span className="subcategory-chip">{label}</span>}
       <Link className="font-cinzel text-xl font-bold line-clamp-2" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}>{product.name}</Link>
       <p className="line-clamp-2 my-3 product-description">{product.description}</p>
