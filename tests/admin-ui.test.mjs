@@ -26,3 +26,10 @@ test('PNG/JPG file previews use local blob URLs and release them when replaced o
  const hook=readFileSync('src/features/admin-products/hooks/useProductEditor.ts','utf8');assert.match(hook,/setPreview\(createImagePreview\(file\)\)/);assert.match(hook,/URL.revokeObjectURL\(preview\)/);
  const view=readFileSync('src/features/admin-products/components/ProductEditor.tsx','utf8');assert.match(view,/src={editor.preview/);
 });
+
+import { normalizePriceInput } from '../src/features/admin-products/services/priceInput.ts';
+test('price entry can stay empty, removes leading zeros and retains decimals',()=>{
+ for(const [input,output] of [['',''],['0','0'],['0780','780'],['00780','780'],['780','780'],['0.80','0.80'],['780.50','780.50']]) assert.equal(normalizePriceInput(input),output);
+ const hook=readFileSync('src/features/admin-products/hooks/useProductEditor.ts','utf8');assert.match(hook,/\[priceInput, setPriceInput\] = useState\(''\)/);assert.match(hook,/price: Number\(priceInput\)/);assert.match(hook,/setPriceInput\(String\(product.price\)\)/);
+ const view=readFileSync('src/features/admin-products/components/ProductEditor.tsx','utf8');assert.match(view,/value={editor.priceInput}/);
+});

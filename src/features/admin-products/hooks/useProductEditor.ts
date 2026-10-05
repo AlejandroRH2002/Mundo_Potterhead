@@ -1,3 +1,4 @@
+import { normalizePriceInput } from '../services/priceInput';
 import { createImagePreview } from '../services/imagePreview';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -11,6 +12,8 @@ export function useProductEditor(editing: boolean) {
   const id = params.id ?? search.get('id') ?? undefined;
   const navigate = useNavigate();
   const [draft, setDraft] = useState<ProductDraft>(empty);
+  const [priceInput, setPriceInput] = useState('');
+  const [originalPriceInput, setOriginalPriceInput] = useState('');
   const [preview, setPreview] = useState('');
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -28,7 +31,7 @@ export function useProductEditor(editing: boolean) {
       try {
         if (!id) throw new Error('Selecciona un producto desde el panel de administración.');
         const product = await productService.getById(id);
-        if (active) { setDraft(product); setReady(true); }
+        if (active) { setDraft(product); setPriceInput(String(product.price)); setOriginalPriceInput(product.originalPrice === undefined ? '' : String(product.originalPrice)); setReady(true); }
       } catch (cause: unknown) { if (active) setError(errorMessage(cause)); }
       finally { if (active) setLoading(false); }
     };
@@ -38,7 +41,8 @@ export function useProductEditor(editing: boolean) {
   const change = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
     if (name === 'isOnSale') setDraft(current => ({ ...current, isOnSale: (event.target as HTMLInputElement).checked }));
-    else if (name === 'price' || name === 'originalPrice') setDraft(current => ({ ...current, [name]: value === '' && name === 'originalPrice' ? undefined : Number(value) }));
+    else if (name === 'price') setPriceInput(normalizePriceInput(value));
+    else if (name === 'originalPrice') setOriginalPriceInput(normalizePriceInput(value));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
     else { if (name === 'image') setPreview(''); setDraft(current => ({ ...current, [name]: value })); }
@@ -59,13 +63,15 @@ export function useProductEditor(editing: boolean) {
     setSaving(true); setError('');
     try {
       if (!draft.subcategory) throw new Error('Selecciona una subcategoría para este producto.');
+      if (!priceInput.trim()) throw new Error('Indica el precio del producto.');
+      const payload: ProductDraft = { ...draft, price: Number(priceInput), originalPrice: originalPriceInput.trim() ? Number(originalPriceInput) : undefined };
       if (editing) {
         if (!id) throw new Error('Falta el identificador del producto.');
-        await productService.update(id, draft);
-      } else await productService.create(draft);
+        await productService.update(id, payload);
+      } else await productService.create(payload);
       navigate('/admin');
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
   };
-  return { preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
+  return { priceInput, originalPriceInput, preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
 }
