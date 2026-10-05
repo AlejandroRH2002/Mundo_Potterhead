@@ -1,7 +1,7 @@
 [
   {
     "AllowedOrigins": [
-      "https://mundo-potterhead.pages.dev"
+      "https://your-project.pages.dev"
     ],
     "AllowedMethods": [
       "PUT"

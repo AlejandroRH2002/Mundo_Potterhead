@@ -63,3 +63,9 @@ uploads/
 .turbo/
 .env*
 !.env.example
+
+# Private deployment overrides (keep generic examples versioned)
+/deploy/r2-cors-pages.json
+/deploy/*.local.*
+/deploy/private/
+.pnpm-store/
