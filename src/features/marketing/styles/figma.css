@@ -168,3 +168,23 @@
  .figma-storefront .site-nav .navigation-links { width: 100%; min-width: 0; justify-content: flex-start; gap: .65rem 1rem; }
  .figma-storefront .site-nav .navigation-links > * { flex-shrink: 0; }
 }
+
+/* Shared cart view: full page and native dialog use the same light surfaces. */
+.figma-storefront .cart-dialog { background: var(--figma-canvas); color: var(--figma-ink); border-color: var(--figma-line); }
+.figma-storefront .cart-dialog-header { background: #fff; color: var(--figma-burgundy); border-color: var(--figma-line); }
+.figma-storefront .cart-dialog-header h2 { font-size: 1.4rem; }
+.figma-storefront .cart-page { max-width: 64rem; padding-block: 2rem; }
+.figma-storefront .cart-page .shop-title { margin-block: 1.25rem; }
+.figma-storefront .cart-page .shop-panel { background: #fff; color: var(--figma-ink); border-color: var(--figma-line); border-radius: 1rem; }
+.figma-storefront .cart-page .cart-summary { background: #fff; border-top: 3px solid var(--figma-gold); margin-top: 1.5rem; }
+.figma-storefront .cart-summary > .text-2xl { color: var(--figma-burgundy); font-size: clamp(1.25rem,3vw,1.65rem); }
+.figma-storefront .cart-line { display: grid; grid-template-columns: 5rem minmax(0,1fr) auto; gap: 1rem; align-items: center; }
+.figma-storefront .cart-line > img { width: 5rem; height: 5rem; background: var(--figma-canvas); object-fit: contain; }
+.figma-storefront .cart-line-info p { color: var(--figma-muted); font-size: .8rem; margin-top: .4rem; }
+.figma-storefront .cart-line label { font-size: .8rem; }
+.figma-storefront .cart-line .shop-input { margin-top: .3rem; max-width: 5rem; padding: .6rem; border-radius: .5rem; }
+.figma-storefront .cart-line > strong { color: var(--figma-burgundy); }
+.figma-storefront .cart-line > button { justify-self: end; min-height: 2.75rem; }
+.figma-storefront .cart-page .state-panel { padding: 2rem; border: 1px solid var(--figma-line); border-radius: 1rem; text-align: center; }
+.figma-storefront .cart-page .state-panel .shop-button { margin-top: 1rem; }
+@media(max-width:359px) { .figma-storefront .cart-line { grid-template-columns: 4rem minmax(0,1fr); gap: .75rem; }.figma-storefront .cart-line > img { width: 4rem; height: 4rem; }.figma-storefront .cart-line > label { grid-column: 1 / -1; }.figma-storefront .cart-line > button { grid-column: 2; }.figma-storefront .cart-dialog .shop-page { padding: 1rem; } }

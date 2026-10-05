@@ -7,7 +7,7 @@ import { money } from '@/shared/lib/money';
 export function Cart({ drawer = false }: { drawer?: boolean }) {
   const cart = useCart();
   return <section className="shop-page cart-page">
-    <Link to="/" className="shop-link">← Seguir comprando</Link>
+    <Link to="/#catalogo" className="shop-link">← Seguir comprando</Link>
     {drawer ? <h2 className="shop-title">Mi carrito</h2> : <h1 className="shop-title">Mi carrito</h1>}
     {cart.loading && <p role="status">Cargando carrito…</p>}
     {cart.error && <p role="alert" className="shop-error">{cart.error}</p>}
@@ -16,9 +16,9 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
       <p>Producto ya no disponible ({item.productId}). Retíralo para continuar.</p>
       <button className="shop-button" onClick={() => cart.remove(item.productId)}>Retirar</button>
     </div>)}
-    {cart.lines.map(line => <article className="shop-panel flex flex-wrap items-center gap-5" key={line.productId}>
+    {cart.lines.map(line => <article className="shop-panel cart-line flex flex-wrap items-center gap-5" key={line.productId}>
       <img loading="lazy" decoding="async" width={96} height={96} className="h-24 w-24 rounded object-cover" src={line.product.image} alt={line.product.name} />
-      <div className="flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link><p>{money(line.product.price)} por unidad</p></div>
+      <div className="cart-line-info flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link><p>{money(line.product.price)} por unidad</p></div>
       <label>Cantidad
         <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value))} aria-label={`Cantidad de ${line.product.name}`} />
       </label>
