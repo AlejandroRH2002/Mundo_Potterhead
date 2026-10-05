@@ -23,8 +23,11 @@ import { createImagePreview } from '../src/features/admin-products/services/imag
 test('PNG/JPG file previews use local blob URLs and release them when replaced or unmounted', () => {
  for(const type of ['image/png','image/jpeg']) {const url=createImagePreview(new File(['preview'],'selected',{type}));assert.match(url,/^blob:/);URL.revokeObjectURL(url);}
  assert.throws(()=>createImagePreview(new File(['x'],'invalid',{type:'text/plain'})));
- const hook=readFileSync('src/features/admin-products/hooks/useProductEditor.ts','utf8');assert.match(hook,/setPreview\(createImagePreview\(file\)\)/);assert.match(hook,/URL.revokeObjectURL\(preview\)/);
+ const hook=readFileSync('src/features/admin-products/hooks/useProductEditor.ts','utf8');assert.match(hook,/setPreview\(createImagePreview\(files\[0\]\)\)/);assert.match(hook,/URL.revokeObjectURL\(preview\)/);
  const view=readFileSync('src/features/admin-products/components/ProductEditor.tsx','utf8');assert.match(view,/src={editor.preview/);
+ assert.match(view,/type="file" multiple/);
+ assert.match(hook,/for \(const file of files\)/);
+ assert.match(hook,/images: all\.slice\(1\)/);
 });
 
 import { normalizePriceInput } from '../src/features/admin-products/services/priceInput.ts';
