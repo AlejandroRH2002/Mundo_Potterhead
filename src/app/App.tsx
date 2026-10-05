@@ -45,9 +45,11 @@ function RouteMetadata() {
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const catalogView = ['/', '/otros-universos'].includes(location.pathname) && (!!location.search || ['#catalogo', '#catalog-results'].includes(location.hash));
+  const transitionKey = location.pathname + (catalogView ? ':catalog' : ':page');
   return <Suspense fallback={<div className="page-loading" role="status"><BrandMark/><p>Cargando…</p></div>}>
     <AnimatePresence mode="wait">
-      <PageTransition key={location.pathname} routeKey={location.key}><Routes location={location}>
+      <PageTransition key={transitionKey} routeKey={location.key}><Routes location={location}>
         <Route path="/" element={<Home />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/product/:id" element={<ProductDetail />} />
