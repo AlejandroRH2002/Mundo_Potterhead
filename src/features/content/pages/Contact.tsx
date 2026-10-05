@@ -1,94 +1,17 @@
+import { Link } from 'react-router-dom';
 import { ContactMap } from '../components/ContactMap';
-import { Phone, MapPin, Facebook } from 'lucide-react';
-
-export function Contact() {
-  return (
-    <div className="contact-enter">
-      <div className="bg-magical min-h-svh">
-        <div className="content-wrapper py-16">
-          <div className="max-w-6xl mx-auto px-4">
-            <h1 className="text-4xl font-cinzel font-bold text-center text-yellow-300 mb-12">
-              Contáctanos
-            </h1>
-            
-            <div className="bg-white/90 backdrop-blur-sm rounded-lg shadow-xl p-8 border border-yellow-300/30">
-              <div className="grid md:grid-cols-2 gap-12">
-                {/* Contact Information */}
-                <div className="space-y-6">
-                  <h2 className="text-2xl font-cinzel font-bold text-red-900 mb-6">
-                    Información de Contacto
-                  </h2>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <Phone className="h-5 w-5 text-yellow-700" />
-                      <div>
-                        <p className="font-bold text-gray-800">WhatsApp</p>
-                        <p className="text-gray-600">{import.meta.env.VITE_WHATSAPP_NUMBER ? `+${import.meta.env.VITE_WHATSAPP_NUMBER}` : 'Consulta nuestros canales de contacto.'}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <Facebook className="h-5 w-5 text-yellow-700" />
-                      <div>
-                        <p className="font-bold text-gray-800">Facebook</p>
-                        <a 
-                          href="https://www.facebook.com/people/Mundo-Potterhead-y-Otros-Universos/100080211423270/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          @MundoPotterheadyOtrosUniversos
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      <MapPin className="h-5 w-5 text-yellow-700" />
-                      <div>
-                        <p className="font-bold text-gray-800">Ubicación</p>
-                        <p className="text-gray-600">{import.meta.env.VITE_MAP_QUERY || 'Consulta la ubicación por WhatsApp.'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Business Hours */}
-                  <div className="mt-8">
-                    <h2 className="text-2xl font-cinzel font-bold text-red-900 mb-6">
-                      Horario de Atención
-                    </h2>
-                    
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="font-bold text-gray-800">Lunes - Jueves</span>
-                        <span className="text-gray-600">4:00 PM - 8:00 PM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-gray-800">Viernes</span>
-                        <div className="text-right">
-                          <div className="text-gray-600">10:00 AM - 1:00 PM</div>
-                          <div className="text-gray-600">4:00 PM - 8:00 PM</div>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-gray-800">Sábado</span>
-                        <span className="text-gray-600">10:00 AM - 6:00 PM</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-gray-800">Domingo</span>
-                        <span className="text-gray-600">Cerrado</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Map */}
-                <ContactMap/>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+import { ContactForm } from '../components/ContactForm';
+import { contactFaq } from '../data/contactFaq';
+import { Breadcrumbs } from '@/shared/components/Breadcrumbs';
+import { Subscription } from '@/features/marketing/components/Subscription';
+import { FigmaIcon } from '@/features/marketing/components/FigmaIcon';
+import { figmaAssets } from '@/features/marketing/data/figmaAssets';
+const icons=figmaAssets.contactDesktop;
+export function Contact(){
+ const email=import.meta.env.VITE_LEGAL_EMAIL?.trim();const validEmail=email&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+ const phone=import.meta.env.VITE_WHATSAPP_NUMBER?.trim()??'';const validPhone=/^[1-9]\d{7,14}$/.test(phone);
+ return <><header className="figma-contact-heading"><div className="figma-container"><Breadcrumbs items={[{label:'Inicio',to:'/'},{label:'Contacto'}]}/><h1>Estamos al otro lado del portal.</h1><p>Cuéntanos qué necesitas. Coordinamos tu cotización y tus consultas por WhatsApp.</p></div></header>
+ <div className="figma-container figma-sections"><div className="figma-contact-grid"><ContactForm/><aside className="figma-contact-sidebar"><section className="figma-contact-details"><h2>Atención al cliente</h2>{validEmail&&<p><FigmaIcon src={icons.imgMail}/><a href={'mailto:'+email}>{email}</a></p>}<p><FigmaIcon src={icons.imgPhone}/>{validPhone?<a href={'https://wa.me/'+phone} target="_blank" rel="noopener noreferrer">+{phone}</a>:'Consulta nuestros canales de contacto.'}</p><p><FigmaIcon src={icons.imgMapPin}/>{import.meta.env.VITE_MAP_QUERY||'Consulta la ubicación por WhatsApp.'}</p></section><section className="figma-paper"><FigmaIcon src={icons.imgPackageSearch}/><h2>¿Dudas sobre tu cotización?</h2><p>La disponibilidad y la entrega se confirman directamente en la conversación.</p>{validPhone&&<a className="shop-link" href={'https://wa.me/'+phone} target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>}</section><ContactMap/></aside></div>
+ <section className="figma-faq"><header className="section-heading"><p className="eyebrow">Respuestas sin acertijos</p><h2>Preguntas frecuentes</h2><p>Lo esencial sobre cotizaciones, disponibilidad y entrega.</p></header><div className="grid grid-cols-1 gap-4 md:grid-cols-2">{contactFaq.map((item,index)=><details className="figma-paper" key={item.question} open={index===0}><summary>{item.question}</summary><p>{item.answer}</p></details>)}</div></section><Subscription/>
+ <p className="text-sm"><Link className="shop-link" to="/terms">Consulta los términos de la cotización</Link></p></div></>;
 }

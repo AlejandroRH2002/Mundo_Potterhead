@@ -1,5 +1,9 @@
 # Mundo Potterhead
 
+## Diseño de Figma
+
+Las cuatro vistas públicas se adaptaron a los frames de escritorio/móvil de Figma. Consulta [tokens, componentes, diferencias de negocio y revisión manual](deploy/design/FIGMA.md). Esta adaptación sustituye la portada pública anterior basada en banner.jpg; se conservan catálogo real, filtros, auth y cotización por WhatsApp. No cambia variables privadas ni requiere migración.
+
 ## Revisión visual del escaparate
 
 Ajustes incrementales: `Button` con variantes/tamaños/loading, anuncio descartable y puntos de confianza editables en `src/features/marketing/data/storefrontCopy.ts`, CTA de cotización y WhatsApp, mini-resumen móvil, migas de pan y galería/relacionados. No se añaden favoritos ni reseñas ficticias. La BD/API actual solo ofrece una imagen; la UI acepta extras válidos si el contrato futuro los incorpora. Scroll/foco centralizados: rutas arriba, filtros confirmados al inicio de resultados y restauración de POP con posiciones en memoria.

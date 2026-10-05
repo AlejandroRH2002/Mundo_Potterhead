@@ -13,6 +13,7 @@ export function Privacy() {
     <p>El carrito guarda identificadores de productos y cantidades en el almacenamiento local del navegador. Puedes vaciarlo desde el carrito o borrar los datos del sitio. No se registra una compra por añadir productos.</p>
     <p>Si usas la suscripción de novedades, el correo y la fecha se guardan solo en este navegador tras tu consentimiento. Es una simulación: no se envían correos. Puedes borrar esa preferencia eliminando los datos del sitio.</p>
     <h2 className="text-xl font-bold">WhatsApp</h2>
+    <p>El formulario de contacto prepara un mensaje con el nombre, correo opcional, motivo y consulta que introduzcas. Esos campos no se guardan en el sitio; al continuar se incluyen en el enlace a WhatsApp y tú decides enviar el mensaje.</p>
     <p>Al pulsar enviar, se abre WhatsApp con un mensaje de productos, cantidades y total. Tú decides enviarlo. El sitio no guarda ese mensaje como pedido; su envío y la conversación posterior se gestionan fuera del sitio mediante WhatsApp/Meta, conforme a sus condiciones y privacidad.</p>
     <p>Para consultas sobre tu cuenta y los datos tratados por el responsable, utiliza el contacto indicado arriba. El almacenamiento del navegador se conserva hasta que lo elimines; las sesiones vencen o se revocan. No se promete una eliminación automática de la cuenta.</p>
     <p>Al abrir la página de contacto, Google puede recibir datos técnicos de la visita al cargarse el mapa, conforme a sus propias políticas de privacidad.</p>
