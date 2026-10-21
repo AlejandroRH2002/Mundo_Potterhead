@@ -352,3 +352,11 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
  .site-nav .nav-search-shell .search-open { top: .5rem; left: .75rem; right: .75rem; padding: .25rem; border-radius: 2rem; min-height: 3.5rem; align-items: center; z-index: 52; }
  .site-nav .search-open .nav-search-close { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 2.75rem; min-height: 2.75rem; }
 }
+
+.inventory-filters,.inventory-forms { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; margin-block:1.5rem; }
+.inventory-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:1rem; }
+.inventory-card,.inventory-forms form { min-width:0; overflow-wrap:anywhere; }
+.inventory-page .admin-actions { display:flex; flex-wrap:wrap; gap:.75rem; margin-block:1rem; }
+.inventory-page label { display:block; margin-block:.75rem; }
+.inventory-page li { padding-block:.75rem; border-bottom:1px solid var(--brand-line); }
+@media(min-width:768px) { .inventory-filters { grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto; align-items:end; }.inventory-forms { grid-template-columns:repeat(2,minmax(0,1fr)); } }

@@ -6,7 +6,7 @@ import { money } from '@/shared/lib/money';
 export function AdminDashboard() {
   const admin = useAdminProducts();
   return <section className="shop-page admin-page">
-    <div className="flex flex-wrap items-center justify-between gap-4"><Link className="shop-link" to="/admin/usuarios">{adminLabels.users}</Link><h1 className="shop-title">{adminLabels.productsTitle}</h1><Link className="shop-button" to="/products/new">Crear producto</Link></div>
+    <div className="flex flex-wrap items-center justify-between gap-4"><Link className="shop-button" to="/admin/inventario">Inventario</Link><Link className="shop-link" to="/admin/usuarios">{adminLabels.users}</Link><h1 className="shop-title">{adminLabels.productsTitle}</h1><Link className="shop-button" to="/products/new">Crear producto</Link></div>
     <label>Buscar producto<input className="shop-input mb-6" type="search" value={admin.search} onChange={event => admin.setSearch(event.target.value)} /></label>
     {admin.error && <p className="shop-error" role="alert">{admin.error}</p>}
     {admin.loading && <p role="status">Cargando productos…</p>}
@@ -19,8 +19,8 @@ export function AdminDashboard() {
         <td><strong>{money(product.price)}</strong><div className="admin-chips">{product.isOnSale && <span>Oferta</span>}{product.subcategory && <span>{product.subcategory}</span>}<span>Disponibilidad a confirmar</span></div></td>
         <td><div className="admin-actions">
           <Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}>Ver</Link>
-          <Link className="shop-button" to={safeInternalPath(`/products/edit/${encodeURIComponent(product.id)}`)}>Editar</Link>
-          <button aria-label={`Eliminar ${product.name}`} className="shop-link" disabled={admin.deleting !== null} onClick={() => void admin.remove(product.id)}>{admin.deleting === product.id ? 'Eliminando…' : 'Eliminar'}</button>
+          <Link className="shop-button" to={safeInternalPath(`/products/edit/${encodeURIComponent(product.id)}`)}>Editar</Link><Link className="shop-link" to={'/admin/inventario?productId='+encodeURIComponent(product.id)}>Existencias y modelos</Link>
+          <button aria-label={`Archivar ${product.name}`} className="shop-link" disabled={admin.deleting !== null} onClick={() => void admin.remove(product.id)}>{admin.deleting === product.id ? 'Archivando…' : 'Archivar'}</button>
         </div></td>
       </tr>)}</tbody>
     </table></div>

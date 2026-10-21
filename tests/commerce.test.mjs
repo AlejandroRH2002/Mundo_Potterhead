@@ -64,3 +64,17 @@ test('corrupt storage recovers; failed writes do not report a false success', ()
   try { assert.throws(() => store.set([1]), /Quota/); assert.deepEqual(store.getSnapshot(), []); }
   finally { localStorage.setItem = write; }
 });
+
+test('model cart groups one SKU across photos and WhatsApp includes model and product link',()=>{
+ cartService.clear();const product={...draft,id:'model-fixture',models:[{id:'model-a',sku:'MP-a',name:'Modelo A',active:true,quantity:2,version:1,image:null}],inventoryMode:'enforce'};
+ cartService.add(product.id,product.image,'model-a');cartService.add(product.id,'/images/other.webp','model-a');
+ assert.equal(cartService.getSnapshot().length,1);assert.equal(cartService.getSnapshot()[0].quantity,2);
+ const resolved=resolveCart(cartService.getSnapshot(),[product]);assert.equal(resolved.lines.length,1);
+ const message=new URL(whatsappOrder(resolved.lines,'521234567890','https://shop.test.invalid')).searchParams.get('text');assert.match(message,/Modelo A/);assert.match(message,/MP-a/);assert.match(message,/https:\/\/shop.test.invalid\/product\/model-fixture/);assert.match(message,/no reserva/);
+ cartService.setQuantity(product.id,3,product.image,'model-a');assert.equal(resolveCart(cartService.getSnapshot(),[product]).missing.length,1);
+ cartService.remove(product.id,product.image,'model-a');assert.equal(cartService.getSnapshot().length,0);
+});
+test('legacy cart cannot guess a model when a product has several independently sold designs',()=>{
+ const models=[{id:'a',name:'A',active:true,quantity:3},{id:'b',name:'B',active:true,quantity:2}];
+ assert.equal(resolveCart([{productId:'legacy',quantity:1}],[{...draft,id:'legacy',models,inventoryMode:'enforce'}]).missing.length,1);
+});

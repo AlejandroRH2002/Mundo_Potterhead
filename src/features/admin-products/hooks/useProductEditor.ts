@@ -53,7 +53,7 @@ export function useProductEditor(editing: boolean) {
     const load = async () => {
       try {
         if (!id) throw new Error('Selecciona un producto desde el panel de administración.');
-        const product = await productService.getById(id);
+        const product = await productService.getAdminById(id);
         if (active) { setDraft(product); setPriceInput(String(product.price)); setOriginalPriceInput(product.originalPrice === undefined ? '' : String(product.originalPrice)); setReady(true); }
       } catch (cause: unknown) { if (active) setError(errorMessage(cause)); }
       finally { if (active) setLoading(false); }

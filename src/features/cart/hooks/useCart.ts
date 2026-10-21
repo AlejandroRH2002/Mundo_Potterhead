@@ -1,3 +1,5 @@
+import { requestJson } from '@/shared/lib/httpClient';
+import type { CartLine } from '../services/cartService';
 import { useState, useSyncExternalStore } from 'react';
 import { cartService, resolveCart, whatsappOrder } from '../services/cartService';
 import { useProducts } from '@/features/catalog/hooks/useProducts';
@@ -9,8 +11,8 @@ export function useCartCount() {
 }
 export function useAddToCart() {
   const [message, setMessage] = useState('');
-  const add = (id: string, selectedImage?: string) => {
-    try { cartService.add(id, selectedImage); setMessage('Producto agregado al carrito.'); }
+  const add = (id: string, selectedImage?: string, modelId?: string) => {
+    try { cartService.add(id, selectedImage, modelId); setMessage('Producto agregado al carrito.'); }
     catch (cause: unknown) { setMessage(errorMessage(cause)); }
   };
   return { add, message };
@@ -37,13 +39,15 @@ export function useCart() {
         throw new Error('Se actualizaron los precios. Revisa el nuevo total y vuelve a enviar el pedido.');
       }
       const phone = import.meta.env.VITE_WHATSAPP_NUMBER ?? '';
-      window.location.assign(whatsappOrder(latest.lines, phone, window.location.origin));
+      const validated = await requestJson<{lines:CartLine[]}>('/quote', {method:'POST',body:JSON.stringify({lines:cartService.getSnapshot()})});
+      if(validated.lines.some(line=>latest.lines.find(old=>old.productId===line.productId)?.product.price!==line.product.price))throw new Error('Los precios cambiaron. Revisa el carrito antes de cotizar.');
+      window.location.assign(whatsappOrder(validated.lines, phone, window.location.origin));
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSending(false); }
   };
   return { ...resolved, loading: catalog.loading, error: error || catalog.error, sending, checkout,
-    setQuantity: (id: string, quantity: number, selectedImage?: string) => change(() => cartService.setQuantity(id, quantity, selectedImage)),
-    remove: (id: string, selectedImage?: string) => change(() => cartService.remove(id, selectedImage)),
+    setQuantity: (id: string, quantity: number, selectedImage?: string, modelId?: string) => change(() => cartService.setQuantity(id, quantity, selectedImage, modelId)),
+    remove: (id: string, selectedImage?: string, modelId?: string) => change(() => cartService.remove(id, selectedImage, modelId)),
     clear: () => change(cartService.clear),
   };
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Product } from '@/types/product';
 import { productService } from '../services/productService';
 import { errorMessage } from '@/shared/lib/money';
-export function useProducts() {
+export function useProducts(admin = false) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -12,7 +12,7 @@ export function useProducts() {
     const load = async () => {
       const current = ++revision;
       try {
-        const items = await productService.list();
+        const items = await productService.list(admin);
         if (active && current === revision) { setProducts(items); setError(''); }
       } catch (cause: unknown) { if (active && current === revision) setError(errorMessage(cause)); }
       finally { if (active && current === revision) setLoading(false); }
@@ -20,6 +20,6 @@ export function useProducts() {
     void load();
     const unsubscribe = productService.subscribe(() => { void load(); });
     return () => { active = false; unsubscribe(); };
-  }, []);
+  }, [admin]);
   return { products, loading, error, setProducts };
 }

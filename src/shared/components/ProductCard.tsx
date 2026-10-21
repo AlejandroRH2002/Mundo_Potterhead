@@ -3,12 +3,14 @@ import { Button } from './Button';
 import { productImages } from '@/shared/lib/productMedia';
 import { useEffect, useState } from 'react';
 import type { Product } from '@/types/product';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAddToCart } from '@/features/cart/hooks/useCart';
 import { money } from '@/shared/lib/money';
 import { m, useReducedMotion } from 'framer-motion';
 import { taxonomy } from '../../../shared/catalogTaxonomy.ts';
 export function ProductCard({ product, priority = false, index = 0 }: { product: Product; priority?: boolean; index?: number }) {
+  const navigate=useNavigate();
+  const models=product.models?.filter(model=>model.active)??[];
   const secondary = productImages(product)[1];
   const isNew = 'isNew' in product && product.isNew === true;
   const cart = useAddToCart();
@@ -26,7 +28,7 @@ export function ProductCard({ product, priority = false, index = 0 }: { product:
       <p className="line-clamp-2 my-3 product-description">{product.description}</p>
       <p className="availability-note">Disponibilidad por confirmar</p>
       <p className="text-xl font-bold mb-3">{money(product.price)} {product.isOnSale && product.originalPrice && <span className="text-sm text-gray-600 line-through">{money(product.originalPrice)}</span>}</p>
-      <Button aria-label={`Añadir ${product.name} a mi cotización`} className="quick-add mt-auto" onClick={() => { cart.add(product.id, product.image); setNotice(true); setNoticeVersion(value=>value+1); }}>Añadir a mi cotización</Button>
+      <Button aria-label={`Añadir ${product.name} a mi cotización`} className="quick-add mt-auto" onClick={() => { if(product.models && models.length!==1){navigate(safeInternalPath('/product/'+encodeURIComponent(product.id)));return;} cart.add(product.id, product.image, models[0]?.id); setNotice(true); setNoticeVersion(value=>value+1); }}>{product.models && models.length!==1?'Elegir modelo':'Añadir a mi cotización'}</Button>
       <p role="status" aria-live="polite" className="cart-feedback text-sm mt-2">{cart.message === 'Producto agregado al carrito.' && !notice ? '' : cart.message}</p>
     </div>
   </m.article>;
