@@ -96,3 +96,7 @@ Readiness 200 comprueba conexión; no garantiza que las migraciones estén aplic
 ### Siguiente fase: existencias por modelo
 
 Una galería contiene fotos, no inventario. Para indicar tres unidades de un diseño y dos de otro, cada modelo necesitará identificador estable, nombre, imagen asociada y stock; las tallas requerirán variantes de ese modelo. Las líneas del carrito y el mensaje de WhatsApp deberán conservar modelo/talla y validar cantidades contra stock. En este flujo de cotización no se descontará inventario automáticamente al abrir WhatsApp, porque no confirma una venta; el administrador actualizará existencias tras confirmar la operación. Esta fase todavía no está implementada.
+
+## Inventario por modelo: despliegue separado
+
+El modo backend INVENTORY_MODE es opcional y predetermina capture. No activar enforce antes de completar conteos y publicar frontend compatible. Ver [secuencia controlada](../docs/auditoria-inventario/10-despliegue-seguro.md) y [rollback](../docs/auditoria-inventario/11-rollback.md). La migración nueva es aditiva; no modifica stock legado ni R2. No se ha aplicado en esta rama.

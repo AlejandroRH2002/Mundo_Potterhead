@@ -16,7 +16,7 @@ El carrito se conserva en el navegador. Antes de enviarlo se consultan nuevament
 
 El panel permite gestionar productos, galerías y cuentas de usuarios según los permisos asignados. Las imágenes PNG, JPEG y WebP se comprimen antes de subirlas; se puede elegir cuál aparece como principal en el catálogo.
 
-La elección por imagen permite reconocer visualmente un diseño. Todavía no existe inventario por modelo, selección de talla ni precios independientes por variante. Para esa siguiente etapa se recomiendan modelos con nombres estables y tallas asociadas.
+Los modelos vendibles se identifican mediante un SKU estable y pueden tener existencias propias e historial de entradas, ventas y ajustes. La fotografía es una referencia visual, no una unidad de inventario. La incorporación es gradual: los conteos pendientes no se interpretan como cero y la restricción pública se activa por separado. No se manejan tallas, reservas ni precios independientes por modelo.
 
 ## Diseño
 
@@ -53,6 +53,8 @@ Requiere Node.js 24, pnpm 11.21.0 y una base de desarrollo preparada. Instalar d
 ## Documentación
 
 - [Despliegue y operación: Pages, Render, Neon y R2](deploy/CLOUD.md).
+- [Manual de inventario](docs/auditoria-inventario/08-manual-administrador-inventario.md).
+- [Preparación del despliegue de inventario](docs/auditoria-inventario/10-despliegue-seguro.md).
 - [Referencia del diseño](deploy/design/FIGMA.md).
 
 Las instrucciones de infraestructura y base de datos se mantienen en la guía operativa. Los entornos privados, claves, bases locales y configuraciones específicas de despliegue quedan fuera de Git.
