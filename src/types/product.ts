@@ -1,5 +1,9 @@
+import type { SellableModel, InventoryMode } from '../../shared/inventory.ts';
 export interface Product {
   id: string;
+  models?: SellableModel[];
+  inventoryMode?: InventoryMode;
+  archived?: boolean;
   name: string;
   description: string;
   price: number;

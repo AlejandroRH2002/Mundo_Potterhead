@@ -1,3 +1,4 @@
+import { createInventory, inventoryMode, assertInventoryReady } from './repositories/inventory.ts';
 import { databaseDiagnostic } from './lib/databaseDiagnostic.ts';
 import { PrismaClient } from '@prisma/client';
 import { readConfig, ConfigurationError, configurationWarnings } from './config.ts';
@@ -12,17 +13,21 @@ import { createCleanup, cleanExpiredRecords } from './cleanup.ts';
 
 async function start() {
   const config = readConfig(process.env);
+  let mode;try{mode=inventoryMode(process.env);}catch{throw new ConfigurationError('INVENTORY_MODE debe ser capture o enforce.');}
   const media = createMediaStorage(process.env);
   for (const reason of configurationWarnings(config)) audit({ event: 'warning', code: 'STARTUP_CONFIGURATION_WARNING', reason });
   const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   await db.$connect();
+  try{await assertInventoryReady(db,mode);}catch(error){if(mode==='enforce' && error instanceof Error && error.message.startsWith('INVENTORY_MODE'))throw new ConfigurationError(error.message);throw error;}
+  const products=createDatabaseProducts(db,mode);
+  const adminProducts=createDatabaseProducts(db,mode,true);
   const auth = await createDatabaseAuth(db, config.sessionSecret);
   // One additional connection per replica: probes cannot queue behind catalog traffic.
   const probeUrl=new URL(config.databaseUrl);probeUrl.searchParams.set('connection_limit','1');
   const probeDb=new PrismaClient({datasources:{db:{url:probeUrl.toString()}}});
   await probeDb.$connect();
-  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
-  const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
+  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;await probeDb.productModel.findFirst({select:{id:true,quantity:true,version:true}});}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
+  const server = createApi({ auth, users: createDatabaseUsers(db), products, adminProducts, inventory:createInventory(db,products,mode), ...config,
     limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
   });
