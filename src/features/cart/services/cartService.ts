@@ -46,7 +46,7 @@ export function resolveCart(entries: CartEntry[], products: Product[]) {
     const sku=chosen?skus.find(sku=>sku.id===chosen)??(skus.length===1?skus[0]:undefined):skus.length===1?skus[0]:undefined;
     const requested=sku?entries.filter(item=>item.productId===entry.productId&&((item.skuId??item.modelId)===sku.id||!(item.skuId??item.modelId)&&skus.length===1&&models.length===1)).reduce((sum,item)=>sum+item.quantity,0):0;
     const overStock=product?.inventoryMode==='enforce'&&(!sku||sku.quantity===null||sku.quantity<requested);
-    if (product && !overStock && (!models.length || model&&sku) && (!entry.selectedImage || productImages(product).includes(entry.selectedImage))) lines.push({ ...entry, product, modelName:model?.name,sku:sku?.code,size:sku?.size,color:sku&&'color' in sku?sku.color:undefined, subtotal: toCents(product.price) * entry.quantity / 100 });
+    if (product && !overStock && (product.models===undefined || model&&sku) && (!entry.selectedImage || productImages(product).includes(entry.selectedImage))) lines.push({ ...entry, product, modelName:model?.name,sku:sku?.code,size:sku?.size,color:sku&&'color' in sku?sku.color:undefined, subtotal: toCents(product.price) * entry.quantity / 100 });
     else missing.push(entry);
   }
   return { lines, missing, total: lines.reduce((sum, line) => sum + toCents(line.subtotal), 0) / 100 };

@@ -265,3 +265,42 @@ test('catalog import: preview is read-only, same-file retries are idempotent and
  await assert.rejects(()=>catalogManagement.apply(owner.id,changed,old.token),/Simula/);
  assert.equal((await db.productSku.findUnique({where:{id:sku.id}})).quantity,4);
 });
+
+test('variant removal deletes unreferenced SKU, reserves historical codes and keeps ledger balances unchanged',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}});
+ const row={...templateRow,status:'active',productCode:'REMOVE-'+randomUUID(),modelCode:'MODEL-'+randomUUID(),sku:'SKU-'+randomUUID(),images:'https://images.test.invalid/removal.webp'};
+ const {planImport}=await import('../shared/catalogManagement.ts');
+ let document=await catalogManagement.save(owner.id,planImport([row]).products[0]);const productId=document.id,modelId=document.models[0].id,first=document.models[0].variants[0];
+ const ambiguous=structuredClone(document);ambiguous.removedVariantIds=[first.id];delete ambiguous.models[0].variants[0].id;await assert.rejects(()=>catalogManagement.save(owner.id,ambiguous),/mismo guardado/);assert.ok(await db.productSku.findUnique({where:{id:first.id}}));
+ document.removedVariantIds=[first.id];document.models[0].variants=[];document=await catalogManagement.save(owner.id,document);
+ assert.equal(await db.productSku.findUnique({where:{id:first.id}}),null);assert.equal(document.models[0].active,false);
+ await assert.rejects(()=>createInventory(db,products,'capture').quote({lines:[{productId,skuId:first.id,quantity:1}]}),/variante activa/);
+ document.models[0].active=true;document.models[0].variants=[{code:first.code,size:first.size,color:first.color,images:[],active:true}];document=await catalogManagement.save(owner.id,document);
+ const reused=document.models[0].variants[0];assert.notEqual(reused.id,first.id);assert.equal(reused.code,first.code);
+ const inventory=createInventory(db,products,'capture');await inventory.move(owner.id,reused.id,{key:randomUUID(),type:'COUNT',quantity:2,expectedVersion:0,reason:'Removal fixture count'});
+ document=await catalogManagement.get(productId);document.removedVariantIds=[reused.id];document.models[0].variants=[];document=await catalogManagement.save(owner.id,document);
+ const retired=await db.productSku.findUniqueOrThrow({where:{id:reused.id}});assert.equal(retired.active,false);assert.equal(retired.quantity,2);assert.equal(retired.version,1);assert.equal(await db.inventoryMovement.count({where:{skuId:reused.id}}),1);
+ await assert.rejects(()=>db.productSku.create({data:{modelId,code:reused.code,size:'xl',color:'New'}}));
+ document.models[0].active=true;document.models[0].variants[0].active=true;document=await catalogManagement.save(owner.id,document);assert.equal(document.models[0].variants[0].id,reused.id);
+ assert.equal((await inventory.quote({lines:[{productId,skuId:reused.id,quantity:1}]})).lines.length,1);
+ const foreign=await catalogManagement.duplicate(owner.id,productId);document=await catalogManagement.get(productId);document.removedVariantIds=[foreign.models[0].variants[0].id];await assert.rejects(()=>catalogManagement.save(owner.id,document),/otro producto/);
+ assert.equal((await db.inventoryMovement.findFirst({where:{skuId:reused.id}})).after,2);assert.equal((await db.productSku.findUnique({where:{id:reused.id}})).quantity,2);
+});
+
+test('legacy product orders prevent physical SKU deletion even without inventory movements',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}});const {planImport}=await import('../shared/catalogManagement.ts');
+ const row={...templateRow,productCode:'ORDER-'+randomUUID(),modelCode:'MODEL-'+randomUUID(),sku:'SKU-'+randomUUID(),images:'https://images.test.invalid/order.webp'};
+ let document=await catalogManagement.save(owner.id,planImport([row]).products[0]);const id=document.models[0].variants[0].id;
+ const order=await db.order.create({data:{userId:owner.id,total:780,items:{create:{productId:document.id,quantity:1,price:780}}}});
+ document.removedVariantIds=[id];document.models[0].variants=[];document=await catalogManagement.save(owner.id,document);
+ assert.equal((await db.productSku.findUniqueOrThrow({where:{id}})).active,false);assert.equal(await db.orderItem.count({where:{orderId:order.id,productId:document.id}}),1);assert.equal(await db.inventoryMovement.count({where:{skuId:id}}),0);
+});
+
+test('inventory count racing a SKU removal either completes with preserved history or rejects the removed SKU',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}});const {planImport}=await import('../shared/catalogManagement.ts');
+ const row={...templateRow,productCode:'RACE-'+randomUUID(),modelCode:'MODEL-'+randomUUID(),sku:'SKU-'+randomUUID(),images:'https://images.test.invalid/race.webp'};
+ const document=await catalogManagement.save(owner.id,planImport([row]).products[0]);const id=document.models[0].variants[0].id;document.removedVariantIds=[id];document.models[0].variants=[];
+ const inventory=createInventory(db,products,'capture');const outcomes=await Promise.allSettled([catalogManagement.save(owner.id,document),inventory.move(owner.id,id,{key:randomUUID(),type:'COUNT',quantity:2,expectedVersion:0,reason:'Concurrent removal count'})]);assert.equal(outcomes[0].status,'fulfilled');
+ const sku=await db.productSku.findUnique({where:{id}}),movements=await db.inventoryMovement.count({where:{skuId:id}});
+ if(sku){assert.equal(sku.active,false);assert.equal(sku.quantity,2);assert.equal(movements,1);}else{assert.equal(movements,0);assert.equal(outcomes[1].status,'rejected');}
+});

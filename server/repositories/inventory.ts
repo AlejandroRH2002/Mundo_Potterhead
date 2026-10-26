@@ -103,7 +103,7 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         const model=chosenId?models.find(m=>m.skus?.some(s=>s.id===chosenId)||m.id===chosenId):models.length===1?models[0]:undefined;
         const skus=model?.skus?.filter(s=>s.active!==false)??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
         const sku=chosenId?skus.find(s=>s.id===chosenId)??(skus.length===1?skus[0]:undefined):skus.length===1?skus[0]:undefined;
-        if((models.length&&!model)||(model&&!sku))throw new InventoryError(409,'Selecciona diseño y talla antes de cotizar.');
+        if(product.models!==undefined&&(!model||!sku))throw new InventoryError(409,'Selecciona una variante activa de diseño y talla antes de cotizar.');
         if(mode==='enforce'&&(!sku||sku.quantity===null))throw new InventoryError(409,'SKU sin disponibilidad confirmada.');
         if(sku){const total=(totals.get(sku.id)??0)+line.quantity;totals.set(sku.id,total);if(mode==='enforce'&&total>sku.quantity!)throw new InventoryError(409,'La cantidad supera las existencias de '+model!.name+'.');}
         if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? [])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');

@@ -28,6 +28,20 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
   if(existing){await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${existing.id} FOR UPDATE`;
    const latest=await tx.product.findUniqueOrThrow({where:{id:existing.id}});if(input.revision!==undefined&&input.revision!==latest.revision)throw new InventoryError(409,'El producto cambió. Recarga antes de guardar.');
   }
+  if(input.removedVariantIds?.length){
+   if(!existing)throw new InventoryError(400,'Solo se pueden quitar variantes del producto guardado.');
+   const hasOrders=await tx.orderItem.count({where:{productId:existing.id}})>0;
+   for(const id of [...input.removedVariantIds].sort()){
+    await tx.$queryRaw`SELECT "id" FROM "ProductSku" WHERE "id"=${id} FOR UPDATE`;
+    const sku=await tx.productSku.findUnique({where:{id},include:{model:{select:{productId:true}}}});
+    if(!sku||sku.model.productId!==existing.id)throw new InventoryError(409,'Una variante ya no existe o pertenece a otro producto. Recarga el editor.');
+    if(input.models.some(model=>model.variants.some(variant=>variant.code===sku.code)))throw new InventoryError(409,'No reutilices un SKU pendiente de quitar en el mismo guardado. Guarda el retiro primero o reactiva la variante existente.');
+    const hasHistory=await tx.inventoryMovement.count({where:{skuId:id}})>0;
+    // Legacy orders reference products, so any order protects all their SKU identities.
+    if(hasOrders||hasHistory||(sku.quantity??0)>0||sku.version>0)await tx.productSku.update({where:{id},data:{active:false}});
+    else await tx.productSku.delete({where:{id}});
+   }
+  }
   const draft=productDraftSchema.parse(input.product);if(draft.image===productPlaceholder)draft.image=input.models.flatMap(model=>[...model.images,...model.variants.flatMap(sku=>sku.images)])[0]??productPlaceholder;
   const allImages=new Set([draft.image,...(draft.images??[])].filter(image=>image!==productPlaceholder));
   if(existing){const current=await load(tx,existing.id);for(const model of current.models){const replacement=input.models.find(m=>m.code===model.code||m.id===model.id);if(!replacement){model.images.forEach(image=>allImages.add(image));model.variants.forEach(s=>s.images.forEach(image=>allImages.add(image)));}else model.variants.filter(s=>!replacement.variants.some(v=>v.code===s.code||v.id===s.id)).forEach(s=>s.images.forEach(image=>allImages.add(image)));}}
@@ -55,6 +69,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
     const values={size:variant.size,color:variant.color,images:variant.images,active:variant.active};
     if(old)await tx.productSku.update({where:{id:old.id},data:values});else await tx.productSku.create({data:{id:randomUUID(),code:variant.code,modelId,...values}});
    }
+   if(!await tx.productSku.count({where:{modelId,active:true}}))await tx.productModel.update({where:{id:modelId},data:{active:false}});
    if(merge&&current){/* Omitted variants are deliberately preserved by import. */}
   }
   if(process.env.INVENTORY_MODE==='enforce'&&input.status==='active'&&await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{active:true}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura el inventario antes de activar el producto.');

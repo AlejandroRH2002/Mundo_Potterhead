@@ -78,3 +78,9 @@ test('legacy cart cannot guess a model when a product has several independently 
  const models=[{id:'a',name:'A',active:true,quantity:3},{id:'b',name:'B',active:true,quantity:2}];
  assert.equal(resolveCart([{productId:'legacy',quantity:1}],[{...draft,id:'legacy',models,inventoryMode:'enforce'}]).missing.length,1);
 });
+
+test('a removed last SKU never becomes a generic legacy cart line',()=>{
+ const product={...draft,id:'retired',models:[],inventoryMode:'capture'};
+ const result=resolveCart([{productId:'retired',skuId:'removed-sku',quantity:1}],[product]);assert.equal(result.lines.length,0);assert.equal(result.missing.length,1);
+ assert.equal(resolveCart([{productId:'retired',quantity:1}],[product]).missing.length,1);
+});

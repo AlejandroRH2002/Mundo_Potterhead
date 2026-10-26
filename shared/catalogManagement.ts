@@ -12,13 +12,14 @@ export const variantSchema = z.object({
 }).strict();
 export const managedModelSchema = z.object({
  id: z.string().max(100).optional(), code, name: z.string().trim().min(1).max(100),
- active: z.boolean().default(true), images: gallerySchema.default([]), variants: z.array(variantSchema).min(1).max(100),
+ active: z.boolean().default(true), images: gallerySchema.default([]), variants: z.array(variantSchema).max(100),
 }).strict();
 export const managedProductSchema = z.object({
  id: z.string().max(100).optional(), revision: z.number().int().nonnegative().optional(), code,
  status: z.enum(catalogStates).default('draft'),
  product: z.object({ name: z.string(), description: z.string(), price: z.number(), image: z.string().optional(), images: gallerySchema.optional(), imageThumbnails:z.record(z.string(),z.string()).optional(), category: z.string(), subcategory: z.string().nullable().optional(), universe: z.string(), originalPrice:z.number().optional(),isOnSale:z.boolean().optional() }).strict(),
  models: z.array(managedModelSchema).min(1).max(30),
+ removedVariantIds:z.array(z.string().min(1).max(100)).max(100).refine(ids=>new Set(ids).size===ids.length,'Hay variantes repetidas en la selección.').optional(),
 }).strict().superRefine((value, ctx) => {
  const parsed = productDraftSchema.safeParse(value.product);
  if (!parsed.success) { for (const issue of parsed.error.issues) ctx.addIssue({ code:'custom',path:['product',...issue.path],message:issue.message }); return; }
@@ -29,6 +30,7 @@ export const managedProductSchema = z.object({
   modelCodes.add(model.code);names.add(model.name);model.images.forEach(image=>pictures.add(image));
   const combinations=new Set<string>();
   for(const [j,variant] of model.variants.entries()){
+   if(variant.id&&value.removedVariantIds?.includes(variant.id))ctx.addIssue({code:'custom',path:['models',i,'variants',j],message:'Una variante pendiente de quitar no puede permanecer en el formulario.'});
    const combination=JSON.stringify([variant.size,variant.color.toLocaleLowerCase('es')]);
    if(!validSize(parsed.data.category,variant.size)||combinations.has(combination)||skuCodes.has(variant.code))ctx.addIssue({code:'custom',path:['models',i,'variants',j],message:'Talla inválida o SKU/combinación talla-color repetida.'});
    combinations.add(combination);skuCodes.add(variant.code);variant.images.forEach(image=>pictures.add(image));
