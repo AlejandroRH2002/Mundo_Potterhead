@@ -13,6 +13,19 @@ export function safeArchive(bytes:Uint8Array):Record<string,Uint8Array>{
   return !file.name.endsWith('/');
  }});
 }
+// Validate the entire image archive before any upload, including short-name aliases.
+export function imageArchive(bytes:Uint8Array):Record<string,Uint8Array>{
+ const entries=safeArchive(bytes),aliases=new Set<string>();
+ if(!Object.keys(entries).length)throw new Error('El ZIP no contiene imágenes.');
+ for(const name of Object.keys(entries)){
+  if(!/\.(png|jpe?g|webp)$/i.test(name))throw new Error('El ZIP solo puede contener imágenes PNG, JPEG o WebP.');
+  const parts=name.split('/'),basename=parts[parts.length-1];
+  if(aliases.has(basename))throw new Error('Nombre de imagen ambiguo en el ZIP: '+basename);
+  aliases.add(basename);
+  if(!entries[name].length)throw new Error('El ZIP contiene una imagen vacía.');
+ }
+ return entries;
+}
 export function parseCsv(text:string):string[][]{
  if(text.length>2_000_000)throw new Error('CSV demasiado grande.');
  const rows:string[][]=[];let row:string[]=[],cell='',quoted=false,closed=false;

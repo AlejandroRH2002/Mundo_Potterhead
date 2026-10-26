@@ -304,3 +304,97 @@ test('inventory count racing a SKU removal either completes with preserved histo
  const sku=await db.productSku.findUnique({where:{id}}),movements=await db.inventoryMovement.count({where:{skuId:id}});
  if(sku){assert.equal(sku.active,false);assert.equal(sku.quantity,2);assert.equal(movements,1);}else{assert.equal(movements,0);assert.equal(outcomes[1].status,'rejected');}
 });
+
+for(const format of ['csv','xlsx'])test(`real PostgreSQL ${format}+ZIP: base product, designs, sizes, image references, replay, update and public detail`,async()=>{
+ const {csvFile,parseCsv,recordsFromRows,workbookFile,parseWorkbook,imageArchive}=await import('../shared/catalogFiles.ts');
+ const {planImport}=await import('../shared/catalogManagement.ts');
+ const {zipSync}=await import('fflate');
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='FILES-'+randomUUID();
+ const baseRow={...templateRow,productCode:prefix,modelCode:prefix+'-BASE',sku:prefix+'-BASE-M',images:'',status:'active',quantity:'',inventoryMode:'',reason:''};
+ const baseProduct=await catalogManagement.save(owner.id,planImport([baseRow]).products[0]);
+ // These are archive reference fixtures, NOT an R2 upload or a browser image decoding test.
+ const archive=imageArchive(zipSync({'designs/a.png':new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0]),'designs/b.png':new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,1])}));
+ const images=Object.fromEntries(Object.keys(archive).map(name=>[name,'https://images.test.invalid/'+prefix+'/'+name]));
+ const source=[['A','m','3'],['A','l','0'],['B','m','2'],['B','l','']].map(([design,size,quantity])=>({...baseRow,modelCode:prefix+'-'+design,modelName:'Design '+design,sku:prefix+'-'+design+'-'+size,size,images:'designs/'+design.toLowerCase()+'.png',quantity,inventoryMode:quantity?'replace':'',reason:quantity?'Physical fixture count':''}));
+ const rows=format==='csv'?recordsFromRows(parseCsv(csvFile(source))):parseWorkbook(workbookFile(source));
+ assert.deepEqual(rows,source);
+ const request={key:randomUUID(),rows,images};const preview=await catalogManagement.preview(request);assert.equal(preview.report.valid,true);
+ assert.equal((await catalogManagement.apply(owner.id,request,preview.token)).updated,1);
+ let persisted=await db.product.findUniqueOrThrow({where:{id:baseProduct.id},include:{models:{include:{skus:true}}}});
+ assert.equal(persisted.stock,0);assert.equal(persisted.models.length,3);assert.equal(persisted.models.reduce((n,m)=>n+m.skus.length,0),5);assert.ok(persisted.models.every(m=>m.quantity===null));
+ for(const design of ['A','B']){const model=persisted.models.find(m=>m.sku===prefix+'-'+design);assert.deepEqual(model.images,[images['designs/'+design.toLowerCase()+'.png']]);for(const sku of model.skus)assert.deepEqual(sku.images,model.images);}
+ const beforeReplay=await db.inventoryMovement.count({where:{model:{productId:persisted.id}}});
+ await catalogManagement.apply(owner.id,request,preview.token);
+ const replay=await catalogManagement.apply(owner.id,{...request,key:randomUUID()},preview.token);assert.equal(replay.skipped,4);assert.equal(await db.inventoryMovement.count({where:{model:{productId:persisted.id}}}),beforeReplay);
+ const update={key:randomUUID(),rows:[{...source[0],modelName:'Design A updated',quantity:'',inventoryMode:'',reason:''}],images};
+ await catalogManagement.apply(owner.id,update,(await catalogManagement.preview(update)).token);
+ persisted=await db.product.findUniqueOrThrow({where:{id:baseProduct.id},include:{models:{include:{skus:true}}}});
+ assert.equal(persisted.models.length,3);const modelA=persisted.models.find(m=>m.sku===prefix+'-A');assert.equal(modelA.name,'Design A updated');assert.equal(modelA.skus.length,2);assert.equal(modelA.skus.find(s=>s.size==='m').quantity,3);
+ const publicRepo=createDatabaseProducts(db,'capture');const detail=await publicRepo.get(persisted.id);assert.equal(detail.models.length,3);assert.equal(detail.models.find(m=>m.id===modelA.id).skus.length,2);
+ const {parseCatalogQuery}=await import('../shared/catalogQuery.ts');const listed=await publicRepo.search(parseCatalogQuery(new URLSearchParams({q:'Design A updated'})));assert.ok(listed.items.some(p=>p.id===persisted.id));assert.ok(listed.items.every(p=>!('models'in p)&&!JSON.stringify(p).includes('data:image')));
+ const inventory=createInventory(db,publicRepo,'capture');const exhausted=modelA.skus.find(s=>s.size==='l');
+ await assert.rejects(()=>inventory.move(owner.id,exhausted.id,{key:randomUUID(),type:'SALE',quantity:1,reason:'Must not oversell fixture'}),/insuficientes/);
+ const strictInventory=createInventory(db,createDatabaseProducts(db,'enforce'),'enforce');await assert.rejects(()=>strictInventory.quote({lines:[{productId:persisted.id,skuId:exhausted.id,quantity:1}]}),/existencias/);
+ const available=modelA.skus.find(s=>s.size==='m');const quote=await strictInventory.quote({lines:[{productId:persisted.id,skuId:available.id,quantity:1}]});assert.equal(quote.lines[0].sku,available.code);assert.equal(quote.lines[0].modelName,'Design A updated');
+ const history=await inventory.history(available.id,{page:1,pageSize:24});assert.equal(history.items.length,1);assert.equal(history.items[0].after,3);assert.equal(history.items[0].actorId,owner.id);assert.ok((await catalogManagement.history(1)).some(item=>item.id===update.key));
+});
+
+test('failed multi-product import rolls back products, images, quantities, history and request key, then retries',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='ROLL-'+randomUUID();
+ const make=(suffix,reason)=>({...templateRow,productCode:prefix+'-'+suffix,modelCode:prefix+'-MODEL-'+suffix,sku:prefix+'-SKU-'+suffix,images:'https://images.test.invalid/'+suffix+'.webp',quantity:'2',inventoryMode:'replace',reason});
+ const request={key:randomUUID(),rows:[make('A','Valid fixture'),make('B','import-rollback-fixture')],images:{}};
+ const initial={key:randomUUID(),rows:[{...make('A','Existing fixture'),name:'Before rollback',images:'https://images.test.invalid/before.webp',quantity:'1'}],images:{}};await catalogManagement.apply(owner.id,initial,(await catalogManagement.preview(initial)).token);
+ const original=await db.product.findUniqueOrThrow({where:{code:prefix+'-A'},include:{models:{include:{skus:true}}}});
+ const preview=await catalogManagement.preview(request);assert.equal(preview.report.valid,true);
+ await db.$executeRaw`CREATE FUNCTION mp_import_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."reason"='import-rollback-fixture' THEN RAISE EXCEPTION 'import fixture failure'; END IF; RETURN NEW; END; $$`;
+ await db.$executeRaw`CREATE TRIGGER mp_import_test_fail BEFORE INSERT ON "InventoryMovement" FOR EACH ROW EXECUTE FUNCTION mp_import_test_fail()`;
+ try{await assert.rejects(()=>catalogManagement.apply(owner.id,request,preview.token));}finally{await db.$executeRaw`DROP TRIGGER mp_import_test_fail ON "InventoryMovement"`;await db.$executeRaw`DROP FUNCTION mp_import_test_fail()`;}
+ assert.equal(await db.product.count({where:{code:{startsWith:prefix}}}),1);assert.equal(await db.productModel.count({where:{sku:{startsWith:prefix}}}),1);assert.equal(await db.productSku.count({where:{code:{startsWith:prefix}}}),1);assert.deepEqual(await db.product.findUniqueOrThrow({where:{id:original.id},include:{models:{include:{skus:true}}}}),original);assert.equal(await db.catalogImport.count({where:{id:request.key}}),0);assert.equal(await db.inventoryMovement.count({where:{reason:'import-rollback-fixture'}}),0);
+ const retried=await catalogManagement.apply(owner.id,request,preview.token);assert.equal(retried.created,1);assert.equal(retried.updated,1);assert.equal(await db.inventoryMovement.count({where:{model:{product:{code:{startsWith:prefix}}}}}),3);
+});
+
+test('import updates inventory without reactivating retired model/SKU or changing prior ledger entries',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='RETIRED-'+randomUUID();
+ const row={...templateRow,productCode:prefix,modelCode:prefix+'-MODEL',sku:prefix+'-M',images:'https://images.test.invalid/retired.webp',quantity:'2',inventoryMode:'replace',reason:'Initial fixture'};
+ const first={key:randomUUID(),rows:[row],images:{}};await catalogManagement.apply(owner.id,first,(await catalogManagement.preview(first)).token);
+ const product=await db.product.findUniqueOrThrow({where:{code:prefix}});let managed=await catalogManagement.get(product.id);managed.models[0].active=false;managed.models[0].variants[0].active=false;managed=await catalogManagement.save(owner.id,managed);
+ const sku=managed.models[0].variants[0];const ledgerBefore=await db.inventoryMovement.findMany({where:{skuId:sku.id}});
+ const receipt={key:randomUUID(),rows:[{...row,quantity:'1',inventoryMode:'increment',reason:'Receipt fixture'}],images:{}};await catalogManagement.apply(owner.id,receipt,(await catalogManagement.preview(receipt)).token);
+ const after=await db.productSku.findUniqueOrThrow({where:{id:sku.id},include:{model:true}});assert.equal(after.quantity,3);assert.equal(after.active,false);assert.equal(after.model.active,false);assert.deepEqual(await db.inventoryMovement.findMany({where:{id:{in:ledgerBefore.map(m=>m.id)}}}),ledgerBefore);
+ const same={key:randomUUID(),rows:[{...row,quantity:'3',reason:'No change fixture'}],images:{}};await catalogManagement.apply(owner.id,same,(await catalogManagement.preview(same)).token);assert.equal(await db.inventoryMovement.count({where:{skuId:sku.id}}),2);
+});
+
+test('import HTTP authorization, history, strict invalid rows and failed requests leave no writes',async()=>{
+ const ownerSession=await auth.authenticate(email,password),ownerCookie='__Host-mp_session='+ownerSession.token;
+ const {hashPassword}=await import('../server/security/password.ts');const customer=await db.user.create({data:{email:randomUUID()+'@test.invalid',password:await hashPassword(password),role:'CUSTOMER'}});const session=await auth.authenticate(customer.email,password),cookie='__Host-mp_session='+session.token;
+ const prefix='HTTPIMP-'+randomUUID(),row={...templateRow,productCode:prefix,modelCode:prefix+'-MODEL',sku:prefix+'-SKU',images:'https://images.test.invalid/http.webp',quantity:'2',inventoryMode:'replace',reason:'HTTP fixture'};
+ const request={key:randomUUID(),rows:[row],images:{}};const preview=await catalogManagement.preview(request);
+ for(const [path,method,payload] of [['/api/admin/catalog/import','POST',{request,token:preview.token}],['/api/admin/catalog/history','GET',undefined],['/api/admin/catalog','GET',undefined],['/api/admin/catalog','POST',{}],['/api/admin/catalog/bulk','PATCH',{}],['/api/admin/catalog/missing/duplicate','POST',{}]]){
+  assert.equal((await send(path,{method,payload})).status,401);assert.equal((await send(path,{method,payload,cookie})).status,403);
+ }
+ assert.equal((await send('/api/admin/catalog/import',{method:'POST',cookie:ownerCookie,payload:{request,token:preview.token},headers:{'X-Requested-With':''}})).status,403);
+ assert.equal((await send('/api/admin/catalog/import',{method:'POST',cookie:ownerCookie,from:'https://outside.test.invalid',payload:{request,token:preview.token}})).status,403);
+ assert.equal((await send('/api/admin/catalog/import',{method:'POST',cookie:ownerCookie,payload:{request,token:'tampered'}})).status,409);
+ for(const rows of [[{...row,quantity:'-1'}],[row,row],[{...row,size:'invalid'}],[{...row,images:'javascript:alert(1)'}],[{...row,unexpected:'value'}]]){
+  const invalid={...request,key:randomUUID(),rows};const check=await catalogManagement.preview(invalid);assert.equal(check.report.valid,false);assert.ok(check.report.errors.every(issue=>issue.row>=2));
+  assert.equal((await send('/api/admin/catalog/import',{method:'POST',cookie:ownerCookie,payload:{request:invalid,token:check.token}})).status,400);
+ }
+ assert.equal(await db.product.count({where:{code:prefix}}),0);assert.equal(await db.catalogImport.count({where:{id:request.key}}),0);
+ assert.equal((await send('/api/admin/catalog/import',{method:'POST',cookie:ownerCookie,payload:{request,token:preview.token}})).status,200);
+ const history=await send('/api/admin/catalog/history',{cookie:ownerCookie});assert.equal(history.status,200);assert.ok((await history.json()).some(item=>item.id===request.key));
+ const product=await db.product.findUniqueOrThrow({where:{code:prefix}}),managed=await catalogManagement.get(product.id);
+ const duplicate=await send('/api/admin/catalog/'+product.id+'/duplicate',{method:'POST',cookie:ownerCookie});assert.equal(duplicate.status,201);const copy=await duplicate.json();assert.equal(copy.status,'draft');assert.notEqual(copy.models[0].variants[0].code,managed.models[0].variants[0].code);assert.equal((await db.productSku.findUnique({where:{id:copy.models[0].variants[0].id}})).quantity,null);
+ const collision={...request,rows:[{...row,name:'Different payload'}]};await assert.rejects(()=>catalogManagement.apply(ownerSession.user.id,collision,preview.token),/clave/);
+});
+
+test('isolated enforce import applies initial counts before readiness and rolls back incomplete active products',async()=>{
+ const previous=process.env.INVENTORY_MODE;process.env.INVENTORY_MODE='enforce';
+ try{
+  const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='ENFORCE-'+randomUUID();
+  const row={...templateRow,productCode:prefix,modelCode:prefix+'-MODEL',sku:prefix+'-M',images:'https://images.test.invalid/enforce.webp',status:'active',quantity:'2',inventoryMode:'replace',reason:'Initial active fixture'};
+  const request={key:randomUUID(),rows:[row],images:{}};assert.equal((await catalogManagement.preview(request)).report.valid,true);await catalogManagement.apply(owner.id,request,(await catalogManagement.preview(request)).token);assert.equal((await db.productSku.findUniqueOrThrow({where:{code:row.sku}})).quantity,2);
+  const incomplete={key:randomUUID(),rows:[{...row,productCode:prefix+'-PENDING',modelCode:prefix+'-PENDING-MODEL',sku:prefix+'-PENDING-M',quantity:'',inventoryMode:'',reason:''}],images:{}};
+  const check=await catalogManagement.preview(incomplete);await assert.rejects(()=>catalogManagement.apply(owner.id,incomplete,check.token),/inventario/);
+  assert.equal(await db.product.count({where:{code:prefix+'-PENDING'}}),0);assert.equal(await db.catalogImport.count({where:{id:incomplete.key}}),0);
+ }finally{if(previous===undefined)delete process.env.INVENTORY_MODE;else process.env.INVENTORY_MODE=previous;}
+});

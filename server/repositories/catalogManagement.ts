@@ -59,20 +59,20 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
    if(current&&current.productId!==productId||model.id&&current?.id!==model.id)throw new InventoryError(409,'Código de modelo asociado a otro registro.');
    const modelId=current?.id??randomUUID();
    const pictures=model.images;
-   const values={name:model.name,image:pictures[0]??null,images:pictures,active:model.active};
+   const values={name:model.name,image:pictures[0]??null,images:pictures,active:merge&&current?current.active:model.active};
    if(current)await tx.productModel.update({where:{id:modelId},data:values});else await tx.productModel.create({data:{id:modelId,productId,sku:model.code,...values}});
    for(const variant of model.variants){
     const old=await tx.productSku.findUnique({where:{code:variant.code}});
     if(old&&old.modelId!==modelId||variant.id&&old?.id!==variant.id)throw new InventoryError(409,'SKU asociado a otro registro.');
     if(old&&(old.size!==variant.size||old.color!==variant.color)&&await tx.inventoryMovement.count({where:{skuId:old.id}}))throw new InventoryError(409,'Un SKU con movimientos conserva talla y color. Desactívalo y crea otra variante.');
     // Codes and IDs remain stable. Quantity changes are exclusively ledger operations.
-    const values={size:variant.size,color:variant.color,images:variant.images,active:variant.active};
+    const values={size:variant.size,color:variant.color,images:variant.images,active:merge&&old?old.active:variant.active};
     if(old)await tx.productSku.update({where:{id:old.id},data:values});else await tx.productSku.create({data:{id:randomUUID(),code:variant.code,modelId,...values}});
    }
    if(!await tx.productSku.count({where:{modelId,active:true}}))await tx.productModel.update({where:{id:modelId},data:{active:false}});
    if(merge&&current){/* Omitted variants are deliberately preserved by import. */}
   }
-  if(process.env.INVENTORY_MODE==='enforce'&&input.status==='active'&&await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{active:true}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura el inventario antes de activar el producto.');
+  if(!merge&&process.env.INVENTORY_MODE==='enforce'&&input.status==='active'&&await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{active:true}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura el inventario antes de activar el producto.');
   return {id:productId,created:!existing};
  }
  async function snapshot(tx:Tx,request:Request){
@@ -124,6 +124,11 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
      await tx.productSku.update({where:{id:sku.id},data:{quantity:after,version:{increment:1}}});
      const key=createHash('sha256').update(request.key+':'+i).digest('hex');
      await tx.inventoryMovement.create({data:{id:randomUUID(),key:'import-'+key,fingerprint:hash(line),skuId:sku.id,modelId:sku.modelId,actorId,type,quantity:line.quantity,before:current.quantity,after,delta:after-(current.quantity??0),reason:line.reason}});
+    }
+    // Imported initial counts are written in this same transaction before enforcing readiness.
+    if(process.env.INVENTORY_MODE==='enforce'){
+     const codes=plan.products.filter(product=>product.status==='active').map(product=>product.code);
+     if(codes.length&&await tx.productModel.count({where:{active:true,product:{OR:[{code:{in:codes}},{id:{in:codes}}]},OR:[{skus:{none:{active:true}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura el inventario antes de activar el producto.');
     }
     const report:ImportReport={id:request.key,valid:true,rows:plan.rows,products:plan.products.length,created,updated,errors:[]};
     await tx.catalogImport.create({data:{id:request.key,actorId,fingerprint,summary:report as unknown as Prisma.InputJsonValue}});return report;

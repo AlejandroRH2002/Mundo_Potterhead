@@ -69,3 +69,10 @@ test('inventory renders one row per SKU, explicit stock/count columns and disabl
  assert.equal((html.match(/<tr/g)||[]).length,3);assert.match(html,/Stock actual/);assert.match(html,/Conteo físico/);assert.match(html,/Agotado/);assert.match(html,/Pendiente de conteo/);assert.match(html,/inactivo/);
  assert.equal((html.match(/disabled=""/g)||[]).length,2);assert.equal(saves,0);assert.match(html,/data-label="SKU"/);assert.equal((html.match(/id="count-(?:a|b)"/g)||[]).length,2);
 });
+
+test('image ZIP preflight rejects ambiguous names, empty images and unsafe files before upload',async()=>{
+ const {imageArchive}=await import('../shared/catalogFiles.ts');
+ const bytes=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0]);
+ assert.deepEqual(Object.keys(imageArchive(zipSync({'models/a.png':bytes,'models/b.png':bytes}))),['models/a.png','models/b.png']);
+ for(const entries of [{'a/x.png':bytes,'b/x.png':bytes},{'a.png':bytes,'payload.html':bytes},{'a.png':new Uint8Array()},{'../a.png':bytes},{}])assert.throws(()=>imageArchive(zipSync(entries)));
+});
