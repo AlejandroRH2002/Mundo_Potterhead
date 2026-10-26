@@ -12,7 +12,7 @@ export const catalogQuerySchema = z.object({
  onSale: z.enum(['true', 'false']).transform(value => value === 'true').optional(),
  minPrice: price.optional(), maxPrice: price.optional(), q: z.string().trim().max(150).optional(),
  sort: z.enum(['novedad', 'precio-asc', 'precio-desc', 'descuento']).default('novedad'),
- page: integer(100_000).default('1'), pageSize: integer(100).default('24'),
+ page: integer(100_000).default(1), pageSize: integer(100).default(24),
 }).strict().superRefine((query, context) => {
  if(query.size && (query.category ? !validSize(query.category,query.size) : !Object.keys(sizeTaxonomy).some(category=>validSize(category,query.size!))))context.addIssue({code:'custom',path:['size'],message:'Talla inválida.'});
  if (query.subcategory && (!query.category || !belongsToCategory(query.category, query.subcategory))) context.addIssue({ code: 'custom', path: ['subcategory'], message: 'Selecciona una subcategoría de la categoría indicada.' });

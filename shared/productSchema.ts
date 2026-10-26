@@ -14,7 +14,7 @@ export const productDraftSchema = z.object({
   originalPrice: money.optional(),
   isOnSale: z.boolean().optional(),
   image: z.preprocess(value => value == null || (typeof value === 'string' && !value.trim()) ? productPlaceholder : value, z.string().trim().max(2_800_000).refine(validImage, 'Imagen no válida.')),
-  imageThumbnails:z.record(z.string().max(2048).refine(value=>validImage(value)&&!value.startsWith('data:'))).refine(value=>Object.keys(value).length<=8&&Object.keys(value).every(key=>key.length<=2048&&validImage(key)&&!key.startsWith('data:')),'Máximo 8 miniaturas con referencias válidas.').optional(),
+  imageThumbnails:z.record(z.string(),z.string().max(2048).refine(value=>validImage(value)&&!value.startsWith('data:'))).refine(value=>Object.keys(value).length<=8&&Object.keys(value).every(key=>key.length<=2048&&validImage(key)&&!key.startsWith('data:')),'Máximo 8 miniaturas con referencias válidas.').optional(),
   images: z.array(z.string().trim().max(2048).refine(value => validImage(value) && !value.startsWith('data:'), 'Usa una imagen alojada, no Base64.')).max(7, 'Puedes añadir hasta 8 imágenes contando la principal.').optional(),
   category: z.enum(categories),
   subcategory: z.string().max(80).nullable().optional(),

@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS build
+FROM node:24.22.1-bookworm-slim AS build
 WORKDIR /app
 ENV CI=true
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -12,7 +12,7 @@ COPY src/types ./src/types
 COPY scripts/build-server.mjs scripts/migrate.mjs ./scripts/
 RUN pnpm db:generate && node scripts/build-server.mjs && pnpm prune --prod && pnpm db:generate
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:24.22.1-bookworm-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production API_HOST=0.0.0.0 API_PORT=3001
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
