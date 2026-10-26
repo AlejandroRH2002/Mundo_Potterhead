@@ -1,12 +1,14 @@
 # Despliegue sin dominio: Pages + Render + Neon + R2
 
+Para actualizar modelos, colores e importación, seguir primero [el procedimiento de catálogo](../docs/catalogo/DESPLIEGUE.md): ensayo en una rama aislada de Neon, respaldo, migración, API completa y después frontend. Revisar los auto-deploys antes del merge; no publicar el nuevo editor sobre una API antigua.
+
 Guía verificada con documentación oficial el 2 de octubre de 2026. Los recursos y secretos se configuran manualmente; no se desplegó ni se conectó a una base cloud. Se mantiene catálogo → cotización por WhatsApp, sin pagos.
 
 ## 1. Variables por plataforma
 
 | Variable / binding | Obligatoria | Dónde | Valor / comprobación |
 | --- | --- | --- | --- |
-| NODE_VERSION / PNPM_VERSION | Sí para Pages | Pages, build | 24 / 11.21.0; Render también debe usar Node 24 y pnpm del package.json |
+| NODE_VERSION / PNPM_VERSION | Sí para Pages | Pages, build | 24.22.1 / 11.21.0; Render también debe usar Node 24.22.1 y pnpm del package.json |
 | VITE_API_URL | Sí | Pages, build | /api; nunca URL de Render en el navegador |
 | VITE_SITE_URL | Sí para publicar SEO | Pages, build | Origen HTTPS estable del proyecto *.pages.dev, sin ruta |
 | VITE_WHATSAPP_NUMBER, VITE_LEGAL_NAME, VITE_LEGAL_EMAIL | Sí para lanzamiento | Pages, build | Datos públicos reales; no credenciales |
