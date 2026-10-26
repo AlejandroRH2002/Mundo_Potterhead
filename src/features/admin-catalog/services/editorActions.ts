@@ -23,3 +23,11 @@ export function duplicateModel(value:ManagedProduct,index:number):ManagedProduct
  const copy={...source,id:undefined,code:'M-'+crypto.randomUUID(),name,active:false,images:[...source.images],variants:source.variants.map(sku=>({...sku,id:undefined,code:'S-'+crypto.randomUUID(),images:[...sku.images]}))};
  return {...value,models:[...value.models,copy]};
 }
+
+export function singleDesign(value:ManagedProduct,name='Único'):ManagedProduct{
+ const id=crypto.randomUUID();return {...value,models:[...value.models,{code:'M-'+id,name,active:false,images:[],variants:[{code:'S-'+id,size:'one',color:'',images:[],active:true}]}]};
+}
+export function removeDesign(value:ManagedProduct,index:number):ManagedProduct{
+ const model=value.models[index];if(!model)return value;
+ return {...value,models:model.id?value.models.map((m,i)=>i===index?{...m,active:false,variants:m.variants.filter(s=>!!s.id).map(s=>({...s,active:false}))}:m):value.models.filter((_,i)=>i!==index)};
+}
