@@ -10,9 +10,14 @@ async function mediaRequest(path: string, stage: string, init?: RequestInit): Pr
   }
 }
 
-export async function uploadProductImage(file: File): Promise<string> {
+const thumbnails=new Map<string,string>();
+export const thumbnailForImage=(image:string)=>thumbnails.get(image);
+export async function uploadProductImage(file:File):Promise<string>{
+ const full=await compressImage(file);const thumb=await compressImage(file,400);const thumbUrl=await uploadPreparedImage(thumb);const fullUrl=await uploadPreparedImage(full);thumbnails.set(fullUrl,thumbUrl);return fullUrl;
+}
+async function uploadPreparedImage(file: File): Promise<string> {
   if (!imageTypes.some(type => type === file.type) || file.size === 0) throw new Error('Selecciona una imagen PNG, JPEG o WebP.');
-  file = await compressImage(file);
+  const sha256=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await file.arrayBuffer())),byte=>byte.toString(16).padStart(2,'0')).join('');
   const config = mediaConfigSchema.parse(await mediaRequest('/media/config', 'Configuración de imágenes'));
   if (file.size > config.maxBytes) throw new Error(`La imagen debe ocupar como máximo ${config.maxBytes / 1024 / 1024} MB.`);
   if (!config.enabled) {
@@ -24,8 +29,9 @@ export async function uploadProductImage(file: File): Promise<string> {
     });
   }
   const policy = uploadPolicySchema.parse(await mediaRequest('/media/upload', 'Autorización de subida', {
-    method: 'POST', body: JSON.stringify({ size: file.size, contentType: file.type }),
+    method: 'POST', body: JSON.stringify({ size: file.size, contentType: file.type, sha256 }),
   }));
+  if('publicUrl' in policy)return policy.publicUrl;
   const url = new URL(policy.url);
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('Destino de carga inválido.');
   let response: Response;

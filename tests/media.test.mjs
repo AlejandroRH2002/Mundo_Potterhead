@@ -24,7 +24,7 @@ test('completion checks actual bytes and size before copying the inspected objec
   const storage=createMediaStorage(env,client);
   try {
     const valid=await storage.sign({ contentType:'image/png',size:24 });
-    assert.match(await storage.complete(valid.ticket), /^https:\/\/images.test.invalid\/products\/[a-f0-9-]+\.png$/); assert.equal(copied,1); assert.equal(deleted,1);
+    assert.match(await storage.complete(valid.ticket), /^https:\/\/images.test.invalid\/products\/sha256-[a-f0-9]{64}\.png$/); assert.equal(copied,1); assert.equal(deleted,1);
     bytes=Buffer.alloc(24); await assert.rejects(storage.complete(valid.ticket), /contenido/); assert.equal(copied,1);
     expectedLength=25; await assert.rejects(storage.complete(valid.ticket), /Tamaño/); assert.equal(copied,1);
     await assert.rejects(storage.complete(valid.ticket + 'tampered'), /inválida/);

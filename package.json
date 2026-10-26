@@ -14,7 +14,7 @@
     "build": "pnpm db:generate && tsc -b && vite build && node scripts/build-server.mjs && node scripts/check-client-secrets.mjs",
     "audit:client": "node scripts/check-client-secrets.mjs",
     "typecheck": "tsc -b",
-    "test": "node --test tests/inventory.test.mjs tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs tests/accessibility.test.mjs tests/users.test.mjs tests/media.test.mjs tests/media-migration.test.mjs tests/image-performance.test.mjs tests/deployment.test.mjs tests/smoke.test.mjs tests/catalog.test.mjs tests/catalog-taxonomy.test.mjs tests/storefront.test.mjs tests/pages.test.mjs tests/navigation-path.test.mjs tests/admin-ui.test.mjs",
+    "test": "node --test tests/sizes.test.mjs tests/inventory.test.mjs tests/commerce.test.mjs tests/security.test.mjs tests/cloud.test.mjs tests/cleanup.test.mjs tests/session.test.mjs tests/seo.test.mjs tests/accessibility.test.mjs tests/users.test.mjs tests/media.test.mjs tests/media-migration.test.mjs tests/image-performance.test.mjs tests/deployment.test.mjs tests/smoke.test.mjs tests/catalog.test.mjs tests/catalog-taxonomy.test.mjs tests/storefront.test.mjs tests/pages.test.mjs tests/navigation-path.test.mjs tests/admin-ui.test.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "build:server": "pnpm db:generate && tsc -b tsconfig.server.json && node scripts/build-server.mjs",
@@ -26,7 +26,9 @@
     "db:seed:local": "node --env-file=.env server/scripts/seed.ts",
     "catalog:backfill-subcategory": "node --env-file=.env server/scripts/backfillSubcategory.ts",
     "build:web": "tsc -b tsconfig.app.json tsconfig.node.json && vite build && node scripts/check-client-secrets.mjs",
-    "inventory:prepare": "node server/scripts/prepareInventory.ts"
+    "inventory:prepare": "node server/scripts/prepareInventory.ts",
+    "catalog:backfill-models": "node server/scripts/backfillModels.ts",
+    "media:orphans": "node server/scripts/mediaOrphans.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1142.0",

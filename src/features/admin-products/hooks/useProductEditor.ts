@@ -5,7 +5,7 @@ import { createImagePreview } from '../services/imagePreview';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { productService, type ProductDraft } from '@/features/catalog/services/productService';
-import { uploadProductImage } from '../services/mediaService';
+import { uploadProductImage, thumbnailForImage } from '../services/mediaService';
 import { errorMessage } from '@/shared/lib/money';
 const empty: ProductDraft = { name: '', description: '', price: 0, image: '', category: 'accessories', universe: 'harry-potter', isOnSale: false };
 const sanitizeImageSource = (value: string) => {
@@ -119,8 +119,8 @@ export function useProductEditor(editing: boolean) {
       const payload: ProductDraft = { ...draft, price: Number(priceInput), originalPrice: originalPriceInput.trim() ? Number(originalPriceInput) : undefined };
       if (editing) {
         if (!id) throw new Error('Falta el identificador del producto.');
-        await productService.update(id, payload);
-      } else await productService.create(payload);
+        await productService.update(id, {...payload,imageThumbnails:Object.fromEntries(productImages({...payload,id}).flatMap(image=>{const thumb=thumbnailForImage(image)??draft.imageThumbnails?.[image];return thumb&&!thumb.startsWith('data:')&&!image.startsWith('data:')?[[image,thumb]]:[];}))});
+      } else await productService.create({...payload,imageThumbnails:Object.fromEntries(productImages({...payload,id:'new'}).flatMap(image=>{const thumb=thumbnailForImage(image)??draft.imageThumbnails?.[image];return thumb&&!thumb.startsWith('data:')&&!image.startsWith('data:')?[[image,thumb]]:[];}))});
       navigate('/admin');
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
