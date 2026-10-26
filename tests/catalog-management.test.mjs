@@ -13,7 +13,7 @@ const vite=await createTestViteServer();after(()=>vite.close());
 test('editor sections render separate controls instead of mixing data, variants and galleries',async()=>{
  const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');
  const value=planImport([row]).products[0];const props={value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true};
- const models=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'models'}));assert.match(models,/Datos del producto/);assert.doesNotMatch(models,/Quitar variante|type="file"/);
+ const models=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'models'}));assert.match(models,/Datos del producto/);assert.doesNotMatch(models,/Quitar variante|Galería del producto/);
  const variants=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'variants'}));assert.match(variants,/Quitar variante/);assert.match(variants,/Precio compartido/);assert.doesNotMatch(variants,/type="file"|Datos del producto/);
  const images=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'images'}));assert.match(images,/type="file"/);assert.doesNotMatch(images,/Quitar variante|Datos del producto/);
 });
@@ -75,4 +75,29 @@ test('image ZIP preflight rejects ambiguous names, empty images and unsafe files
  const bytes=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0]);
  assert.deepEqual(Object.keys(imageArchive(zipSync({'models/a.png':bytes,'models/b.png':bytes}))),['models/a.png','models/b.png']);
  for(const entries of [{'a/x.png':bytes,'b/x.png':bytes},{'a.png':bytes,'payload.html':bytes},{'a.png':new Uint8Array()},{'../a.png':bytes},{}])assert.throws(()=>imageArchive(zipSync(entries)));
+});
+
+test('simplified design CSV/XLSX templates round-trip without parent properties or required SKU',async()=>{
+ const {designColumns}=await import('../shared/catalogManagement.ts');
+ const rows=[{modelCode:'DESIGN-A',modelName:'Diseño A',sku:'',size:'one',color:'',quantity:''}];
+ assert.deepEqual(recordsFromRows(parseCsv(csvFile(rows,designColumns)),'designs'),rows);
+ assert.deepEqual(parseWorkbook(workbookFile(rows,designColumns),'designs'),rows);
+ assert.throws(()=>recordsFromRows([['modelCode','modelName','price'],['A','A','1']],'designs'));
+});
+test('design planning inherits parent, generates stable SKU and rejects conflicting existing identities',async()=>{
+ const {planDesignImport}=await import('../server/lib/designImport.ts');const parent=planImport([row]).products[0];
+ const design={modelCode:'DESIGN-A',modelName:'Diseño nuevo',size:'m',color:'Azul'};
+ const plan=planDesignImport(parent,[design,{...design,size:'l'}]);assert.equal(plan.errors.length,0);assert.deepEqual(plan.products[0].product,parent.product);assert.equal(plan.products[0].models[1].active,false);assert.equal(plan.products[0].models[1].images.length,0);
+ const first=plan.products[0].models[1].variants[0].code;assert.equal(planDesignImport(parent,[design]).products[0].models[1].variants[0].code,first);
+ assert.ok(planDesignImport(parent,[design,design]).errors.length);assert.ok(planDesignImport(parent,[{...design,size:'22'}]).errors.length);assert.ok(planDesignImport(parent,[{...design,price:'1'}]).errors.length);
+ const saved=plan.products[0];assert.ok(planDesignImport(saved,[{...design,modelName:'Unexpected rename'}]).errors.length);assert.equal(planDesignImport(saved,[design]).designStats.existingSkus,1);
+});
+test('model photo administration shows own placeholders and paginated upload actions',async()=>{
+ const {ModelPhotos}=await vite.ssrLoadModule('/src/features/admin-catalog/components/ModelPhotos.tsx');const value=planImport([row]).products[0];value.models[0].images=[];
+ const html=renderToStaticMarkup(createElement(ModelPhotos,{value,onChange:()=>{},onBusy:()=>{},onSelect:()=>{}}));assert.match(html,/Pendiente de fotografía/);assert.match(html,/Sin imagen/);assert.match(html,/Agregar imagen/);assert.match(html,/product-placeholder.svg/);assert.doesNotMatch(html,/Publicar diseño al guardar/);
+});
+
+test('a base product can be edited before it has any designs or stock',async()=>{
+ const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');const value=planImport([row]).products[0];value.models=[];assert.equal(managedProductSchema.safeParse(value).success,true);
+ for(const section of ['models','variants','images']){const html=renderToStaticMarkup(createElement(CatalogEditor,{value,section,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true}));assert.match(html,/Producto padre sin diseños/);assert.match(html,/Añadir modelo/);}
 });

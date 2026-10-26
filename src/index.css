@@ -442,3 +442,8 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 .inventory-page .inventory-filters{grid-template-columns:minmax(0,1fr)}
 @media(min-width:900px){.inventory-page .inventory-filters{grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto auto}}
 .figma-storefront .inventory-page{max-width:100%;color:#302523}
+.catalog-photo-board{margin-block:1.5rem;padding:1rem;border:1px solid #ddcec1;border-radius:1rem;background:#fffaf0;color:#302523}
+.catalog-photo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:1rem;margin-block:1rem;padding:0;list-style:none}
+.catalog-photo-grid>li{display:flex;flex-direction:column;gap:.5rem;padding:1rem;border:1px solid #e2d4c5;border-radius:.75rem;background:white;min-width:0;overflow-wrap:anywhere}
+.catalog-photo-grid img{width:100%;height:10rem;object-fit:contain;aspect-ratio:1;background:#f5eee4;border-radius:.5rem}
+.catalog-photo-grid input[type=file]{max-width:100%;font-size:.75rem;display:block;margin-top:.5rem}.catalog-photo-grid .admin-actions{margin-top:auto}.catalog-photo-grid .button-outline{color:#681621;background:white}

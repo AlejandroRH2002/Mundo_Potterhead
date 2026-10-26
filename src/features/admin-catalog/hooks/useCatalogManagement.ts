@@ -11,7 +11,7 @@ function fieldLabel(path:PropertyKey[]):string {
 }
 
 export function newManagedProduct():ManagedProduct {
- const id=crypto.randomUUID();return {code:'P-'+id,status:'draft',product:{name:'',description:'',price:0,category:'clothing',subcategory:null,universe:'harry-potter',images:[]},models:[{code:'M-'+id,name:'General',active:true,images:[],variants:[{code:'S-'+id,size:'one',color:'',images:[],active:true}]}]};
+ const id=crypto.randomUUID();return {code:'P-'+id,status:'draft',product:{name:'',description:'',price:0,category:'clothing',subcategory:null,universe:'harry-potter',images:[]},models:[]};
 }
 export function useCatalogManagement(){
  const [items,setItems]=useState<CatalogRow[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[q,setQ]=useState(''),[category,setCategory]=useState('');

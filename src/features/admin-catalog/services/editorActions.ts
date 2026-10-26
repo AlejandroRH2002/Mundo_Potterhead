@@ -13,7 +13,7 @@ export function addVariant(value:ManagedProduct,modelIndex:number):ManagedProduc
   if(index!==modelIndex)return model;
   const sizes=['one',...sizeTaxonomy[category].map(size=>size.slug)];
   const size=sizes.find(size=>!model.variants.some(sku=>sku.size===size&&!sku.color))??'one';
-  return {...model,active:model.variants.length?model.active:true,variants:[...model.variants,{code:'S-'+crypto.randomUUID(),size,color:'',images:[],active:true}]};
+  return {...model,active:model.active,variants:[...model.variants,{code:'S-'+crypto.randomUUID(),size,color:'',images:[],active:true}]};
  })};
 }
 export function duplicateModel(value:ManagedProduct,index:number):ManagedProduct {

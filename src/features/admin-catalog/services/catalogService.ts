@@ -2,7 +2,7 @@ import { requestJson } from '@/shared/lib/httpClient';
 import { thumbnailForImage } from '@/features/admin-products/services/mediaService';
 import type { ManagedProduct, ImportRecord, ImportReport } from '../../../../shared/catalogManagement';
 export interface CatalogRow {id:string;code:string|null;name:string;status:ManagedProduct['status'];category:string;price:number;revision:number}
-export interface ImportInput {key:string;rows:ImportRecord[];images:Record<string,string>}
+export interface ImportInput {parentId?:string;key:string;rows:ImportRecord[];images:Record<string,string>}
 const base='/admin/catalog';
 export const catalogService={
  list:(params:URLSearchParams)=>requestJson<{items:CatalogRow[];total:number;page:number}>(base+'?'+params),
