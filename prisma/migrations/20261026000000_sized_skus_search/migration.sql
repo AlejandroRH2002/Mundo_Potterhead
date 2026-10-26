@@ -39,9 +39,9 @@ BEGIN SELECT p."category" INTO cat FROM "Product" p JOIN "ProductModel" m ON m."
  IF cat='footwear' AND NEW."size" IN ('22','22.5','23','23.5','24','24.5','25','25.5','26','26.5','27','27.5','28','28.5','29','29.5','30') THEN RETURN NEW; END IF;
  RAISE EXCEPTION 'Size does not belong to product category'; END; $$;
 CREATE TRIGGER sku_size BEFORE INSERT OR UPDATE OF "size","modelId" ON "ProductSku" FOR EACH ROW EXECUTE FUNCTION mp_check_size();
-CREATE FUNCTION mp_check_product_category() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION mp_check_product_category() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN IF NEW."category"=OLD."category" THEN RETURN NEW; END IF;
  IF EXISTS(SELECT 1 FROM "ProductSku" s JOIN "ProductModel" m ON m."id"=s."modelId" WHERE m."productId"=NEW."id" AND NOT (s."size"='one' OR NEW."category"='clothing' AND s."size" IN ('xs','s','m','l','xl','xxl') OR NEW."category"='footwear' AND s."size" IN ('22','22.5','23','23.5','24','24.5','25','25.5','26','26.5','27','27.5','28','28.5','29','29.5','30'))) THEN RAISE EXCEPTION 'Existing sizes conflict with category'; END IF;
- RETURN NEW; END; $;
+ RETURN NEW; END; $$;
 CREATE TRIGGER product_category_sizes BEFORE UPDATE OF "category" ON "Product" FOR EACH ROW EXECUTE FUNCTION mp_check_product_category();
 COMMIT;

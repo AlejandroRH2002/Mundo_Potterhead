@@ -21,7 +21,7 @@ let networkCreated = false;
 let apiCreated = false;
 try {
   if (imageName) { run('docker', ['network', 'create', network]); networkCreated = true; }
-  run('docker', ['run', '--detach', '--rm', '--name', name, ...(imageName ? ['--network', network] : []), '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=mp_test', '-e', 'POSTGRES_DB=mp_test', '-p', '127.0.0.1::5432', 'postgres:16-alpine']);
+  run('docker', ['run', '--detach', '--rm', '--name', name, '--tmpfs', '/var/lib/postgresql/data:rw,nosuid', ...(imageName ? ['--network', network] : []), '-e', 'POSTGRES_PASSWORD', '-e', 'POSTGRES_USER=mp_test', '-e', 'POSTGRES_DB=mp_test', '-p', '127.0.0.1::5432', 'postgres:16-alpine']);
   created = true;
   let ready = false;
   for (let attempt = 0; attempt < 60; attempt++) {

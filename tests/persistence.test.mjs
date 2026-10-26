@@ -172,22 +172,22 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  await move(b.id,'SALE',2);assert.equal((await enforced.search(q)).total,0);assert.ok(await captured.get(product.id));
  const retry={key:randomUUID(),type:'RECEIPT',quantity:3,reason:'Retry fixture'};
  const twice=await Promise.all([inventory.move(owner.id,a.id,retry),inventory.move(owner.id,a.id,retry)]);assert.equal(twice[0].id,twice[1].id);
- assert.equal((await db.productModel.findUnique({where:{id:a.id}})).quantity,3);
+ assert.equal((await db.productSku.findUnique({where:{id:a.id}})).quantity,3);
  await assert.rejects(()=>inventory.move(owner.id,a.id,{...retry,quantity:4}),/clave/);
- const before=await db.productModel.findUnique({where:{id:a.id}});
+ const before=await db.productSku.findUnique({where:{id:a.id}});
  await assert.rejects(()=>move(a.id,'ADJUSTMENT',0,{expectedVersion:0}),/cambió/);
  await assert.rejects(()=>db.productSku.update({where:{id:a.id},data:{quantity:-1}}));
  await db.$executeRaw`CREATE FUNCTION mp_inventory_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."reason"='rollback-fixture' THEN RAISE EXCEPTION 'fixture failure'; END IF; RETURN NEW; END; $$`;
  await db.$executeRaw`CREATE TRIGGER inventory_test_fail BEFORE INSERT ON "InventoryMovement" FOR EACH ROW EXECUTE FUNCTION mp_inventory_test_fail()`;
  try {await assert.rejects(()=>inventory.move(owner.id,a.id,{key:randomUUID(),type:'SALE',quantity:1,reason:'rollback-fixture'}));}
  finally {await db.$executeRaw`DROP TRIGGER inventory_test_fail ON "InventoryMovement"`;await db.$executeRaw`DROP FUNCTION mp_inventory_test_fail()`;}
- assert.equal((await db.productModel.findUnique({where:{id:a.id}})).quantity,before.quantity);
+ assert.equal((await db.productSku.findUnique({where:{id:a.id}})).quantity,before.quantity);
  assert.equal(await db.inventoryMovement.count({where:{modelId:a.id,reason:'rollback-fixture'}}),0);
  const history=await inventory.history(a.id,{page:1,pageSize:100,q:'',status:'all'});assert.equal(history.total,6);
  assert.equal(history.items.reduce((total,item)=>total+item.delta,0),3);
  await assert.rejects(()=>db.inventoryMovement.delete({where:{id:opening.id}}));
  const quote=await createInventory(db,enforced,'enforce').quote({lines:[{productId:product.id,modelId:a.id,quantity:3}]});assert.equal(quote.lines.length,1);
- assert.equal((await db.productModel.findUnique({where:{id:a.id}})).quantity,3);
+ assert.equal((await db.productSku.findUnique({where:{id:a.id}})).quantity,3);
  await assert.rejects(()=>createInventory(db,enforced,'enforce').quote({lines:[{productId:product.id,modelId:a.id,quantity:4}]}),/supera/);
  await inventory.archive(owner.id,product.id,true);assert.equal(await enforced.get(product.id),null);assert.ok(await administration.get(product.id));await inventory.archive(owner.id,product.id,false);
  assert.ok(await enforced.get(product.id));
