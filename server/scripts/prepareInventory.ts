@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { databaseUrl } from '../database.ts';
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).filter(arg=>arg!=='--');
 if (args.some(arg => !['--apply', '--dry-run'].includes(arg)) || args.includes('--apply') && args.includes('--dry-run')) throw new Error('Usa --dry-run (predeterminado) o --apply.');
 const apply = args.includes('--apply');
 if(apply && process.env.INVENTORY_MODE==='enforce')throw new Error('Vuelve a capture antes de preparar modelos pendientes.');

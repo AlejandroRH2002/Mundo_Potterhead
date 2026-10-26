@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { databaseUrl } from '../database.ts';
-if(process.argv.slice(2).some(arg=>arg!=='--dry-run'))throw new Error('Solo se permite --dry-run. Este script nunca borra objetos.');
+if(process.argv.slice(2).filter(arg=>arg!=='--').some(arg=>arg!=='--dry-run'))throw new Error('Solo se permite --dry-run. Este script nunca borra objetos.');
 for(const name of ['S3_ENDPOINT','S3_BUCKET','S3_REGION','S3_PUBLIC_BASE_URL'])if(!process.env[name])throw new Error('Falta '+name);
 const prefix=process.env.S3_PUBLIC_BASE_URL!.replace(/\/$/,'')+'/';
 const db=new PrismaClient({datasources:{db:{url:databaseUrl(process.env)}}});

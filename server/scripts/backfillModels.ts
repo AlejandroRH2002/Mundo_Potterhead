@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { databaseUrl } from '../database.ts';
 import { modelBackfillPlan } from '../catalog/modelBackfill.ts';
-const args=process.argv.slice(2);
+const args=process.argv.slice(2).filter(arg=>arg!=='--');
 if(args.some(arg=>!['--dry-run','--apply'].includes(arg))||args.includes('--apply')&&args.includes('--dry-run'))throw new Error('Usa --dry-run (por defecto) o --apply.');
 const apply=args.includes('--apply');
 if(apply&&process.env.INVENTORY_MODE==='enforce')throw new Error('El backfill de imágenes requiere capture.');
