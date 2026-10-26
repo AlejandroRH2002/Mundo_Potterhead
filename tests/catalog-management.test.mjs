@@ -1,10 +1,32 @@
-import test from 'node:test';
+import test, {after} from 'node:test';
+import {createElement} from 'react';
+import {renderToStaticMarkup} from 'react-dom/server';
+import {createTestViteServer} from './fixtures/viteServer.mjs';
 import assert from 'node:assert/strict';
 import {zipSync,unzipSync,strToU8,strFromU8} from 'fflate';
 import {managedProductSchema,planImport} from '../shared/catalogManagement.ts';
 import {parseCsv,recordsFromRows,csvFile,workbookFile,parseWorkbook,safeArchive,templateRow} from '../shared/catalogFiles.ts';
+import {removeVariant,addVariant,duplicateModel} from '../src/features/admin-catalog/services/editorActions.ts';
 
 const row={...templateRow,images:'https://images.test.invalid/a.webp'};
+const vite=await createTestViteServer();after(()=>vite.close());
+test('editor sections render separate controls instead of mixing data, variants and galleries',async()=>{
+ const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');
+ const value=planImport([row]).products[0];const props={value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true};
+ const models=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'models'}));assert.match(models,/Datos del producto/);assert.doesNotMatch(models,/Quitar variante|type="file"/);
+ const variants=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'variants'}));assert.match(variants,/Quitar variante/);assert.match(variants,/Precio compartido/);assert.doesNotMatch(variants,/type="file"|Datos del producto/);
+ const images=renderToStaticMarkup(createElement(CatalogEditor,{...props,section:'images'}));assert.match(images,/type="file"/);assert.doesNotMatch(images,/Quitar variante|Datos del producto/);
+});
+test('editor removes unsaved variants immediately and stages saved removals without mutating the source',()=>{
+ const original=planImport([row]).products[0];const empty=removeVariant(original,0,0);assert.equal(empty.models[0].variants.length,0);assert.equal(original.models[0].variants.length,1);assert.equal(empty.removedVariantIds,undefined);assert.equal(managedProductSchema.safeParse(empty).success,true);
+ original.models[0].variants[0].id='existing-sku';const pending=removeVariant(original,0,0);assert.deepEqual(pending.removedVariantIds,['existing-sku']);assert.equal(pending.models[0].variants.length,0);
+ assert.equal(managedProductSchema.safeParse({...original,removedVariantIds:['existing-sku']}).success,false);
+});
+test('editor creates independent SKU codes and copies models without saved identities',()=>{
+ const original=planImport([row]).products[0];original.models[0].id='saved-model';original.models[0].variants[0].id='saved-sku';
+ const added=addVariant(original,0);assert.equal(added.models[0].variants.length,2);assert.notEqual(added.models[0].variants[1].code,original.models[0].variants[0].code);
+ const copy=duplicateModel(original,0).models[1];assert.equal(copy.id,undefined);assert.equal(copy.variants[0].id,undefined);assert.notEqual(copy.code,original.models[0].code);assert.notEqual(copy.variants[0].code,original.models[0].variants[0].code);assert.equal(copy.active,false);assert.deepEqual(copy.images,original.models[0].images);
+});
 test('CSV and XLSX templates round-trip values, multiline descriptions and colors',()=>{
  const data=[{...row,description:'Tela, suave\nTexto "citado" & <seguro>'}];
  assert.deepEqual(recordsFromRows(parseCsv(csvFile(data))),data);

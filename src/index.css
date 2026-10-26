@@ -375,3 +375,36 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 .catalog-management .shop-input{max-width:100%;min-width:0}
 .catalog-import-preview,.catalog-history{margin-block:1rem;padding:1rem;border:1px solid currentColor;border-radius:.75rem;overflow-wrap:anywhere}
 @media(min-width:768px){.catalog-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-filters{grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto}.catalog-admin-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Standalone catalog workspace: list and editor are mutually exclusive. */
+.catalog-workspace{width:100%;max-width:100rem;min-height:100svh;margin-inline:auto;padding:clamp(1rem,3vw,2.5rem);background:#f8f4eb;color:#32151a;box-sizing:border-box}
+.catalog-workspace-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1.25rem;padding-block:1rem 2rem;border-bottom:1px solid #dacdcc}
+.catalog-workspace-header h1{font-size:clamp(1.8rem,4vw,2.75rem);color:#651222;margin-block:.5rem;line-height:1.2}
+.catalog-brand{font-weight:600;color:#651222}
+.catalog-workspace h2{font-size:clamp(1.2rem,2vw,1.6rem);font-weight:600;color:#651222;overflow-wrap:anywhere}
+.catalog-workspace h3{font-size:1.1rem;font-weight:600;color:#651222;margin-block:1rem}
+.catalog-workspace .shop-panel{background:#fffdf8;color:#32151a;border:1px solid #dacdcc;border-radius:1rem;padding:clamp(1rem,2vw,1.75rem)}
+.catalog-workspace .shop-input{background:white;color:#32151a;border:1px solid #aa9296;border-radius:.6rem;width:100%;box-sizing:border-box}
+.catalog-workspace-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-block:1.5rem}
+.catalog-workspace-tabs button{min-height:3rem;padding:.75rem;border:1px solid #a4898d;border-radius:.75rem;background:#fffdf8;color:#651222;font-weight:600;overflow-wrap:anywhere}
+.catalog-workspace-tabs button[aria-selected=true]{background:#651222;color:#fff8e8;border-color:#651222;box-shadow:inset 0 -3px #d6aa35}
+.catalog-workspace-tabs button:disabled{opacity:.6;cursor:wait}
+.catalog-workspace-body{min-width:0;display:grid;gap:1.25rem}
+.catalog-workspace .catalog-admin-list{grid-template-columns:minmax(0,1fr)}
+.catalog-list-heading,.catalog-editor-heading,.catalog-context-bar,.catalog-model-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem}
+.catalog-model-toolbar{margin-block:1.5rem;padding:1rem;background:#f4ece1;border-radius:.75rem}
+.catalog-model-toolbar label{flex:1 1 14rem;min-width:0}
+.catalog-status,.catalog-success,.catalog-pending-removal{background:#f3e5bb;color:#4a2c08;border:1px solid #ba9440;border-radius:.6rem;padding:.65rem 1rem;overflow-wrap:anywhere}
+.catalog-editor-heading{padding-bottom:1rem;border-bottom:1px solid #dacdcc;margin-bottom:1rem}
+.catalog-empty{padding:2rem 1rem;text-align:center;background:#fffdf8;border:1px dashed #a4898d;border-radius:1rem}
+.catalog-workspace .catalog-variant,.catalog-workspace .catalog-model{border-color:#c8b8ba;background:#fffdf8}
+.catalog-remove-button{border-color:#8e2435!important;color:#80172a!important;background:#fff1f1!important}
+.catalog-save-bar{position:sticky;bottom:0;z-index:1;padding:1rem;background:#fffdf8;border-top:1px solid #c8b8ba;box-shadow:0 -3px 8px #32151a0d}
+.catalog-stock-panel fieldset{min-width:0}
+.catalog-stock-panel fieldset:disabled{opacity:.6}
+@media(min-width:768px){.catalog-workspace-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}.catalog-product-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem 1rem}.catalog-product-row label,.catalog-product-row h3{grid-column:1}.catalog-product-row .admin-actions{grid-column:2;grid-row:1/5;align-self:center}}
+@media(max-width:390px){.catalog-workspace .admin-actions{flex-direction:column;align-items:stretch}.catalog-workspace .admin-actions>*{max-width:100%}.catalog-model-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}}
+.catalog-workspace .button-outline{color:#651222;border-color:#97717b;background:#fffdf8}
+.catalog-workspace .button-outline:not(:disabled):hover{background:#f4e8e6;color:#4c0e1c}
+.catalog-workspace .catalog-remove-button{color:#80172a;background:#fff1f1}
+.catalog-workspace button:focus-visible,.catalog-workspace a:focus-visible,.catalog-workspace input:focus-visible,.catalog-workspace select:focus-visible,.catalog-workspace textarea:focus-visible{outline:3px solid #865a08;outline-offset:3px}

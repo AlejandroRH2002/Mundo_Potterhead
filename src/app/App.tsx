@@ -88,12 +88,18 @@ function RouteFooter() {
   return <Footer />;
 }
 
+function RouteHeader() {
+  const { pathname } = useLocation();
+  if (pathname.replace(/\/+$/, '') === '/admin/catalogo') return null;
+  return <><Announcement /><Navbar /></>;
+}
+
 export default function App() {
   return <BrowserRouter>
     <MotionConfig reducedMotion="user"><LazyMotion features={loadMotion} strict><AuthProvider>
       <StorefrontShell>
         <a className="skip-link" href="#main-content">Saltar al contenido</a>
-        <Announcement /><Navbar />
+        <RouteHeader />
         <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><ScrollManager/><AnimatedRoutes /></main>
         <RouteFooter />
       </StorefrontShell>
