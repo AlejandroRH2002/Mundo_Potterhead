@@ -407,4 +407,38 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 .catalog-workspace .button-outline{color:#651222;border-color:#97717b;background:#fffdf8}
 .catalog-workspace .button-outline:not(:disabled):hover{background:#f4e8e6;color:#4c0e1c}
 .catalog-workspace .catalog-remove-button{color:#80172a;background:#fff1f1}
-.catalog-workspace button:focus-visible,.catalog-workspace a:focus-visible,.catalog-workspace input:focus-visible,.catalog-workspace select:focus-visible,.catalog-workspace textarea:focus-visible{outline:3px solid #865a08;outline-offset:3px}
+.catalog-workspace button:focus-visible,.catalog-workspace a:focus-visible,.catalog-workspace input:focus-visible,.catalog-workspace select:focus-visible,.catalog-workspace textarea:focus-visible{outline:3px solid #865a08;outline-offset:3px}/* Inventory: a single full-width SKU list, shared with the catalog workspace. */
+.inventory-page{width:100%;max-width:100%;min-width:0;background:#faf6ed;color:#302523;padding:clamp(1rem,3vw,2.5rem);border-radius:1.25rem}
+.inventory-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-block:1rem}
+.inventory-page .shop-title{color:#681621;font-size:clamp(1.8rem,3vw,2.8rem);margin-block:.4rem}
+.inventory-eyebrow{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#75542c}
+.inventory-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.75rem;margin-top:1.5rem}
+.inventory-summary>div{display:grid;gap:.25rem;background:#fff;border:1px solid #e2d4c5;border-radius:.8rem;padding:1rem;min-width:0}
+.inventory-summary strong{font-size:1.6rem;color:#681621}.inventory-summary span,.inventory-scope{font-size:.8rem;color:#66574f}
+.inventory-page .button-outline,.inventory-table-shell .button-outline{color:#681621;border-color:#a86b70;background:#fff}
+.inventory-page .button-outline:hover,.inventory-table-shell .button-outline:hover{background:#f6e9e6}
+.inventory-page .shop-input,.inventory-table-shell .shop-input{background:#fff;color:#302523;border:1px solid #cdbbb0}
+.inventory-page .inventory-filters{background:#fff;border:1px solid #e2d4c5;border-radius:1rem;padding:1rem}
+.inventory-table-shell{width:100%;max-width:100%;border:1px solid #ddcec1;border-radius:1rem;background:#fff;color:#302523;overflow-x:auto}
+.inventory-table{width:100%;border-collapse:collapse;text-align:left;font-size:.85rem;table-layout:fixed}
+.inventory-table caption{text-align:left;padding:1rem;color:#66574f;background:#fff9ee;font-size:.8rem}
+.inventory-table th,.inventory-table td{min-width:0;padding:1rem .75rem;vertical-align:middle;border-bottom:1px solid #e9dfd5;overflow-wrap:anywhere;text-align:left}
+.inventory-table thead{background:#f2e9db;color:#57202a}.inventory-table thead th:first-child{width:24%}.inventory-table thead th:nth-child(2){width:14%}.inventory-table thead th:nth-child(3){width:9%}.inventory-table thead th:nth-child(4){width:9%}.inventory-table thead th:nth-child(5){width:12%}.inventory-table thead th:nth-child(6){width:19%}.inventory-table thead th:nth-child(7){width:13%}
+.inventory-product{display:flex;align-items:center;gap:.75rem;min-width:0}.inventory-product>div{display:grid;gap:.3rem;min-width:0}.inventory-product img{width:3.5rem;height:3.5rem;aspect-ratio:1;object-fit:contain;background:#faf6ed;border-radius:.5rem;flex-shrink:0}
+.inventory-product strong{font-weight:600}.inventory-product span,.inventory-color{display:block;font-weight:400}.inventory-table code{font-size:.75rem}
+.inventory-stock{font-size:1.25rem;display:block;color:#57202a}.inventory-unit{display:block;font-size:.75rem;color:#66574f}
+.inventory-badge{display:inline-flex!important;align-items:center;width:fit-content;border:1px solid currentColor;border-radius:2rem;padding:.25rem .55rem;font-size:.72rem;font-weight:600!important;line-height:1.4}
+.inventory-available{background:#edf6ee;color:#285538}.inventory-low{background:#fff3d3;color:#745008}.inventory-empty{background:#fcebec;color:#8b2132}.inventory-pending,.inventory-inactive{background:#f1eff3;color:#5f5269}
+.inventory-count{display:flex;align-items:center;flex-wrap:wrap;gap:.4rem}.inventory-table .inventory-count input{width:5.5rem;min-height:2.75rem;padding:.5rem;margin:0}.inventory-table button{min-height:2.75rem;font-size:.75rem;padding:.45rem .65rem;white-space:normal}
+.inventory-row-actions{display:flex;gap:.35rem;flex-wrap:wrap}.inventory-row-dirty{background:#fff8e4}.inventory-row-dirty>th{box-shadow:inset 3px 0 #b88015}.inventory-count-status{display:block;font-size:.72rem;color:#83540a;margin-block:.3rem;min-height:1em}
+.inventory-table-shell:focus-visible,.inventory-page :focus-visible{outline:2px solid #8c4c26;outline-offset:3px}
+.inventory-page .inventory-forms .shop-panel{background:#fff;color:#302523;border-color:#ddcec1}.inventory-page .inventory-forms h2{color:#681621;font-size:1.3rem}
+.inventory-page>.inventory-empty{padding:1.5rem;border-radius:1rem;background:#fff;border:1px dashed #cdbbb0;color:#302523}
+@media (min-width:768px) and (max-width:1199px){.inventory-table{min-width:64rem}}
+@media(max-width:767px){
+ .inventory-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.inventory-summary>div:last-child{grid-column:1/-1}
+ .inventory-table,.inventory-table tbody,.inventory-table tr,.inventory-table th,.inventory-table td{display:block;width:100%}.inventory-table thead{display:none}.inventory-table tr{border-bottom:1px solid #ddcec1;padding:.75rem}.inventory-table th,.inventory-table td{padding:.45rem;border:0}.inventory-table td{display:grid;grid-template-columns:minmax(0,6.5rem) minmax(0,1fr);gap:.5rem}.inventory-table td:before{content:attr(data-label);font-weight:600;color:#66574f;font-size:.75rem}.inventory-table td>*{min-width:0}.inventory-table .inventory-count-status,.inventory-table td[data-label="Conteo físico"]>button{grid-column:2}.inventory-table caption{display:block}.inventory-color{grid-column:2}.inventory-product{align-items:flex-start}.inventory-table .inventory-count input{width:100%}.inventory-count>*{flex:1 1 4rem}.inventory-table-shell{overflow-x:clip}
+}
+.inventory-page .inventory-filters{grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.inventory-page .inventory-filters{grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto auto}}
+.figma-storefront .inventory-page{max-width:100%;color:#302523}

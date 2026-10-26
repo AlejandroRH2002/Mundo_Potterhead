@@ -61,3 +61,11 @@ test('ZIP paths, expanded size, XML entities, macros and workbook formulas are r
  const macro=zipSync({'xl/vbaProject.bin':new Uint8Array([1])});assert.throws(()=>parseWorkbook(macro));
  const formula=unzipSync(workbookFile([row]));formula['xl/worksheets/sheet1.xml']=strToU8(strFromU8(formula['xl/worksheets/sheet1.xml']).replace('<is>','<f>1+1</f><is>'));assert.throws(()=>parseWorkbook(zipSync(formula)),/fórmulas/);
 });
+
+test('inventory renders one row per SKU, explicit stock/count columns and disabled unchanged saves',async()=>{
+ const {InventoryMatrix}=await vite.ssrLoadModule('/src/features/inventory/components/InventoryMatrix.tsx');
+ const rows=[{id:'a',modelId:'m',productName:'Chamarra',name:'Diseño A',sku:'A-M',size:'m',color:'Rojo',quantity:0,version:1,active:true},{id:'b',modelId:'m',productName:'Chamarra',name:'Diseño A',sku:'A-L',size:'l',quantity:null,version:0,active:false}];
+ let saves=0;const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows,busy:false,save:async()=>{saves++;return true;}}));
+ assert.equal((html.match(/<tr/g)||[]).length,3);assert.match(html,/Stock actual/);assert.match(html,/Conteo físico/);assert.match(html,/Agotado/);assert.match(html,/Pendiente de conteo/);assert.match(html,/inactivo/);
+ assert.equal((html.match(/disabled=""/g)||[]).length,2);assert.equal(saves,0);assert.match(html,/data-label="SKU"/);assert.equal((html.match(/id="count-(?:a|b)"/g)||[]).length,2);
+});

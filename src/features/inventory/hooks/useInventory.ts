@@ -22,10 +22,10 @@ export function useInventory(params: URLSearchParams) {
   const retry = useRef<{ signature: string; key: string }>();
   useEffect(() => { const controller = new AbortController(); setLoading(true); setError(''); void inventoryService.list(new URLSearchParams(query), controller.signal).then(setData).catch(cause => { if (!controller.signal.aborted) setError(errorMessage(cause)); }).finally(() => { if (!controller.signal.aborted) setLoading(false); }); return () => controller.abort(); }, [query, revision]);
   const run = useCallback(async (action: () => Promise<void>) => {
-    if (inFlight.current) return;
+    if (inFlight.current) return false;
     inFlight.current = true; setBusy(true); setError(''); setNotice('');
-    try { await action(); setRevision(value => value + 1); }
-    catch (cause) { setError(errorMessage(cause)); }
+    try { await action(); setRevision(value => value + 1); return true; }
+    catch (cause) { setError(errorMessage(cause)); return false; }
     finally { inFlight.current = false; setBusy(false); }
   }, []);
   const loadHistory = (id: string, page = 1) => run(async () => { setHistory(await inventoryService.history(id, page)); setHistoryId(id); });

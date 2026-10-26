@@ -107,3 +107,23 @@ test('repository fixture replays one operation and rolls back balance if ledger 
   assert.equal(last.filter(result=>result.status==='fulfilled').length,1);assert.equal(state.quantity,0);
   active=false;await assert.rejects(()=>inventory.move('admin','model',input('RECEIPT',1)),/administrador/);
 });
+
+// Presentation rules do not write inventory: persistence remains in the movement endpoint.
+test('physical counts reject empty, fractional, negative and unsafe values',async()=>{
+ const {physicalCount}=await import('../src/features/inventory/services/inventoryPresentation.ts');
+ for(const value of ['', ' ', '-1','1.2','1e3','NaN','1000001'])assert.equal(physicalCount(value),null);
+ assert.equal(physicalCount('0'),0);assert.equal(physicalCount('12'),12);assert.equal(physicalCount('1000000'),1000000);
+});
+test('page summaries distinguish unknown, zero, low stock and unique models',async()=>{
+ const {inventorySummary,stockStatus}=await import('../src/features/inventory/services/inventoryPresentation.ts');
+ const rows=[{id:'a',modelId:'m1',quantity:null},{id:'b',modelId:'m1',quantity:0},{id:'c',modelId:'m2',quantity:3},{id:'d',modelId:'m2',quantity:11}];
+ assert.deepEqual(inventorySummary(rows,10),{models:2,skus:4,low:1,empty:1,pending:1});
+ assert.equal(stockStatus(null).key,'pending');assert.equal(stockStatus(0).key,'empty');assert.equal(stockStatus(10).key,'low');assert.equal(stockStatus(11).key,'available');
+});
+test('inventory list preserves inactive SKUs and reports effective activation without duplicates',async()=>{
+ const row={id:'sku-a',active:false,code:'CODE',size:'m',quantity:2,version:1,model:{id:'model-a',active:true,name:'A',productId:'product',product:{name:'Product',archived:false}}};
+ const db={productSku:{findMany:async()=>[row],count:async()=>1,findUnique:async()=>row}};
+ const repo=createInventory(db,{},'capture');const result=await repo.list(inventoryQuerySchema.parse({}));
+ assert.equal(result.items.length,1);assert.equal(result.total,1);assert.equal(result.items[0].active,false);assert.equal(result.items[0].quantity,2);assert.equal((await repo.get('sku-a')).active,false);
+ row.active=true;row.model.active=false;assert.equal((await repo.list(inventoryQuerySchema.parse({}))).items[0].active,false);
+});

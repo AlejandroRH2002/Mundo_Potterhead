@@ -30,7 +30,7 @@ export const inventoryQuerySchema = z.object({
 export type InventoryQuery = z.infer<typeof inventoryQuerySchema>;
 export interface SellableSku { color?:string; images?:string[]; active?:boolean; id:string; code:string; size:string; quantity:number|null; version:number }
 export interface SellableModel { images?:string[]; skus?:SellableSku[]; thumbnail?:string|null; id: string; sku: string; name: string; image: string | null; active: boolean; quantity: number | null; version: number }
-export interface InventoryRow extends SellableModel { color?:string; modelId?:string; size?:string; productId: string; productName: string; archived: boolean }
+export interface InventoryRow extends SellableModel { modelActive?:boolean; color?:string; modelId?:string; size?:string; productId: string; productName: string; archived: boolean }
 export interface MovementResult { id: string; modelId: string; skuId?:string; type: string; quantity: number; before: number | null; after: number; delta: number; reason: string; actorId: string; createdAt: string }
 export interface InventoryPage { lowStockThreshold?:number; items: InventoryRow[]; total: number; page: number; pageSize: number }
 export interface MovementPage { items: MovementResult[]; total: number; page: number; pageSize: number }

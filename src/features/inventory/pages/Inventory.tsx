@@ -1,4 +1,5 @@
-import { sizeTaxonomy,sizeLabel } from '../../../../shared/sizes';
+import { inventorySummary } from '../services/inventoryPresentation';
+import { sizeTaxonomy } from '../../../../shared/sizes';
 import { InventoryMatrix } from '../components/InventoryMatrix';
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -11,6 +12,9 @@ export function Inventory() {
   const [params, setParams] = useSearchParams();
   const admin = useInventory(params);
   const [selected, setSelected] = useState<InventoryRow>();
+  const [pending,setPending]=useState(false);
+  const allowLeave=()=>!pending||window.confirm('Hay conteos sin guardar. ¿Descartarlos al cambiar la vista?');
+  const summary=inventorySummary(admin.data?.items??[],admin.data?.lowStockThreshold??10);
   const [type, setType] = useState<MovementInput['type']>('SALE');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('');
@@ -19,31 +23,25 @@ export function Inventory() {
   const [newSize,setNewSize]=useState('one');
   const [active, setActive] = useState(true);
   useEffect(()=>{setQuantity('');setReason('');},[admin.saved]);
-  const filter = (key: string, value: string) => { const next = new URLSearchParams(params); next.delete('page'); if (value) next.set(key, value); else next.delete(key); setParams(next); setSelected(undefined); };
-  const choose = (row: InventoryRow) => { setNewSize('one');setSelected(row);void admin.loadGallery(row.productId); setType(row.quantity === null ? 'COUNT' : 'SALE'); setQuantity(''); setReason(''); setModelName(row.name); setImage(row.image ?? ''); setActive(row.active);requestAnimationFrame(()=>{const form=document.getElementById('inventory-operation');form?.scrollIntoView({block:'start',behavior:'auto'});form?.focus({preventScroll:true});}); };
+  const filter = (key: string, value: string) => { if(!allowLeave())return; const next = new URLSearchParams(params); next.delete('page'); if (value) next.set(key, value); else next.delete(key); setParams(next); setSelected(undefined); };
+  const choose = (row: InventoryRow) => { setNewSize('one');setSelected(row);void admin.loadGallery(row.productId); setType(row.quantity === null ? 'COUNT' : 'SALE'); setQuantity(''); setReason(''); setModelName(row.name); setImage(row.image ?? ''); setActive(row.modelActive??row.active);requestAnimationFrame(()=>{const form=document.getElementById('inventory-operation');form?.scrollIntoView({block:'start',behavior:'auto'});form?.focus({preventScroll:true});}); };
   const current = selected && admin.data?.items.find(row => row.id === selected.id);
   const operation:MovementInput['type']=current?.quantity===null?'COUNT':type==='COUNT'?'SALE':type;
   return <section className="shop-page admin-page inventory-page">
     <Link className="button-outline button-size-md" to="/admin">← Productos</Link>
-    <h1 className="shop-title">Inventario por modelo</h1>
+    <div className="inventory-heading"><div><span className="inventory-eyebrow">Control de existencias</span><h1 className="shop-title">Inventario por modelo</h1></div><Link className="button-outline button-size-md" to="/admin/catalogo">Editar catálogo →</Link></div>
     <p>Captura cantidades reales. Cotizar por WhatsApp no reserva ni descuenta mercancía. Stock bajo: hasta {admin.data?.lowStockThreshold??10} unidades.</p>
-    <div className="inventory-filters"><label>Buscar producto, modelo o SKU<input className="shop-input" type="search" value={params.get('q') ?? ''} onChange={event => filter('q', event.target.value)}/></label>
+    <div className="inventory-summary" aria-label="Resumen de la página visible">{[["Modelos en página",summary.models],["SKU en página",summary.skus],["Stock bajo",summary.low],["Agotados",summary.empty],["Sin conteo",summary.pending]].map(([label,value])=><div key={label}><strong>{admin.loading?"—":value}</strong><span>{label}</span></div>)}</div><p className="inventory-scope">Resumen de los SKU de esta página, con los filtros actuales. Total de SKU encontrados: {admin.data?.total??"—"}.</p><div className="inventory-filters"><label>Buscar producto, modelo o SKU<input className="shop-input" type="search" value={params.get('q') ?? ''} onChange={event => filter('q', event.target.value)}/></label>
       <label>Estado<select className="shop-input" value={params.get('status') ?? 'all'} onChange={event => filter('status', event.target.value)}>{[['all','Todos'],['pending','Pendientes'],['empty','Agotados'],['low','Stock bajo'],['available','Disponibles']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <Button variant="secondary" onClick={() => { setParams({}); setSelected(undefined); }}>Limpiar filtros</Button></div>
+      <Button variant="secondary" onClick={() => { if(!allowLeave())return; setParams({}); setSelected(undefined); }}>Limpiar filtros</Button><Button variant="secondary" disabled={admin.busy||admin.loading} onClick={()=>void admin.run(async()=>{})}>Actualizar saldos</Button></div>
     {admin.error && <p className="shop-error" role="alert">{admin.error}</p>}
     <p role="status" aria-live="polite">{admin.notice}</p>
     {admin.loading && <p role="status">Cargando inventario…</p>}
-    {!admin.loading && !admin.data?.items.length && <p>No hay modelos con estos filtros.</p>}
-    <InventoryMatrix rows={admin.data?.items??[]} busy={admin.busy} save={(row,value)=>admin.move(row,{type:row.quantity===null?'COUNT':'ADJUSTMENT',quantity:value,expectedVersion:row.version,reason:'Conteo rápido de cuadrícula'})}/>
-    <div className="inventory-grid">{admin.data?.items.map(row => <article key={row.id} className="shop-panel inventory-card">
-      <h2>{row.productName}</h2><p><strong>{row.name} · {sizeLabel(row.size??'one')}{row.color?' · '+row.color:''}</strong> · {row.sku}</p><p>{row.quantity === null ? 'Pendiente de captura' : `${row.quantity} unidades${row.quantity === 0 ? ' · Agotado' : row.quantity <= (admin.data?.lowStockThreshold??10) ? ' · Stock bajo' : ''}`}</p>
-      <p>{row.active ? 'Modelo activo' : 'Modelo inactivo'}{row.archived ? ' · Producto archivado' : ''}</p>
-      <div className="admin-actions"><Button disabled={admin.busy} onClick={() => choose(row)}>Gestionar modelo</Button><Button variant="secondary" disabled={admin.busy} onClick={() => void admin.loadHistory(row.id)}>Movimientos</Button>
-      <Button variant="secondary" disabled={admin.busy} onClick={() => { if (window.confirm(row.archived ? '¿Mostrar este producto según su disponibilidad?' : '¿Archivar la ficha completa sin borrar su historial?')) void admin.archive(row.productId, !row.archived); }}>{row.archived ? 'Mostrar producto' : 'Archivar producto'}</Button></div>
-    </article>)}</div>
-    {admin.data && <nav className="admin-actions" aria-label="Páginas de inventario"><Button variant="secondary" disabled={admin.loading || admin.data.page <= 1} onClick={() => { const next = new URLSearchParams(params); next.set('page', String(admin.data!.page - 1)); setParams(next); setSelected(undefined); }}>Anterior</Button><span>Página {admin.data.page} · {admin.data.total} modelos</span><Button variant="secondary" disabled={admin.loading || admin.data.page * admin.data.pageSize >= admin.data.total} onClick={() => { const next = new URLSearchParams(params); next.set('page', String(admin.data!.page + 1)); setParams(next); setSelected(undefined); }}>Siguiente</Button></nav>}
+    {!admin.loading && !admin.error && !admin.data?.items.length && <div className="inventory-empty"><h2>No hay SKU con estos filtros</h2><p>Prueba otro nombre, modelo o SKU, o limpia los filtros.</p></div>}
+    <InventoryMatrix key={params.toString()} rows={admin.data?.items??[]} busy={admin.busy||admin.loading} threshold={admin.data?.lowStockThreshold??10} onDirtyChange={setPending} save={(row,value)=>admin.move(row,{type:row.quantity===null?'COUNT':'ADJUSTMENT',quantity:value,expectedVersion:row.version,reason:'Conteo físico desde inventario'})} actions={row=><><Button size="sm" variant="secondary" disabled={admin.busy} onClick={()=>choose(row)}>Gestionar</Button><Button size="sm" variant="secondary" disabled={admin.busy} onClick={()=>void admin.loadHistory(row.id)}>Historial</Button><Button size="sm" variant="secondary" disabled={admin.busy} onClick={()=>{if(window.confirm(row.archived?'¿Mostrar este producto según su disponibilidad?':'¿Archivar la ficha completa sin borrar su historial?'))void admin.archive(row.productId,!row.archived);}}>{row.archived?'Mostrar':'Archivar'}</Button></>}/>
+    {admin.data && <nav className="admin-actions" aria-label="Páginas de inventario"><Button variant="secondary" disabled={admin.loading || admin.data.page <= 1} onClick={() => { if(!allowLeave())return; const next = new URLSearchParams(params); next.set('page', String(admin.data!.page - 1)); setParams(next); setSelected(undefined); }}>Anterior</Button><span>Página {admin.data.page} · {admin.data.total} SKU</span><Button variant="secondary" disabled={admin.loading || admin.data.page * admin.data.pageSize >= admin.data.total} onClick={() => { if(!allowLeave())return; const next = new URLSearchParams(params); next.set('page', String(admin.data!.page + 1)); setParams(next); setSelected(undefined); }}>Siguiente</Button></nav>}
     {current && <div className="inventory-forms"><form id="inventory-operation" tabIndex={-1} className="shop-panel" onSubmit={event => { event.preventDefault(); if (window.confirm(`¿Confirmar ${operation} de ${quantity} para ${current.name}?`)) void admin.move(current, { type:operation, quantity: Number(quantity), reason, expectedVersion: current.version }); }}>
-      <h2>Actualizar {current.name}</h2><p>Saldo actual: {current.quantity ?? 'pendiente'}. Conteo y ajuste establecen una cantidad absoluta.</p>
+      <div className="admin-actions"><h2>Actualizar {current.name}</h2><Button type="button" variant="secondary" onClick={()=>setSelected(undefined)}>Cerrar gestión</Button></div><p>Saldo actual: {current.quantity ?? 'pendiente'}. Conteo y ajuste establecen una cantidad absoluta.</p>
       <label>Operación<select className="shop-input" value={operation} onChange={event => setType(event.target.value as MovementInput['type'])}>{(current.quantity === null ? [['COUNT','Conteo inicial']] : [['SALE','Registrar venta'],['RECEIPT','Registrar entrada'],['ADJUSTMENT','Conteo / corrección justificada']]).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
       <label>Cantidad<input className="shop-input" type="number" min={operation === 'SALE' || operation === 'RECEIPT' ? 1 : 0} max="1000000" step="1" required value={quantity} onChange={event => setQuantity(event.target.value)}/></label>
       <label>Motivo (sin datos personales)<input className="shop-input" required minLength={3} maxLength={300} value={reason} onChange={event => setReason(event.target.value)}/></label>
