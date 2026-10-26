@@ -17,7 +17,7 @@ export function siteOrigin(value: string | undefined): string | undefined {
 export function routeMetadata(path: string) {
   const entry = publicRoutes[path as keyof typeof publicRoutes];
   if (entry) return { ...entry, noindex: false };
-  const title = path === '/cart' ? 'Mi cotización' : path === '/login' ? 'Iniciar sesión' : path === '/profile' ? 'Mi perfil' : path.startsWith('/admin/inventario') ? 'Inventario por modelo' : path.startsWith('/admin/usuarios') ? adminLabels.usersTitle : path.startsWith('/admin') || path.startsWith('/products/') ? adminLabels.productsTitle : 'Página no encontrada';
+  const title = path === '/cart' ? 'Mi cotización' : path === '/login' ? 'Iniciar sesión' : path === '/profile' ? 'Mi perfil' : path.startsWith('/admin/catalogo') ? 'Modelos e importaci?n' : path.startsWith('/admin/inventario') ? 'Inventario por modelo' : path.startsWith('/admin/usuarios') ? adminLabels.usersTitle : path.startsWith('/admin') || path.startsWith('/products/') ? adminLabels.productsTitle : 'Página no encontrada';
   return { title, description: 'Mundo Potterhead: catálogo y cotizaciones por WhatsApp.', noindex: true };
 }
 const xml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');

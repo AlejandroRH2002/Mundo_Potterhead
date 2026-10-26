@@ -20,7 +20,7 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
     </div>)}
     {cart.lines.map(line => <article className="shop-panel cart-line flex flex-wrap items-center gap-5" key={cartEntryKey(line)}>
       <img loading="lazy" decoding="async" width={96} height={96} className="h-24 w-24 rounded object-cover" src={line.selectedImage || line.product.image} alt={line.product.name} />
-      <div className="cart-line-info flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link>{line.modelName && <p>Modelo: {line.modelName} · Talla: {sizeLabel(line.size??'one')} · {line.sku}</p>}{line.selectedImage && <p>Diseño según la imagen elegida</p>}<p>{money(line.product.price)} por unidad</p></div>
+      <div className="cart-line-info flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link>{line.modelName && <p>Modelo: {line.modelName} · Talla: {sizeLabel(line.size??'one')}{line.color ? ' / '+line.color : ''} · {line.sku}</p>}{line.selectedImage && <p>Diseño según la imagen elegida</p>}<p>{money(line.product.price)} por unidad</p></div>
       <label>Cantidad
         <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value), line.selectedImage, line.skuId??line.modelId)} aria-label={`Cantidad de ${line.product.name}`} />
       </label>

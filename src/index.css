@@ -362,3 +362,16 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 @media(min-width:768px) { .inventory-filters { grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto; align-items:end; }.inventory-forms { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 
 .model-picker { display:flex;flex-wrap:wrap;gap:.75rem;margin-block:.75rem; }.model-picker button { display:grid;gap:.25rem;min-height:2.75rem;padding:.5rem; }.model-picker img { width:4rem;height:4rem;object-fit:contain; }.model-picker [aria-pressed=true] { outline:2px solid var(--brand-gold);outline-offset:2px; }.inventory-matrix { max-width:100%;overflow-x:auto;margin-block:1rem; }.inventory-matrix th,.inventory-matrix td { padding:.5rem;min-width:6rem; }.inventory-matrix input { width:6rem;max-width:100%; }
+/* Management surfaces reuse the storefront tokens and remain independent of public layout. */
+.catalog-management{display:grid;gap:1.5rem;min-width:0}
+.catalog-form-grid,.catalog-filters{display:grid;gap:1rem;grid-template-columns:minmax(0,1fr);align-items:end}
+.catalog-editor fieldset,.catalog-model,.catalog-variant{min-width:0}
+.catalog-editor label,.catalog-import label{display:block;margin-block:.75rem}
+.catalog-model,.catalog-variant{border:1px solid currentColor;border-radius:1rem;padding:1rem;margin-block:1rem;overflow-wrap:anywhere}
+.catalog-gallery{margin-block:1rem;padding-block:1rem;border-top:1px solid currentColor}
+.catalog-thumbnail{max-width:10rem;overflow-wrap:anywhere}
+.catalog-thumbnail img{background:var(--color-cream,#fff8ed);border-radius:.5rem}
+.catalog-admin-list{display:grid;gap:1rem;grid-template-columns:minmax(0,1fr)}
+.catalog-management .shop-input{max-width:100%;min-width:0}
+.catalog-import-preview,.catalog-history{margin-block:1rem;padding:1rem;border:1px solid currentColor;border-radius:.75rem;overflow-wrap:anywhere}
+@media(min-width:768px){.catalog-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-filters{grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto}.catalog-admin-list{grid-template-columns:repeat(2,minmax(0,1fr))}}

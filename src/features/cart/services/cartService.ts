@@ -5,7 +5,7 @@ import { createLocalStore } from '@/shared/lib/localStore';
 import { toCents, money } from '@/shared/lib/money';
 import type { Product } from '@/types/product';
 export interface CartEntry { productId: string; quantity: number; selectedImage?: string; modelId?: string;skuId?:string }
-export interface CartLine extends CartEntry { product: Product; subtotal: number; modelName?: string; sku?: string;size?:string }
+export interface CartLine extends CartEntry { product: Product; subtotal: number; modelName?: string; sku?: string;size?:string;color?:string }
 export const cartEntryKey = (entry: Pick<CartEntry, 'productId' | 'selectedImage' | 'modelId' | 'skuId'>) => JSON.stringify([entry.productId, entry.skuId ?? entry.modelId ?? entry.selectedImage ?? '']);
 function validEntries(value: unknown): value is CartEntry[] {
   return Array.isArray(value) && value.length <= 100 && value.every(item => {
@@ -42,11 +42,11 @@ export function resolveCart(entries: CartEntry[], products: Product[]) {
     const models=product?.models?.filter(model=>model.active)??[];
     const chosen=entry.skuId??entry.modelId;
     const model=chosen?models.find(model=>model.skus?.some(sku=>sku.id===chosen)||model.id===chosen):models.length===1?models[0]:undefined;
-    const skus=model?.skus??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
+    const skus=model?.skus?.filter(s=>s.active!==false)??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
     const sku=chosen?skus.find(sku=>sku.id===chosen)??(skus.length===1?skus[0]:undefined):skus.length===1?skus[0]:undefined;
     const requested=sku?entries.filter(item=>item.productId===entry.productId&&((item.skuId??item.modelId)===sku.id||!(item.skuId??item.modelId)&&skus.length===1&&models.length===1)).reduce((sum,item)=>sum+item.quantity,0):0;
     const overStock=product?.inventoryMode==='enforce'&&(!sku||sku.quantity===null||sku.quantity<requested);
-    if (product && !overStock && (!models.length || model&&sku) && (!entry.selectedImage || productImages(product).includes(entry.selectedImage))) lines.push({ ...entry, product, modelName:model?.name,sku:sku?.code,size:sku?.size, subtotal: toCents(product.price) * entry.quantity / 100 });
+    if (product && !overStock && (!models.length || model&&sku) && (!entry.selectedImage || productImages(product).includes(entry.selectedImage))) lines.push({ ...entry, product, modelName:model?.name,sku:sku?.code,size:sku?.size,color:sku&&'color' in sku?sku.color:undefined, subtotal: toCents(product.price) * entry.quantity / 100 });
     else missing.push(entry);
   }
   return { lines, missing, total: lines.reduce((sum, line) => sum + toCents(line.subtotal), 0) / 100 };
@@ -58,7 +58,7 @@ export function whatsappOrder(lines: CartLine[], phone: string, origin?: string)
   const message = [
     'Hola, Mundo Potterhead. Quisiera solicitar el siguiente pedido:',
     '',
-    ...lines.map((line, index) => `${index + 1}. ${line.product.name} (ID: ${line.productId})${line.modelName ? ' · Modelo: ' + line.modelName + ' · Talla: '+sizeLabel(line.size??'one')+' · SKU: ' + line.sku : ''}${origin ? '\n   Producto: ' + new URL('/product/' + encodeURIComponent(line.productId), origin).href : ''}${line.selectedImage ? '\n   Imagen elegida: ' + (origin ? new URL(line.selectedImage, origin).href : line.selectedImage) : ''}\n   Cantidad: ${line.quantity} · Precio unitario: ${money(line.product.price)}\n   Subtotal: ${money(toCents(line.product.price) * line.quantity / 100)}`),
+    ...lines.map((line, index) => `${index + 1}. ${line.product.name} (ID: ${line.productId})${line.modelName ? ' · Modelo: ' + line.modelName + ' · Talla: '+sizeLabel(line.size??'one')+(line.color?' / Color: '+line.color:'')+' · SKU: ' + line.sku : ''}${origin ? '\n   Producto: ' + new URL('/product/' + encodeURIComponent(line.productId), origin).href : ''}${line.selectedImage ? '\n   Imagen elegida: ' + (origin ? new URL(line.selectedImage, origin).href : line.selectedImage) : ''}\n   Cantidad: ${line.quantity} · Precio unitario: ${money(line.product.price)}\n   Subtotal: ${money(toCents(line.product.price) * line.quantity / 100)}`),
     '',
     `Total de productos: ${money(total)} MXN`,
     'Envío no incluido. Por favor confirmen disponibilidad, costo de entrega y forma de pago.',
