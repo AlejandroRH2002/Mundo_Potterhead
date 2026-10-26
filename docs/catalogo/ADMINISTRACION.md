@@ -1,3 +1,5 @@
+El flujo de interfaz actual está documentado en [Administración centrada en productos](EXPERIENCIA-PRODUCTOS.md). Las referencias siguientes a secciones independientes describen la transición anterior; servicios, importaciones e integridad siguen vigentes.
+
 # Modelos, variantes e importación
 
 ## Diagnóstico y estructura resultante
