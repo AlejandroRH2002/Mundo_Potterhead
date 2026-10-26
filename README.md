@@ -6,7 +6,7 @@ Una tienda de catálogo para descubrir productos de Harry Potter y otros univers
 
 - Buscar productos y filtrar por universo, categoría, subcategoría, ofertas y precio.
 - Explorar una galería de hasta ocho imágenes por producto.
-- Elegir una imagen de referencia y añadirla a la cotización: distintas imágenes de una misma ficha se conservan como líneas separadas.
+- Elegir diseño y talla para añadir un SKU a la cotización; la imagen identifica el diseño y las cantidades se agrupan por SKU.
 - Ajustar cantidades, revisar el total estimado y abrir WhatsApp con productos e imágenes seleccionadas.
 - Consultar información de contacto, aviso de privacidad y términos de cotización.
 
@@ -16,7 +16,7 @@ El carrito se conserva en el navegador. Antes de enviarlo se consultan nuevament
 
 El panel permite gestionar productos, galerías y cuentas de usuarios según los permisos asignados. Las imágenes PNG, JPEG y WebP se comprimen antes de subirlas; se puede elegir cuál aparece como principal en el catálogo.
 
-Los modelos vendibles se identifican mediante un SKU estable y pueden tener existencias propias e historial de entradas, ventas y ajustes. La fotografía es una referencia visual, no una unidad de inventario. La incorporación es gradual: los conteos pendientes no se interpretan como cero y la restricción pública se activa por separado. No se manejan tallas, reservas ni precios independientes por modelo.
+Los modelos vendibles se identifican mediante un SKU estable y pueden tener existencias propias e historial de entradas, ventas y ajustes. La fotografía es una referencia visual, no una unidad de inventario. La incorporación es gradual: los conteos pendientes no se interpretan como cero y la restricción pública se activa por separado. Los SKU corresponden a diseño × talla; la imagen pertenece al diseño y cada SKU tiene su propio conteo. No hay reservas ni precios independientes por SKU.
 
 ## Diseño
 
