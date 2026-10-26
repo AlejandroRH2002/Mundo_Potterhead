@@ -69,3 +69,9 @@ uploads/
 /deploy/*.local.*
 /deploy/private/
 .pnpm-store/
+
+# Local verified runtime used for security validation
+/.tools/
+
+# Private local database backups; never stage
+/.private-backups/

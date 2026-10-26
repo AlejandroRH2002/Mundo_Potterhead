@@ -1,3 +1,5 @@
+import { loadLocalDevelopment } from './localDevelopment.ts';
+import { startupDiagnostic } from './lib/startupDiagnostic.ts';
 import { createInventory, inventoryMode, assertInventoryReady } from './repositories/inventory.ts';
 import { databaseDiagnostic } from './lib/databaseDiagnostic.ts';
 import { PrismaClient } from '@prisma/client';
@@ -12,6 +14,7 @@ import { audit } from './logger.ts';
 import { createCleanup, cleanExpiredRecords } from './cleanup.ts';
 
 async function start() {
+  if(await loadLocalDevelopment())audit({event:'warning',code:'LOCAL_DATABASE_PORT_ALIGNED',reason:'Conexión local alineada al puerto publicado por Compose; .env no modificado.'});
   const config = readConfig(process.env);
   let mode;try{mode=inventoryMode(process.env);}catch{throw new ConfigurationError('INVENTORY_MODE debe ser capture o enforce.');}
   const media = createMediaStorage(process.env);
@@ -52,7 +55,7 @@ async function start() {
     }), 5000);
   };
   process.once('SIGTERM', stop); process.once('SIGINT', stop);
-  server.on('error', () => { audit({ event: 'failure', code: 'LISTEN_FAILED' }); process.exit(1); });
+  server.on('error', error => { audit({ event: 'failure', ...startupDiagnostic(error) }); process.exit(1); });
   server.listen(config.port, config.host, () => audit({ event: 'startup' }));
 }
-void start().catch((error: unknown) => { audit({ event: 'failure', code: error instanceof ConfigurationError ? 'SERVER_CONFIGURATION' : error instanceof MediaConfigError ? 'MEDIA_CONFIGURATION' : 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE', ...(error instanceof MediaConfigError || error instanceof ConfigurationError ? { reason: error.message } : {}) }); process.exit(1); });
+void start().catch((error:unknown)=>{audit({event:'failure',...(error instanceof ConfigurationError?{code:'SERVER_CONFIGURATION',reason:error.message}:error instanceof MediaConfigError?{code:'MEDIA_CONFIGURATION',reason:error.message}:startupDiagnostic(error))});process.exit(1);});

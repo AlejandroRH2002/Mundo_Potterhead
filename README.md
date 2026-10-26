@@ -39,7 +39,7 @@ React, TypeScript, Vite, Tailwind CSS y Framer Motion en el frontend. API Node.j
 
 ## Desarrollo
 
-Requiere Node.js 24, pnpm 11.21.0 y una base de desarrollo preparada. Instalar dependencias con pnpm install --frozen-lockfile y ejecutar pnpm dev. La configuración pública de ejemplo está en .env.example; no contiene credenciales reales.
+Requiere Node.js 24.22.1, pnpm 11.21.0 y una base de desarrollo preparada. Instalar dependencias con pnpm install --frozen-lockfile y ejecutar pnpm dev. La configuración pública de ejemplo está en .env.example; no contiene credenciales reales.
 
 | Comando | Uso |
 | --- | --- |
@@ -58,3 +58,9 @@ Requiere Node.js 24, pnpm 11.21.0 y una base de desarrollo preparada. Instalar d
 - [Referencia del diseño](deploy/design/FIGMA.md).
 
 Las instrucciones de infraestructura y base de datos se mantienen en la guía operativa. Los entornos privados, claves, bases locales y configuraciones específicas de despliegue quedan fuera de Git.
+
+## Diagnóstico local
+
+Compose publica PostgreSQL en loopback:15432 para evitar reservas de puertos de Windows. Ejecuta pnpm dev:check antes de pnpm dev; el ajuste de puerto es solo en memoria y no modifica .env. No expongas Vite a redes ni túneles públicos.
+
+[Informe de recuperación y revisión de dependencias](docs/security/2026-10-26.md).

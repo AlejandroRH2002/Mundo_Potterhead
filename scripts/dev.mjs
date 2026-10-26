@@ -1,7 +1,8 @@
+import { loadLocalDevelopment } from '../server/localDevelopment.ts';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { setTimeout as pause } from 'node:timers/promises';
-import { readConfig } from '../server/config.ts';
+import { readConfig,ConfigurationError } from '../server/config.ts';
 
 const children = new Set();
 let stopping = false;
@@ -34,8 +35,10 @@ async function freePort(host, port) {
   });
 }
 try {
-  process.loadEnvFile('.env');
+  if(await loadLocalDevelopment())console.warn('LOCAL_DATABASE_PORT_ALIGNED: se usa el puerto publicado por Compose sin editar .env.');
   const config = readConfig(process.env);
+  const dbHost=new URL(config.databaseUrl).hostname;
+  if (!['localhost','127.0.0.1','[::1]'].includes(dbHost))throw new Error('LOCAL_DATABASE_REQUIRED');
   if (process.env.NODE_ENV === 'production' || config.origin !== 'http://localhost:5173' ||
     !['127.0.0.1', 'localhost'].includes(config.host) || config.secureCookies) throw new Error('LOCAL_CONFIGURATION_REQUIRED');
   // Vite and API inherit exactly the same port, including PORT override.
@@ -58,7 +61,7 @@ try {
     console.log('API ready; starting frontend at http://localhost:5173.');
   }
 } catch (error) {
-  const message = error instanceof Error && /^(PORT_\d+_UNAVAILABLE|LOCAL_CONFIGURATION_REQUIRED|API_NOT_READY_CHECK_DATABASE_AND_MIGRATIONS)$/.test(error.message)
-    ? error.message : 'DEV_START_FAILED_CHECK_ENV_AND_DEPENDENCIES';
+  const message = error instanceof Error && /^(PORT_\d+_UNAVAILABLE|LOCAL_CONFIGURATION_REQUIRED|LOCAL_DATABASE_REQUIRED|API_NOT_READY_CHECK_DATABASE_AND_MIGRATIONS)$/.test(error.message)
+    ? error.message : error instanceof ConfigurationError ? error.message : 'DEV_START_FAILED_CHECK_ENV_AND_DEPENDENCIES';
   console.error(message); stop(1);
 }
