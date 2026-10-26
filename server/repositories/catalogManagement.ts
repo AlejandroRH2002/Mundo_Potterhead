@@ -1,3 +1,4 @@
+import {planDesignImport} from '../lib/designImport.ts';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import { bulkChangeSchema, importRequestSchema, managedProductSchema, planImport, type ImportReport, type ManagedProduct } from '../../shared/catalogManagement.ts';
@@ -42,16 +43,13 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
     else await tx.productSku.delete({where:{id}});
    }
   }
-  const draft=productDraftSchema.parse(input.product);if(draft.image===productPlaceholder)draft.image=input.models.flatMap(model=>[...model.images,...model.variants.flatMap(sku=>sku.images)])[0]??productPlaceholder;
-  const allImages=new Set([draft.image,...(draft.images??[])].filter(image=>image!==productPlaceholder));
-  if(existing){const current=await load(tx,existing.id);for(const model of current.models){const replacement=input.models.find(m=>m.code===model.code||m.id===model.id);if(!replacement){model.images.forEach(image=>allImages.add(image));model.variants.forEach(s=>s.images.forEach(image=>allImages.add(image)));}else model.variants.filter(s=>!replacement.variants.some(v=>v.code===s.code||v.id===s.id)).forEach(s=>s.images.forEach(image=>allImages.add(image)));}}
-  for(const model of input.models){model.images.forEach(image=>allImages.add(image));model.variants.forEach(sku=>sku.images.forEach(image=>allImages.add(image)));}
-  if(allImages.size>8)throw new InventoryError(400,'Máximo ocho imágenes diferentes por producto, incluidos modelos existentes.');
-  if(process.env.NODE_ENV==='production'&&[...allImages].some(image=>image!==productPlaceholder&&!image.startsWith('https://')))throw new InventoryError(400,'Las imágenes requieren HTTPS en producción.');
+  const draft=productDraftSchema.parse(input.product);
+  const allImages=new Set([draft.image,...(draft.images??[]),...input.models.flatMap(model=>[...model.images,...model.variants.flatMap(sku=>sku.images)])].filter(image=>image!==productPlaceholder));
+  if(process.env.NODE_ENV==='production'&&[...allImages].some(image=>!image.startsWith('https://')))throw new InventoryError(400,'Las im?genes requieren HTTPS en producci?n.');
   const productId=existing?.id??randomUUID();
   const oldSkus=existing?await tx.productSku.findMany({where:{model:{productId}}}):[];
   if(oldSkus.some(sku=>!validSize(draft.category,sku.size)))throw new InventoryError(409,'La categoría no admite las tallas existentes.');
-  const values={code:input.code,status:input.status,name:draft.name,description:draft.description,price:new Prisma.Decimal(draft.price.toFixed(2)),category:draft.category,subcategory:draft.subcategory??null,universe:draft.universe,imageUrl:draft.image,images:[...allImages].filter(image=>image!==draft.image),originalPrice:draft.originalPrice===undefined?null:new Prisma.Decimal(draft.originalPrice.toFixed(2)),isOnSale:draft.isOnSale??false};
+  const values={code:input.code,status:input.status,name:draft.name,description:draft.description,price:new Prisma.Decimal(draft.price.toFixed(2)),category:draft.category,subcategory:draft.subcategory??null,universe:draft.universe,imageUrl:draft.image,images:draft.images??[],originalPrice:draft.originalPrice===undefined?null:new Prisma.Decimal(draft.originalPrice.toFixed(2)),isOnSale:draft.isOnSale??false};
   const media=draft.imageThumbnails?{imageThumbnails:draft.imageThumbnails}:{};
   if(existing)await tx.product.update({where:{id:productId},data:{...values,...media}});else await tx.product.create({data:{id:productId,...values,...media}});
   for(const model of input.models){
@@ -59,6 +57,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
    if(current&&current.productId!==productId||model.id&&current?.id!==model.id)throw new InventoryError(409,'Código de modelo asociado a otro registro.');
    const modelId=current?.id??randomUUID();
    const pictures=model.images;
+   if(model.active&&!pictures.length&&(!current?.active||!!current.image||current.images.length>0))throw new InventoryError(400,'Añade una fotografía al diseño antes de publicarlo.');
    const values={name:model.name,image:pictures[0]??null,images:pictures,active:merge&&current?current.active:model.active};
    if(current)await tx.productModel.update({where:{id:modelId},data:values});else await tx.productModel.create({data:{id:modelId,productId,sku:model.code,...values}});
    for(const variant of model.variants){
@@ -76,13 +75,13 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
   return {id:productId,created:!existing};
  }
  async function snapshot(tx:Tx,request:Request){
-  const codes=[...new Set(request.rows.map(row=>row.productCode).filter(Boolean))];
+  const codes=[...new Set([request.parentId,...request.rows.map(row=>row.productCode)].filter((value):value is string=>!!value))];
   const products=await tx.product.findMany({where:{OR:[{code:{in:codes}},{id:{in:codes}}]},orderBy:{id:'asc'},select:{id:true,revision:true,models:{orderBy:{id:'asc'},select:{id:true,updatedAt:true,skus:{orderBy:{id:'asc'},select:{id:true,version:true,active:true,color:true,size:true}}}}}});
   return hash(products);
  }
  const signature=(request:Request,state:string)=>createHmac('sha256',secret).update(hash(request)+':'+state).digest('hex');
  async function inspect(tx:Tx,request:Request){
-  const plan=planImport(request.rows,request.images);
+  const plan=request.parentId?planDesignImport(await load(tx,request.parentId),request.rows):planImport(request.rows,request.images);
   for(const product of plan.products){
    const old=await tx.product.findFirst({where:{OR:[{code:product.code},{id:product.code}]},select:{id:true}});
    if(old){
@@ -103,8 +102,8 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
   async save(actorId:string,value:unknown){const input=managedProductSchema.parse(value);if(input.id&&input.revision===undefined)throw new InventoryError(400,'La edición requiere la revisión actual del producto.');return db.$transaction(async tx=>{await lock(tx,actorId);if(!input.id&&await tx.product.findUnique({where:{code:input.code}}))throw new InventoryError(409,'El código ya existe; abre el producto para editarlo.');const result=await save(tx,input);return load(tx,result.id);},{timeout:15000});},
   async duplicate(actorId:string,id:string){return db.$transaction(async tx=>{await lock(tx,actorId);const source=await load(tx,id);delete source.id;delete source.revision;source.code='COPY-'+randomUUID();source.status='draft';source.product.name+=' (copia)';for(const model of source.models){delete model.id;model.code='MP-'+randomUUID();for(const variant of model.variants){delete variant.id;variant.code='MP-'+randomUUID();}}const result=await save(tx,source);return load(tx,result.id);},{timeout:15000});},
   async bulk(actorId:string,value:unknown){const input=bulkChangeSchema.parse(value);return db.$transaction(async tx=>{await lock(tx,actorId);for(const item of [...input.items].sort((a,b)=>a.id.localeCompare(b.id))){const current=await load(tx,item.id);current.revision=item.revision;if(input.status)current.status=input.status;if(input.category){current.product.category=input.category;current.product.subcategory=null;}const parsed=managedProductSchema.safeParse(current);if(!parsed.success)throw new InventoryError(400,'Una categoría no admite las variantes existentes.');await save(tx,parsed.data);}return {updated:input.items.length};},{timeout:15000});},
-  async preview(value:unknown){const request=importRequestSchema.parse(value);const plan=await inspect(db,request);const state=await snapshot(db,request);return {report:{valid:!plan.errors.length,rows:plan.rows,products:plan.products.length,errors:plan.errors} satisfies ImportReport,token:state+'.'+signature(request,state)};},
-  async apply(actorId:string,value:unknown,token:string){const request=importRequestSchema.parse(value);const fingerprint=hash({rows:request.rows,images:request.images});
+  async preview(value:unknown){const request=importRequestSchema.parse(value);const plan=await inspect(db,request);const state=await snapshot(db,request);return {report:{...plan.designStats,valid:!plan.errors.length,rows:plan.rows,products:plan.products.length,errors:plan.errors} satisfies ImportReport,token:state+'.'+signature(request,state)};},
+  async apply(actorId:string,value:unknown,token:string){const request=importRequestSchema.parse(value);const fingerprint=hash({...(request.parentId?{parentId:request.parentId}:{}),rows:request.rows,images:request.images});
    return db.$transaction(async tx=>{
     await lock(tx,actorId);const prior=await tx.catalogImport.findUnique({where:{id:request.key}});if(prior){if(prior.fingerprint!==fingerprint)throw new InventoryError(409,'La clave ya corresponde a otra importación.');return prior.summary as unknown as ImportReport;}
     const repeated=await tx.catalogImport.findUnique({where:{fingerprint}});if(repeated)return {...repeated.summary as unknown as ImportReport,skipped:request.rows.length};
@@ -130,7 +129,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
      const codes=plan.products.filter(product=>product.status==='active').map(product=>product.code);
      if(codes.length&&await tx.productModel.count({where:{active:true,product:{OR:[{code:{in:codes}},{id:{in:codes}}]},OR:[{skus:{none:{active:true}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura el inventario antes de activar el producto.');
     }
-    const report:ImportReport={id:request.key,valid:true,rows:plan.rows,products:plan.products.length,created,updated,errors:[]};
+    const report:ImportReport={...plan.designStats,id:request.key,valid:true,rows:plan.rows,products:plan.products.length,created,updated,errors:[]};
     await tx.catalogImport.create({data:{id:request.key,actorId,fingerprint,summary:report as unknown as Prisma.InputJsonValue}});return report;
    },{timeout:30000,maxWait:5000});
   },

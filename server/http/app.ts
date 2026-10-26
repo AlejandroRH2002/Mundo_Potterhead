@@ -103,7 +103,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       }
       if (path === '/api/quote' && method === 'POST') {
         if (!inventory) throw new HttpError(503, 'Validación de inventario no disponible.');
-        const input=quoteSchema.safeParse(await body(request,256*1024));
+        const input=quoteSchema.safeParse(await body(request,2*1024*1024));
         if (!input.success) throw new HttpError(400, 'Cotización inválida.');
         json(response,200,await inventory.quote(input.data));return;
       }

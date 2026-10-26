@@ -79,15 +79,16 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} FOR UPDATE`;
         const product = await tx.product.findUnique({ where: { id: productId } });
         if (!product) throw new InventoryError(404, 'Producto no encontrado.');
-        if (input.image && ![product.imageUrl,catalogImage(product.id,product.imageUrl??''), ...product.images].includes(input.image)) throw new InventoryError(400, 'La imagen debe pertenecer a la galería del producto.');
+        if (input.image && ![product.imageUrl,catalogImage(product.id,product.imageUrl??''), ...product.images].includes(input.image)&&!await tx.productModel.findFirst({where:{productId,OR:[{image:input.image},{images:{has:input.image}},{skus:{some:{images:{has:input.image}}}}]},select:{id:true}})) throw new InventoryError(400, 'La imagen debe pertenecer a la galería del producto.');
         if (id) {
           const model = await tx.productModel.findUnique({ where: { id } });
           if (model?.productId !== productId) throw new InventoryError(404, 'Modelo no encontrado.');
           if (mode === 'enforce' && input.active && (!await tx.productSku.count({where:{modelId:id}})||await tx.productSku.count({where:{modelId:id,quantity:null}}))) throw new InventoryError(409, 'Captura primero el conteo antes de activar este modelo.');
+          if(input.active&&!model.active&&!input.image&&!model.image&&!model.images?.length)throw new InventoryError(400,'Añade una fotografía al diseño antes de publicarlo.');
           return tx.productModel.update({ where: { id }, data: { name: input.name, image: input.image || model.images?.[0] || null, images: input.image ? [input.image,...(model.images??[]).filter(image=>image!==input.image)] : model.images??[], active: input.active } });
         }
         const uuid = randomUUID();
-        return tx.productModel.create({ data: { id: uuid, productId, sku: 'MP-' + uuid, name: input.name, image: input.image || null, active: mode === 'enforce' ? false : input.active, skus:{create:{id:uuid,code:'MP-'+uuid,size:'one'}} } });
+        return tx.productModel.create({ data: { id: uuid, productId, sku: 'MP-' + uuid, name: input.name, image: input.image || null, active: mode === 'enforce' ? false : !!input.image&&input.active, skus:{create:{id:uuid,code:'MP-'+uuid,size:'one'}} } });
       });
     },
     async quote(input) {
@@ -106,7 +107,7 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         if(product.models!==undefined&&(!model||!sku))throw new InventoryError(409,'Selecciona una variante activa de diseño y talla antes de cotizar.');
         if(mode==='enforce'&&(!sku||sku.quantity===null))throw new InventoryError(409,'SKU sin disponibilidad confirmada.');
         if(sku){const total=(totals.get(sku.id)??0)+line.quantity;totals.set(sku.id,total);if(mode==='enforce'&&total>sku.quantity!)throw new InventoryError(409,'La cantidad supera las existencias de '+model!.name+'.');}
-        if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? [])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');
+        if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? []),model?.image,...(model?.images??[]),...(sku&&'images' in sku?sku.images??[]:[])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');
         lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, color:sku&&'color' in sku?sku.color:undefined, modelName: model?.name, sku: sku?.code, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
       }
       return { lines, mode, notice: 'Disponibilidad sujeta a confirmación. Esta cotización no reserva existencias.' };

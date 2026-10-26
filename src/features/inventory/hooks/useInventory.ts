@@ -31,7 +31,7 @@ export function useInventory(params: URLSearchParams) {
   const loadHistory = (id: string, page = 1) => run(async () => { setHistory(await inventoryService.history(id, page)); setHistoryId(id); });
   return { data, error, notice, loading, busy, history, historyId, saved, gallery, category, run,
     addSku:(modelId:string,size:string)=>run(async()=>{await inventoryService.addSku(modelId,size);setNotice('Talla creada con cantidad pendiente.');}),
-    loadGallery:(productId:string)=>run(async()=>{const product=await productService.getAdminById(productId);setGallery(productImages(product));setCategory(product.category);}), loadHistory,
+    loadGallery:(productId:string)=>run(async()=>{const product=await productService.getAdminById(productId);setGallery([...new Set([...productImages(product),...(product.models??[]).flatMap(model=>[...(model.images??[]),...(model.skus??[]).flatMap(sku=>sku.images??[])])])]);setCategory(product.category);}), loadHistory,
     move: (row: InventoryRow, input: Omit<MovementInput, 'key'>) => run(async () => {
       const signature = JSON.stringify([row.id, input]);
       if (retry.current?.signature !== signature) retry.current = { signature, key: crypto.randomUUID() };

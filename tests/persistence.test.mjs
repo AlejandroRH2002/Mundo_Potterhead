@@ -159,7 +159,7 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  const owner=await db.user.create({data:{email:randomUUID()+'@test.invalid',password:'unused-test-hash',role:'ADMIN'}});
  const captured=createDatabaseProducts(db,'capture');const enforced=createDatabaseProducts(db,'enforce');const administration=createDatabaseProducts(db,'enforce',true);
  const inventory=createInventory(db,captured,'capture');
- const product=await captured.create({...draft,name:'Inventory '+randomUUID()});const a=product.models[0];
+ const product=await captured.create({...draft,image:'/images/b.webp',name:'Inventory '+randomUUID()});const a=product.models[0];
  assert.equal(a.quantity,null);assert.ok(await captured.get(product.id));assert.equal(await enforced.get(product.id),null);
  await assert.rejects(()=>assertInventoryReady(db,'enforce'),/capturar/);
  const move=(id,type,quantity,extra={})=>inventory.move(owner.id,id,{key:randomUUID(),type,quantity,reason:'Isolated fixture',...extra});
@@ -169,7 +169,7 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  const last=await Promise.allSettled([move(a.id,'SALE',1),move(a.id,'SALE',1)]);assert.equal(last.filter(result=>result.status==='fulfilled').length,1);
  assert.equal((await db.productSku.findUnique({where:{id:a.id}})).quantity,0);
  assert.equal(await enforced.get(product.id),null);assert.ok(await administration.get(product.id));
- const b=await inventory.model(owner.id,product.id,{name:'Modelo B',active:true});await move(b.id,'COUNT',2,{expectedVersion:0});
+ const b=await inventory.model(owner.id,product.id,{name:'Modelo B',image:'/images/b.webp',active:true});await move(b.id,'COUNT',2,{expectedVersion:0});
  assert.equal((await enforced.get(product.id)).models.length,1);
  const q={page:1,pageSize:24,sort:'novedad',q:product.name};assert.equal((await enforced.search(q)).total,1);
  await move(b.id,'SALE',2);assert.equal((await enforced.search(q)).total,0);assert.ok(await captured.get(product.id));
@@ -330,7 +330,7 @@ for(const format of ['csv','xlsx'])test(`real PostgreSQL ${format}+ZIP: base pro
  await catalogManagement.apply(owner.id,update,(await catalogManagement.preview(update)).token);
  persisted=await db.product.findUniqueOrThrow({where:{id:baseProduct.id},include:{models:{include:{skus:true}}}});
  assert.equal(persisted.models.length,3);const modelA=persisted.models.find(m=>m.sku===prefix+'-A');assert.equal(modelA.name,'Design A updated');assert.equal(modelA.skus.length,2);assert.equal(modelA.skus.find(s=>s.size==='m').quantity,3);
- const publicRepo=createDatabaseProducts(db,'capture');const detail=await publicRepo.get(persisted.id);assert.equal(detail.models.length,3);assert.equal(detail.models.find(m=>m.id===modelA.id).skus.length,2);
+ const publicRepo=createDatabaseProducts(db,'capture');const detail=await publicRepo.get(persisted.id);assert.equal(detail.models.length,2);assert.equal(detail.models.find(m=>m.id===modelA.id).skus.length,2);
  const {parseCatalogQuery}=await import('../shared/catalogQuery.ts');const listed=await publicRepo.search(parseCatalogQuery(new URLSearchParams({q:'Design A updated'})));assert.ok(listed.items.some(p=>p.id===persisted.id));assert.ok(listed.items.every(p=>!('models'in p)&&!JSON.stringify(p).includes('data:image')));
  const inventory=createInventory(db,publicRepo,'capture');const exhausted=modelA.skus.find(s=>s.size==='l');
  await assert.rejects(()=>inventory.move(owner.id,exhausted.id,{key:randomUUID(),type:'SALE',quantity:1,reason:'Must not oversell fixture'}),/insuficientes/);
@@ -397,4 +397,43 @@ test('isolated enforce import applies initial counts before readiness and rolls 
   const check=await catalogManagement.preview(incomplete);await assert.rejects(()=>catalogManagement.apply(owner.id,incomplete,check.token),/inventario/);
   assert.equal(await db.product.count({where:{code:prefix+'-PENDING'}}),0);assert.equal(await db.catalogImport.count({where:{id:incomplete.key}}),0);
  }finally{if(previous===undefined)delete process.env.INVENTORY_MODE;else process.env.INVENTORY_MODE=previous;}
+});
+
+test('parent design import: 30 drafts, inherited properties, progressive photos, SKU history and replay',async()=>{
+ const {planImport,designColumns}=await import('../shared/catalogManagement.ts');const {csvFile,parseCsv,recordsFromRows}=await import('../shared/catalogFiles.ts');const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='PARENT-'+randomUUID();
+ const parentDraft=planImport([{...templateRow,productCode:prefix,modelCode:prefix+'-BASE',sku:prefix+'-BASE',images:'',status:'active',quantity:'',inventoryMode:'',reason:''}]).products[0];parentDraft.models=[];const parent=await catalogManagement.save(owner.id,parentDraft);
+ const original=await db.product.findUniqueOrThrow({where:{id:parent.id}});const order=await db.order.create({data:{userId:owner.id,total:Number(original.price),items:{create:{productId:parent.id,quantity:1,price:Number(original.price)}}}});
+ const rows=recordsFromRows(parseCsv(csvFile(Array.from({length:30},(_,i)=>({modelCode:prefix+'-'+i,modelName:'Design '+i,size:'one',quantity:String(i%4),sku:'',color:''})),designColumns)),'designs');
+ const request={key:randomUUID(),parentId:parent.id,rows,images:{}};const check=await catalogManagement.preview(request);assert.equal(check.report.valid,true);assert.equal(check.report.newModels,30);assert.equal(check.report.newSkus,30);
+ await catalogManagement.apply(owner.id,request,check.token);let managed=await catalogManagement.get(parent.id);const designs=managed.models.filter(model=>model.code!==prefix+'-BASE');assert.equal(designs.length,30);assert.ok(designs.every(model=>!model.active&&!model.images.length&&model.variants.length===1));
+ const identities=designs.map(model=>model.variants[0].id);const inventory=createInventory(db,products,'capture');const listed=await inventory.list({productId:parent.id,page:1,pageSize:100,status:'all',q:''});assert.equal(listed.items.length,30);assert.equal(listed.items.find(row=>row.id===designs.find(model=>model.code===prefix+'-1').variants[0].id).quantity,1);
+ assert.equal((await products.get(parent.id)).models.length,0);const beforeLedger=await db.inventoryMovement.findMany({where:{skuId:{in:identities}},orderBy:{id:'asc'}});assert.equal(beforeLedger.length,30);
+ const incomplete=structuredClone(managed);incomplete.models.find(model=>model.code===designs[1].code).active=true;await assert.rejects(()=>catalogManagement.save(owner.id,incomplete),/fotografía/);
+ managed.product.price=999;managed.product.description='Parent description updated';managed=await catalogManagement.save(owner.id,managed);
+ const chosen=managed.models.find(model=>model.code===designs[0].code);chosen.images=['https://images.test.invalid/design-first.webp'];managed=await catalogManagement.save(owner.id,managed);assert.equal(managed.models.find(model=>model.id===chosen.id).active,false);assert.equal(managed.models.filter(m=>m.images.length).length,1);
+ managed.models.find(model=>model.id===chosen.id).active=true;managed=await catalogManagement.save(owner.id,managed);
+ const detail=await products.get(parent.id);assert.equal(detail.price,999);assert.equal(detail.description,'Parent description updated');assert.equal(detail.models.length,1);assert.equal(detail.models[0].id,chosen.id);assert.deepEqual(detail.models[0].images,chosen.images);
+ const quote=await inventory.quote({lines:[{productId:parent.id,skuId:chosen.variants[0].id,quantity:1,selectedImage:chosen.images[0]}]});assert.equal(quote.lines[0].product.price,999);
+ const secondPhoto='https://images.test.invalid/design-replaced.webp';managed.models.find(model=>model.id===chosen.id).images=[secondPhoto];await catalogManagement.save(owner.id,managed);assert.equal((await products.get(parent.id)).models[0].image,secondPhoto);
+ const replay=await catalogManagement.apply(owner.id,{...request,key:randomUUID()},check.token);assert.equal(replay.skipped,30);assert.equal((await catalogManagement.get(parent.id)).product.price,999);assert.equal(await db.productModel.count({where:{productId:parent.id}}),30);assert.deepEqual(await db.inventoryMovement.findMany({where:{skuId:{in:identities}},orderBy:{id:'asc'}}),beforeLedger);
+ assert.equal((await db.orderItem.findFirst({where:{orderId:order.id}})).price,Number(original.price));assert.equal((await db.product.findUniqueOrThrow({where:{id:parent.id}})).stock,0);
+ const changedRequest={...request,key:randomUUID(),rows:[{...rows[0],quantity:'2'}]};const oldPreview=await catalogManagement.preview(changedRequest);managed=await catalogManagement.get(parent.id);managed.product.price=1001;await catalogManagement.save(owner.id,managed);await assert.rejects(()=>catalogManagement.apply(owner.id,changedRequest,oldPreview.token),/Simula/);
+});
+
+test('parent design XLSX imports multiple sizes and stable generated SKUs, rejects wrong sizes and duplicates',async()=>{
+ const {planImport,designColumns}=await import('../shared/catalogManagement.ts');const {workbookFile,parseWorkbook}=await import('../shared/catalogFiles.ts');const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='SIZES-'+randomUUID();
+ const parent=await catalogManagement.save(owner.id,planImport([{...templateRow,productCode:prefix,modelCode:prefix+'-BASE',sku:prefix+'-BASE',images:'',status:'draft'}]).products[0]);
+ const rows=parseWorkbook(workbookFile(['s','m','l','xl'].map(size=>({modelCode:prefix+'-DESIGN',modelName:'Design sizes',size,quantity:'2',color:'Rojo',sku:''})),designColumns),'designs');const request={key:randomUUID(),parentId:parent.id,rows,images:{}};
+ const check=await catalogManagement.preview(request);assert.equal(check.report.newModels,1);assert.equal(check.report.newSkus,4);await catalogManagement.apply(owner.id,request,check.token);const model=await db.productModel.findUniqueOrThrow({where:{sku:prefix+'-DESIGN'},include:{skus:true}});assert.equal(model.skus.length,4);assert.equal(new Set(model.skus.map(s=>s.code)).size,4);assert.ok(model.skus.every(s=>s.quantity===2));
+ for(const invalidRows of [[rows[0],rows[0]],[{...rows[0],size:'22'}],[{...rows[0],price:'1'}],[{...rows[0],sku:model.skus.find(s=>s.size!=='s').code}]]){const invalid={...request,key:randomUUID(),rows:invalidRows};const p=await catalogManagement.preview(invalid);assert.equal(p.report.valid,false);await assert.rejects(()=>catalogManagement.apply(owner.id,invalid,p.token));}
+ const again=await catalogManagement.preview({...request,key:randomUUID()});assert.equal(again.report.existingModels,1);assert.equal(again.report.existingSkus,4);
+});
+
+test('100 independent design photo galleries remain valid and public detail contains no photo-less designs',async()=>{
+ const {planImport}=await import('../shared/catalogManagement.ts');const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='HUNDRED-'+randomUUID();
+ const parent=await catalogManagement.save(owner.id,planImport([{...templateRow,productCode:prefix,modelCode:prefix+'-BASE',sku:prefix+'-BASE',images:'',status:'active'}]).products[0]);
+ const request={key:randomUUID(),parentId:parent.id,rows:Array.from({length:100},(_,i)=>({modelCode:prefix+'-'+i,modelName:'Design '+i})),images:{}};const p=await catalogManagement.preview(request);assert.equal(p.report.valid,true);await catalogManagement.apply(owner.id,request,p.token);
+ let managed=await catalogManagement.get(parent.id);for(const [i,model] of managed.models.entries())if(model.code!==prefix+'-BASE'){model.images=['https://images.test.invalid/100/'+i+'.webp'];model.active=true;}
+ managed=await catalogManagement.save(owner.id,managed);const detail=await products.get(parent.id);assert.equal(detail.models.length,100);assert.ok(detail.models.every(model=>model.images.length===1));assert.ok((detail.images??[]).length<=7);
+ const {isProduct}=await import('../src/features/catalog/services/productValidation.ts');assert.equal(isProduct(detail),true);assert.equal((await catalogManagement.get(parent.id)).models.length,101);
 });

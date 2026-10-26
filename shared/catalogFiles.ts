@@ -1,6 +1,6 @@
 import { unzipSync, zipSync, strFromU8, strToU8 } from 'fflate';
 import { XMLParser } from 'fast-xml-parser';
-import { importColumns, type ImportRecord } from './catalogManagement.ts';
+import { importColumns, designColumns, type ImportRecord } from './catalogManagement.ts';
 
 export const templateRow:ImportRecord={productCode:'CHA-GRY',name:'Chamarra universitaria',description:'Describe materiales y diseño.',price:'780',category:'clothing',subcategory:'chamarras-capas',universe:'harry-potter',status:'draft',modelCode:'GRY-A',modelName:'Diseño A',sku:'GRY-A-M',size:'m',color:'Burdeos',images:'modelo-a.jpg',quantity:'',inventoryMode:'',reason:''};
 const limits={compressed:15*1024*1024,expanded:30*1024*1024,entries:200,rows:201};
@@ -40,10 +40,11 @@ export function parseCsv(text:string):string[][]{
  }
  if(quoted)throw new Error('CSV con comillas sin cerrar.');row.push(cell);if(row.some(Boolean))rows.push(row);return rows;
 }
-export function recordsFromRows(rows:string[][]):ImportRecord[]{
+export function recordsFromRows(rows:string[][],mode:'full'|'designs'='full'):ImportRecord[]{
+ const allowed=mode==='designs'?designColumns:importColumns;
  const headers=rows[0]?.map(value=>value.trim());
- if(!headers?.length||headers.length>importColumns.length||new Set(headers).size!==headers.length||headers.some(key=>!importColumns.includes(key as typeof importColumns[number])))throw new Error('Columnas desconocidas o duplicadas. Usa la plantilla.');
- for(const key of ['productCode','name','description','price','category','universe','modelCode','modelName','sku'])if(!headers.includes(key))throw new Error('Falta columna '+key);
+ if(!headers?.length||headers.length>allowed.length||new Set(headers).size!==headers.length||headers.some(key=>!allowed.some(column=>column===key)))throw new Error('Columnas desconocidas o duplicadas. Usa la plantilla.');
+ for(const key of mode==='designs'?['modelCode','modelName']:['productCode','name','description','price','category','universe','modelCode','modelName','sku'])if(!headers.includes(key))throw new Error('Falta columna '+key);
  if(rows.length<2||rows.length>limits.rows)throw new Error('Importa de 1 a 200 filas por lote.');
  return rows.slice(1).map((row,index)=>{if(row.length>headers.length)throw new Error('Sobran columnas en fila '+(index+2));return Object.fromEntries(headers.map((key,i)=>[key,row[i]??'']));});
 }
@@ -56,7 +57,7 @@ function xml(bytes:Uint8Array|undefined):Record<string,unknown>{
  return object(new XMLParser({ignoreAttributes:false,parseTagValue:false,processEntities:false}).parse(text));
 }
 const unescapeXml=(v:string)=>v.replace(/&(amp|lt|gt|quot|apos);/g,(_,name:string)=>({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'"}[name]??''));
-export function parseWorkbook(bytes:Uint8Array):ImportRecord[]{
+export function parseWorkbook(bytes:Uint8Array,mode:'full'|'designs'='full'):ImportRecord[]{
  const entries=safeArchive(bytes);
  if(Object.keys(entries).some(name=>/vbaProject|externalLinks/i.test(name)))throw new Error('No se admiten macros ni referencias externas.');
  const workbook=object(xml(entries['xl/workbook.xml']).workbook);
@@ -82,12 +83,12 @@ export function parseWorkbook(bytes:Uint8Array):ImportRecord[]{
   }
   return Array.from({length:row.length},(_,i)=>row[i]??'');
  });
- return recordsFromRows(rows);
+ return recordsFromRows(rows,mode);
 }
 const escapeXml=(v:string)=>v.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
-export function csvFile(rows:ImportRecord[]):string{return [importColumns.join(','),...rows.map(row=>importColumns.map(key=>'"'+( /^[=+@\-\t\r]/.test(row[key]??'')?"'":'')+(row[key]??'').replace(/"/g,'""')+'"').join(','))].join('\n');}
-export function workbookFile(rows:ImportRecord[]):Uint8Array{
- const values=[importColumns.map(String),...rows.map(row=>importColumns.map(key=>row[key]??''))];
+export function csvFile(rows:ImportRecord[],columns:readonly string[]=importColumns):string{return [columns.join(','),...rows.map(row=>columns.map(key=>'"'+( /^[=+@\-\t\r]/.test(row[key]??'')?"'":'')+(row[key]??'').replace(/"/g,'""')+'"').join(','))].join('\n');}
+export function workbookFile(rows:ImportRecord[],columns:readonly string[]=importColumns):Uint8Array{
+ const values=[columns.map(String),...rows.map(row=>columns.map(key=>row[key]??''))];
  const sheet='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+values.map((row,i)=>`<row r="${i+1}">`+row.map((value,j)=>`<c r="${String.fromCharCode(65+j)}${i+1}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(value)}</t></is></c>`).join('')+'</row>').join('')+'</sheetData></worksheet>';
  return zipSync(Object.fromEntries(Object.entries({
   '[Content_Types].xml':'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>',

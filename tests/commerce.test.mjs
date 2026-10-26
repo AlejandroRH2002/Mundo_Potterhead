@@ -84,3 +84,8 @@ test('a removed last SKU never becomes a generic legacy cart line',()=>{
  const result=resolveCart([{productId:'retired',skuId:'removed-sku',quantity:1}],[product]);assert.equal(result.lines.length,0);assert.equal(result.missing.length,1);
  assert.equal(resolveCart([{productId:'retired',quantity:1}],[product]).missing.length,1);
 });
+
+test('cart accepts the selected design photo without merging it into the parent gallery',async()=>{
+ const product={id:'design-parent',name:'Parent',description:'Base',price:50,image:'/images/product-placeholder.svg',category:'clothing',universe:'harry-potter',inventoryMode:'capture',models:[{id:'design',sku:'MODEL',name:'Design A',active:true,image:'https://images.test.invalid/a.webp',images:['https://images.test.invalid/a.webp'],quantity:2,version:1,skus:[{id:'sku',code:'SKU-A',size:'m',quantity:2,active:true,version:1}]}]};
+ const entry={productId:product.id,skuId:'sku',quantity:1,selectedImage:product.models[0].image};assert.equal(resolveCart([entry],[product]).lines.length,1);assert.equal(resolveCart([{...entry,selectedImage:'https://images.test.invalid/wrong.webp'}],[product]).missing.length,1);
+});
