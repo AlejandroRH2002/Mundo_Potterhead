@@ -66,6 +66,7 @@ function AnimatedRoutes() {
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/catalogo" element={<CatalogManagement />} />
+          <Route path="/admin/catalogo/:productId" element={<CatalogManagement />} />
           <Route path="/admin/inventario" element={<Inventory />} />
           <Route path="/admin/usuarios" element={<AdminUsers />} />
           <Route path="/products/new" element={<AddProduct />} />
@@ -90,7 +91,7 @@ function RouteFooter() {
 
 function RouteHeader() {
   const { pathname } = useLocation();
-  if (pathname.replace(/\/+$/, '') === '/admin/catalogo') return null;
+  if (pathname.replace(/\/+$/, '') === '/admin/catalogo' || pathname.startsWith('/admin/catalogo/')) return null;
   return <><Announcement /><Navbar /></>;
 }
 

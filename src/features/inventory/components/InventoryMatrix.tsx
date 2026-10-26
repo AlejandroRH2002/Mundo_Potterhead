@@ -3,7 +3,7 @@ import type { InventoryRow } from '../../../../shared/inventory';
 import { sizeLabel } from '../../../../shared/sizes';
 import { Button } from '@/shared/components/Button';
 import { physicalCount, stockStatus } from '../services/inventoryPresentation';
-function InventoryLine({row,busy,save,threshold,actions,onDirty}:{row:InventoryRow;busy:boolean;threshold:number;save:(row:InventoryRow,value:number)=>Promise<unknown>;actions?:(row:InventoryRow)=>ReactNode;onDirty:(id:string,dirty:boolean)=>void}) {
+function InventoryLine({row,busy,save,threshold,actions,onDirty,showCodes}:{row:InventoryRow;busy:boolean;threshold:number;showCodes:boolean;save:(row:InventoryRow,value:number)=>Promise<unknown>;actions?:(row:InventoryRow)=>ReactNode;onDirty:(id:string,dirty:boolean)=>void}) {
  const initial=row.quantity===null?'':String(row.quantity);
  const [draft,setDraft]=useState({value:initial,baseline:initial,version:row.version});
  const dirty=draft.value!==draft.baseline;
@@ -20,7 +20,7 @@ function InventoryLine({row,busy,save,threshold,actions,onDirty}:{row:InventoryR
  };
  return <tr className={dirty?'inventory-row-dirty':''}>
   <th scope="row" data-label="Producto / modelo"><div className="inventory-product">{row.image&& !row.image.startsWith('data:')&&<img src={row.image} alt="" width="56" height="56" loading="lazy" decoding="async"/>}<div><strong>{row.productName}</strong><span>{row.name}</span>{(!row.active||row.archived)&&<span className="inventory-badge inventory-inactive">{row.archived?'Producto archivado':'Variante o modelo inactivo'}</span>}</div></div></th>
-  <td data-label="SKU"><code>{row.sku}</code></td>
+  {showCodes&&<td data-label="SKU"><code>{row.sku}</code></td>}
   <td data-label="Variante"><span>{sizeLabel(row.size??'one')}</span>{row.color&&<span className="inventory-color">{row.color}</span>}</td>
   <td data-label="Stock actual"><strong className="inventory-stock">{row.quantity??'—'}</strong><span className="inventory-unit">{row.quantity===null?'Sin capturar':'unidades'}</span></td>
   <td data-label="Estado"><span className={'inventory-badge inventory-'+status.key}>{status.label}</span></td>
@@ -28,10 +28,10 @@ function InventoryLine({row,busy,save,threshold,actions,onDirty}:{row:InventoryR
   <td data-label="Acciones"><div className="inventory-row-actions">{actions?.(row)??<span className="inventory-unit">Conteo individual</span>}</div></td>
  </tr>;
 }
-export function InventoryMatrix({rows,busy,save,threshold=10,actions,onDirtyChange}:{rows:InventoryRow[];busy:boolean;save:(row:InventoryRow,value:number)=>Promise<unknown>;threshold?:number;actions?:(row:InventoryRow)=>ReactNode;onDirtyChange?:(dirty:boolean)=>void}) {
+export function InventoryMatrix({rows,busy,save,threshold=10,actions,onDirtyChange,showCodes=true}:{rows:InventoryRow[];busy:boolean;save:(row:InventoryRow,value:number)=>Promise<unknown>;threshold?:number;showCodes?:boolean;actions?:(row:InventoryRow)=>ReactNode;onDirtyChange?:(dirty:boolean)=>void}) {
  const [dirtyIds,setDirtyIds]=useState<Set<string>>(()=>new Set());
  const onDirty=useCallback((id:string,dirty:boolean)=>setDirtyIds(current=>{const next=new Set(current);if(dirty)next.add(id);else next.delete(id);return next;}),[]);
  useEffect(()=>{onDirtyChange?.(dirtyIds.size>0);},[dirtyIds,onDirtyChange]);
  if(!rows.length)return null;
- return <div className="inventory-matrix inventory-table-shell" role="region" aria-label="Inventario por SKU" tabIndex={0}><table className="inventory-table"><caption>Stock actual y conteo físico por SKU · cada guardado registra un movimiento</caption><thead><tr>{['Producto / modelo','SKU','Variante','Stock actual','Estado','Conteo físico','Acciones'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{rows.map(row=><InventoryLine key={row.id} row={row} busy={busy} save={save} threshold={threshold} actions={actions} onDirty={onDirty}/>)}</tbody></table></div>;
+ return <div className="inventory-matrix inventory-table-shell" role="region" aria-label={showCodes?'Inventario por SKU':'Existencias por opción'} tabIndex={0}><table className="inventory-table"><caption>Stock actual y conteo físico por {showCodes?'SKU':'opción'} · cada guardado registra un movimiento</caption><thead><tr>{['Producto / diseño',...(showCodes?['SKU']:[]),'Talla y color','Stock actual','Estado','Conteo físico','Acciones'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{rows.map(row=><InventoryLine key={row.id} row={row} busy={busy} save={save} threshold={threshold} actions={actions} onDirty={onDirty} showCodes={showCodes}/>)}</tbody></table></div>;
 }

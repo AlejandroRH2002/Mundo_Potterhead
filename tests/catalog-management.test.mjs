@@ -99,5 +99,26 @@ test('model photo administration shows own placeholders and paginated upload act
 
 test('a base product can be edited before it has any designs or stock',async()=>{
  const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');const value=planImport([row]).products[0];value.models=[];assert.equal(managedProductSchema.safeParse(value).success,true);
- for(const section of ['models','variants','images']){const html=renderToStaticMarkup(createElement(CatalogEditor,{value,section,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true}));assert.match(html,/Producto padre sin diseños/);assert.match(html,/Añadir modelo/);}
+ for(const section of ['models','variants','images']){const html=renderToStaticMarkup(createElement(CatalogEditor,{value,section,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true}));assert.match(html,/Este producto aún no tiene diseños/);if(section!=='images')assert.match(html,/Agregar diseño/);}
+});
+
+test('product wizard preserves parent data while staging designs and refuses to silently drop counts',async()=>{
+ const {stageDesigns,publicationProblem}=await import('../src/features/admin-catalog/services/productWizard.ts');const parent=planImport([row]).products[0];parent.models=[];
+ const rows=Array.from({length:30},(_,i)=>({modelCode:'WIZARD-'+i,modelName:'Diseño nuevo '+i}));const staged=stageDesigns(parent,rows);assert.equal(staged.errors.length,0);assert.equal(staged.products[0].models.length,30);assert.deepEqual(staged.products[0].product,parent.product);assert.equal(parent.models.length,0);
+ assert.equal(stageDesigns(staged.products[0],rows).products[0].models.length,30);assert.throws(()=>stageDesigns(parent,[{...rows[0],quantity:'2'}]),/existencias/);assert.match(publicationProblem(staged.products[0]),/fotografía/);
+ const prepared=staged.products[0];prepared.models[0].images=['https://images.test.invalid/wizard.webp'];prepared.models[0].active=true;assert.equal(publicationProblem(prepared),undefined);prepared.models[1].active=true;assert.match(publicationProblem(prepared),/sin fotografía/);
+});
+test('removing a new design drops it while existing designs and options are only deactivated',async()=>{
+ const {singleDesign,removeDesign}=await import('../src/features/admin-catalog/services/editorActions.ts');const parent=planImport([row]).products[0];const next=singleDesign(parent,'Único');assert.equal(next.models.at(-1).variants.length,1);assert.equal(removeDesign(next,1).models.length,1);
+ parent.models[0].id='saved-model';parent.models[0].variants[0].id='saved-option';const removed=removeDesign(parent,0);assert.equal(removed.models.length,1);assert.equal(removed.models[0].id,'saved-model');assert.equal(removed.models[0].active,false);assert.equal(removed.models[0].variants[0].active,false);assert.equal(parent.models[0].active,true);
+});
+test('wizard screens separate general information, options, photos and final confirmation',async()=>{
+ const {ProductWizard}=await vite.ssrLoadModule('/src/features/admin-catalog/components/ProductWizard.tsx');const value=planImport([row]).products[0];const props={value,onChange:()=>{},onSave:async()=>{},onCancel:()=>{},onUploadState:()=>{},busy:false,dirty:true};
+ const screens=[0,1,2,3].map(initialStep=>renderToStaticMarkup(createElement(ProductWizard,{...props,initialStep})));
+ assert.match(screens[0],/Datos del producto/);assert.doesNotMatch(screens[0],/type="file"|Quitar variante/);assert.match(screens[1],/Sin variantes: una sola opción/);assert.match(screens[1],/Importar varios diseños/);assert.match(screens[1],/<details><summary>Datos avanzados/);assert.doesNotMatch(screens[1],/Datos del producto/);assert.match(screens[2],/Fotografías de/);assert.match(screens[3],/Guardar borrador/);assert.match(screens[3],/Publicar producto/);assert.doesNotMatch(screens[3],/type="file"/);
+});
+
+test('employee inventory keeps internal codes behind advanced options',async()=>{
+ const {InventoryMatrix}=await vite.ssrLoadModule('/src/features/inventory/components/InventoryMatrix.tsx');const row={id:'a',productName:'Producto',name:'Diseño',sku:'PRIVATE-CODE',size:'one',quantity:2,version:1,active:true};
+ const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows:[row],busy:false,save:async()=>true,showCodes:false}));assert.doesNotMatch(html,/<code>|data-label="SKU"/);assert.match(html,/Existencias por opción/);assert.match(html,/Conteo físico/);
 });

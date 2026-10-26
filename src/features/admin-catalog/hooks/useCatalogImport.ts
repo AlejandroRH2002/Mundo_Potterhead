@@ -6,10 +6,10 @@ import { catalogService, type ImportInput } from '../services/catalogService';
 import type { ImportRecord, ImportReport } from '../../../../shared/catalogManagement';
 
 export function download(name:string,data:BlobPart,type:string){const url=URL.createObjectURL(new Blob([data],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-export function useCatalogImport(onApplied?:()=>void){
+export function useCatalogImport(onApplied?:()=>void,presetParent?:string){
  const [rows,setRows]=useState<ImportRecord[]>([]),[images,setImages]=useState<Record<string,string>>({}),[request,setRequest]=useState<ImportInput>(),[preview,setPreview]=useState<{report:ImportReport;token:string}>();
  const [report,setReport]=useState<ImportReport>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[confirmed,setConfirmed]=useState(false),[history,setHistory]=useState<{id:string;createdAt:string;summary:ImportReport}[]>([]),[page,setPage]=useState(1);
- const [mode,setMode]=useState<'full'|'designs'>('full'),[parentId,setParentId]=useState('');
+ const [mode,setMode]=useState<'full'|'designs'>(presetParent?'designs':'full'),[parentId,setParentId]=useState(presetParent??'');
  const inFlight=useRef(false);
  const run=async(work:()=>Promise<void>)=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');try{await work();}catch(error){setError(errorMessage(error));}finally{inFlight.current=false;setBusy(false);}};
  const invalidate=()=>{setRequest(undefined);setPreview(undefined);setReport(undefined);setConfirmed(false);};
