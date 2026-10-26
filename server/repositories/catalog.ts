@@ -5,7 +5,8 @@ import type { CatalogQuery, Facets } from '../../shared/catalogQuery.ts';
 export function catalogWhere(query: CatalogQuery, ignore: string[] = [], mode?: InventoryMode, admin = false): Prisma.Sql {
  const clauses: Prisma.Sql[] = [];
  if (mode && !admin) clauses.push(Prisma.sql`"archived" = false`);
- if (mode === 'enforce' && !admin) clauses.push(Prisma.sql`EXISTS (SELECT 1 FROM "ProductModel" m WHERE m."productId"="Product"."id" AND m."active" AND m."quantity">0)`);
+ if (mode === 'enforce' && !admin) clauses.push(Prisma.sql`EXISTS (SELECT 1 FROM "ProductModel" m JOIN "ProductSku" s ON s."modelId"=m."id" WHERE m."productId"="Product"."id" AND m."active" AND s."quantity">0)`);
+ if(query.size)clauses.push(Prisma.sql`EXISTS(SELECT 1 FROM "ProductModel" sm JOIN "ProductSku" ss ON ss."modelId"=sm."id" WHERE sm."productId"="Product"."id" AND sm."active" AND ss."size"=${query.size})`);
  if (query.universe && !ignore.includes('universe')) clauses.push(Prisma.sql`"universe" = ${query.universe}`);
  if (query.category && !ignore.includes('category')) clauses.push(Prisma.sql`"category" = ${query.category}`);
  if (query.subcategory && !ignore.includes('subcategory')) clauses.push(Prisma.sql`"subcategory" = ${query.subcategory}`);
@@ -15,7 +16,7 @@ export function catalogWhere(query: CatalogQuery, ignore: string[] = [], mode?: 
  if (query.q) {
   // Escape LIKE metacharacters so search remains literal, not a wildcard input.
   const pattern = '%' + query.q.replace(/[\\%_]/g, value => '\\' + value) + '%';
-  const alternatives=[Prisma.sql`"name" ILIKE ${pattern}`,Prisma.sql`COALESCE("description", '') ILIKE ${pattern}`];
+  const alternatives=[Prisma.sql`"searchText" ILIKE ${pattern}`,Prisma.sql`COALESCE("description", '') ILIKE ${pattern}`];
   const terms=taxonomySearch(query.q);
   if(terms.category.length)alternatives.push(Prisma.sql`"category" IN (${Prisma.join(terms.category)})`);
   if(terms.universe.length)alternatives.push(Prisma.sql`"universe" IN (${Prisma.join(terms.universe)})`);

@@ -32,6 +32,8 @@ model Product {
   description String?
   price       Decimal     @db.Decimal(12, 2)
   stock       Int         @default(0)
+  imageThumbnails Json @default("{}")
+  searchText  String      @default("")
   archived    Boolean     @default(false)
   models      ProductModel[]
   imageUrl    String?
@@ -104,6 +106,7 @@ model ProductModel {
   version Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  skus ProductSku[]
   movements InventoryMovement[]
   @@unique([productId, name])
   @@index([productId, active, quantity])
@@ -112,6 +115,8 @@ model InventoryMovement {
   id String @id @default(uuid())
   key String @unique
   fingerprint String
+  skuId String
+  inventorySku ProductSku @relation(fields: [skuId], references: [id], onDelete: Restrict)
   modelId String
   model ProductModel @relation(fields: [modelId], references: [id], onDelete: Restrict)
   actorId String
@@ -124,4 +129,18 @@ model InventoryMovement {
   reason String
   createdAt DateTime @default(now())
   @@index([modelId, createdAt, id])
+  @@index([skuId, createdAt, id])
+}
+
+model ProductSku {
+ id String @id @default(uuid())
+ modelId String
+ model ProductModel @relation(fields: [modelId], references: [id], onDelete: Restrict)
+ code String @unique
+ size String @default("one")
+ quantity Int?
+ version Int @default(0)
+ movements InventoryMovement[]
+ @@unique([modelId, size])
+ @@index([size, quantity])
 }

@@ -87,7 +87,7 @@ test('repository fixture replays one operation and rolls back balance if ledger 
   let queue=Promise.resolve();
   const tx={
     $queryRaw:async()=>[{id:'model',role:'ADMIN',isActive:active}],
-    productModel:{findUnique:async()=>({id:'model',quantity:state.quantity,version:state.version}),update:async({data})=>{state.quantity=data.quantity;state.version++;return state;}},
+    productSku:{findUnique:async()=>({id:'model',modelId:'model',quantity:state.quantity,version:state.version}),update:async({data})=>{state.quantity=data.quantity;state.version++;return state;}},
     inventoryMovement:{findUnique:async({where})=>state.rows.find(row=>row.key===where.key),create:async({data})=>{if(fail)throw Error('fixture insert failed');const row={...data,createdAt:new Date()};state.rows.push(row);return row;}},
   };
   const db={inventoryMovement:tx.inventoryMovement,$transaction:fn=>{

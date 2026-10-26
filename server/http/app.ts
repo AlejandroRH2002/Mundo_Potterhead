@@ -1,3 +1,4 @@
+import { skuInputSchema } from '../../shared/sizes.ts';
 import { InventoryError, inventoryQuerySchema, movementSchema, modelSchema, quoteSchema } from '../../shared/inventory.ts';
 import type { InventoryRepository } from '../repositories/inventory.ts';
 import { catalogImage } from '../../shared/productImage.ts';
@@ -126,6 +127,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
             const parsed=movementSchema.safeParse(await body(request));if(!parsed.success)throw new HttpError(400,parsed.error.issues[0]?.message??'Movimiento inválido.');
             json(response,200,await inventory.move(user.id,resourceId(parts[3]),parsed.data));return;
           }
+          if(method==='POST'&&parts.length===5&&parts[4]==='skus'){const input=skuInputSchema.safeParse(await body(request));if(!input.success)throw new HttpError(400,'Talla inválida.');json(response,201,await inventory.addSku(user.id,resourceId(parts[3]),input.data.size));return;}
           if(method==='POST'&&parts.length===5&&parts[3]==='models'){
             const parsed=modelSchema.safeParse(await body(request));if(!parsed.success)throw new HttpError(400,'Modelo inválido.');
             json(response,201,await inventory.model(user.id,resourceId(parts[4]),parsed.data));return;

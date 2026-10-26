@@ -164,7 +164,7 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  await move(a.id,'RECEIPT',2);assert.equal((await move(a.id,'SALE',2)).after,3);
  const adjusted=await move(a.id,'ADJUSTMENT',1,{expectedVersion:3});assert.equal(adjusted.after,1);
  const last=await Promise.allSettled([move(a.id,'SALE',1),move(a.id,'SALE',1)]);assert.equal(last.filter(result=>result.status==='fulfilled').length,1);
- assert.equal((await db.productModel.findUnique({where:{id:a.id}})).quantity,0);
+ assert.equal((await db.productSku.findUnique({where:{id:a.id}})).quantity,0);
  assert.equal(await enforced.get(product.id),null);assert.ok(await administration.get(product.id));
  const b=await inventory.model(owner.id,product.id,{name:'Modelo B',active:true});await move(b.id,'COUNT',2,{expectedVersion:0});
  assert.equal((await enforced.get(product.id)).models.length,1);
@@ -176,7 +176,7 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  await assert.rejects(()=>inventory.move(owner.id,a.id,{...retry,quantity:4}),/clave/);
  const before=await db.productModel.findUnique({where:{id:a.id}});
  await assert.rejects(()=>move(a.id,'ADJUSTMENT',0,{expectedVersion:0}),/cambió/);
- await assert.rejects(()=>db.productModel.update({where:{id:a.id},data:{quantity:-1}}));
+ await assert.rejects(()=>db.productSku.update({where:{id:a.id},data:{quantity:-1}}));
  await db.$executeRaw`CREATE FUNCTION mp_inventory_test_fail() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW."reason"='rollback-fixture' THEN RAISE EXCEPTION 'fixture failure'; END IF; RETURN NEW; END; $$`;
  await db.$executeRaw`CREATE TRIGGER inventory_test_fail BEFORE INSERT ON "InventoryMovement" FOR EACH ROW EXECUTE FUNCTION mp_inventory_test_fail()`;
  try {await assert.rejects(()=>inventory.move(owner.id,a.id,{key:randomUUID(),type:'SALE',quantity:1,reason:'rollback-fixture'}));}
@@ -192,4 +192,20 @@ test('real PostgreSQL inventory: atomic ledger, last-unit concurrency, retry and
  await inventory.archive(owner.id,product.id,true);assert.equal(await enforced.get(product.id),null);assert.ok(await administration.get(product.id));await inventory.archive(owner.id,product.id,false);
  assert.ok(await enforced.get(product.id));
  await db.user.update({where:{id:owner.id},data:{isActive:false}});await assert.rejects(()=>move(a.id,'SALE',1),/administrador/);
+});
+
+test('real PostgreSQL sized SKU uniqueness, category constraint and lightweight model search (isolated DB only)',async()=>{
+ const owner=await db.user.create({data:{email:randomUUID()+'@test.invalid',password:'unused-test-hash',role:'ADMIN'}});
+ const repository=createDatabaseProducts(db,'capture');const inventory=createInventory(db,repository,'capture');
+ const product=await repository.create({...draft,category:'clothing',name:'Sizing '+randomUUID()});const model=product.models[0];
+ const xs=await inventory.addSku(owner.id,model.id,'xs');assert.equal(xs.quantity,null);
+ await assert.rejects(()=>inventory.addSku(owner.id,model.id,'xs'));
+ await assert.rejects(()=>inventory.addSku(owner.id,model.id,'22'),/talla/);
+ await assert.rejects(()=>db.productSku.update({where:{id:xs.id},data:{size:'22'}}));
+ await inventory.move(owner.id,xs.id,{key:randomUUID(),type:'COUNT',quantity:2,reason:'Real size count',expectedVersion:0});
+ const name='Rojo '+randomUUID();await inventory.model(owner.id,product.id,{name,active:true},model.id);
+ const result=await repository.search({page:1,pageSize:24,sort:'novedad',q:name,category:'clothing',size:'xs'});
+ assert.equal(result.total,1);assert.equal(result.items[0].modelCount,1);assert.equal(result.items[0].available,true);
+ for(const key of ['models','skus','images','imageThumbnails'])assert.equal(key in result.items[0],false);
+ assert.ok((await repository.get(product.id)).models[0].skus.some(sku=>sku.size==='xs'&&sku.quantity===2));
 });

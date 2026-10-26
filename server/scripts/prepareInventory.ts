@@ -17,7 +17,7 @@ try {
       if (apply) await db.$transaction(async tx => {
         await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${row.id} FOR UPDATE`;
         if (await tx.productModel.count({ where: { productId: row.id } })) return;
-        await tx.productModel.upsert({ where: { id: 'default-' + row.id }, update: {}, create: { id: 'default-' + row.id, productId: row.id, sku: 'MP-' + row.id, name: 'General', quantity: null } });
+        await tx.productModel.upsert({ where: { id: 'default-' + row.id }, update: {}, create: { id: 'default-' + row.id, productId: row.id, sku: 'MP-' + row.id, name: 'General', skus:{create:{id:'default-'+row.id,code:'MP-'+row.id,size:'one',quantity:null}} } });
       });
     }
     cursor = rows[rows.length - 1].id;

@@ -1,3 +1,4 @@
+import { sizedSkuSchema } from '../../shared/sizes.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, type PrismaClient, type InventoryMovement } from '@prisma/client';
 import { InventoryError, nextQuantity, type InventoryMode, type InventoryQuery, type InventoryPage, type InventoryRow, type MovementInput, type MovementResult, type MovementPage } from '../../shared/inventory.ts';
@@ -7,6 +8,7 @@ import type { ProductRepository } from '../http/products.ts';
 import { catalogImage } from '../../shared/productImage.ts';
 
 export interface InventoryRepository {
+  addSku(actorId:string,modelId:string,size:string):Promise<unknown>;
   archive(actorId: string, productId: string, archived: boolean): Promise<void>;
   get(id: string): Promise<InventoryRow>;
   list(query: InventoryQuery): Promise<InventoryPage>;
@@ -15,7 +17,7 @@ export interface InventoryRepository {
   model(actorId: string, productId: string, input: z.infer<typeof modelSchema>, id?: string): Promise<unknown>;
   quote(input: z.infer<typeof quoteSchema>): Promise<unknown>;
 }
-const dto = (row: InventoryMovement): MovementResult => ({ id: row.id, modelId: row.modelId, type: row.type, quantity: row.quantity, before: row.before, after: row.after, delta: row.delta, reason: row.reason, actorId: row.actorId, createdAt: row.createdAt.toISOString() });
+const dto = (row: InventoryMovement): MovementResult => ({ id: row.id, modelId: row.modelId, skuId:row.skuId, type: row.type, quantity: row.quantity, before: row.before, after: row.after, delta: row.delta, reason: row.reason, actorId: row.actorId, createdAt: row.createdAt.toISOString() });
 async function actor(tx: Prisma.TransactionClient, id: string) {
   const rows = await tx.$queryRaw<{role: string; isActive: boolean}[]>`SELECT "role", "isActive" FROM "User" WHERE "id"=${id} FOR SHARE`;
   if (!rows[0]?.isActive || rows[0].role !== 'ADMIN') throw new InventoryError(403, 'Se requiere un administrador activo.');
@@ -27,21 +29,22 @@ export function inventoryMode(env: NodeJS.ProcessEnv): InventoryMode {
 }
 export async function assertInventoryReady(db: PrismaClient, mode: InventoryMode) {
   if (mode !== 'enforce') return;
-  const pending = await db.product.count({ where: { archived: false, OR: [{ models: { none: {} } }, { models: { some: { active: true, quantity: null } } }] } });
+  const pending = await db.product.count({ where: { archived: false, OR: [{ models: { none: {} } }, {models:{some:{active:true,OR:[{skus:{none:{}}},{skus:{some:{quantity:null}}}]}}}] } });
   if (pending) throw new Error('INVENTORY_MODE=enforce requiere capturar todos los modelos activos de productos no archivados.');
 }
-export function createInventory(db: PrismaClient, products: ProductRepository, mode: InventoryMode): InventoryRepository {
+export function createInventory(db: PrismaClient, products: ProductRepository, mode: InventoryMode, lowStockThreshold=10): InventoryRepository {
   return {
-    async archive(actorId, productId, archived) { await db.$transaction(async tx=>{await actor(tx,actorId);if(!archived && mode==='enforce' && await tx.productModel.count({where:{productId,active:true,quantity:null}}))throw new InventoryError(409,'Captura los modelos pendientes antes de mostrar el producto.');await tx.product.update({where:{id:productId},data:{archived}});}); },
-    async get(id) {const row=await db.productModel.findUnique({where:{id},include:{product:{select:{name:true,archived:true}}}});if(!row)throw new InventoryError(404,'Modelo no encontrado.');const {product,...model}=row;return {...model,productName:product.name,archived:product.archived};},
+    async addSku(actorId,modelId,size) {return db.$transaction(async tx=>{await actor(tx,actorId);const model=await tx.productModel.findUnique({where:{id:modelId},include:{product:{select:{category:true}}}});if(!model)throw new InventoryError(404,'Modelo no encontrado.');if(!sizedSkuSchema.safeParse({category:model.product.category,size}).success)throw new InventoryError(400,'La talla no pertenece a la categoría.');const id=randomUUID();return tx.productSku.create({data:{id,modelId,code:'MP-'+id,size}});});},
+    async archive(actorId, productId, archived) { await db.$transaction(async tx=>{await actor(tx,actorId);if(!archived && mode==='enforce' && await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{}}},{skus:{some:{quantity:null}}}]}}))throw new InventoryError(409,'Captura los modelos pendientes antes de mostrar el producto.');await tx.product.update({where:{id:productId},data:{archived}});}); },
+    async get(id) { const row=await db.productSku.findUnique({where:{id},include:{model:{include:{product:{select:{name:true,archived:true}}}}}});if(!row)throw new InventoryError(404,'SKU no encontrado.');const {model,...sku}=row;return {...model,id:sku.id,modelId:model.id,size:sku.size,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived}; },
     async list(query) {
-      const status: Prisma.ProductModelWhereInput = query.status === 'pending' ? { quantity: null } : query.status === 'empty' ? { quantity: 0 } : query.status === 'low' ? { quantity: { gt: 0, lte: 3 } } : query.status === 'available' ? { quantity: { gt: 0 } } : {};
-      const where: Prisma.ProductModelWhereInput = { ...status, productId: query.productId, ...(query.q ? { OR: [{ name: { contains: query.q, mode: 'insensitive' } }, { sku: { contains: query.q, mode: 'insensitive' } }, { id: { contains: query.q } }, { product: { name: { contains: query.q, mode: 'insensitive' } } }] } : {}) };
-      const [rows, total] = await db.$transaction([db.productModel.findMany({ where, include: { product: { select: { name: true, archived: true } } }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], skip: (query.page - 1) * query.pageSize, take: query.pageSize }), db.productModel.count({ where })]);
-      return { items: rows.map(({ product, ...row }) => ({ ...row, productName: product.name, archived: product.archived })), total, page: query.page, pageSize: query.pageSize };
+      const status:Prisma.ProductSkuWhereInput=query.status==='pending'?{quantity:null}:query.status==='empty'?{quantity:0}:query.status==='low'?{quantity:{gt:0,lte:lowStockThreshold}}:query.status==='available'?{quantity:{gt:0}}:{};
+      const where:Prisma.ProductSkuWhereInput={...status,...(query.productId?{model:{productId:query.productId}}:{}),...(query.q?{OR:[{code:{contains:query.q,mode:'insensitive'}},{model:{name:{contains:query.q,mode:'insensitive'}}},{model:{product:{name:{contains:query.q,mode:'insensitive'}}}},{model:{productId:{contains:query.q}}}]}:{})};
+      const [rows,total]=await Promise.all([db.productSku.findMany({where,include:{model:{include:{product:{select:{name:true,archived:true}}}}},orderBy:[{modelId:'asc'},{size:'asc'}],skip:(query.page-1)*query.pageSize,take:query.pageSize}),db.productSku.count({where})]);
+      return {items:rows.map(({model,...sku})=>({...model,id:sku.id,modelId:model.id,size:sku.size,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived})),total,page:query.page,pageSize:query.pageSize,lowStockThreshold};
     },
     async history(modelId, query) {
-      const where = { modelId };
+      const where = { skuId:modelId };
       const [rows, total] = await db.$transaction([db.inventoryMovement.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: (query.page - 1) * query.pageSize, take: query.pageSize }), db.inventoryMovement.count({ where })]);
       return { items: rows.map(dto), total, page: query.page, pageSize: query.pageSize };
     },
@@ -52,14 +55,14 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         return await db.$transaction(async tx => {
           await actor(tx, actorId);
           // Serialize only this model, never all catalog writes.
-          await tx.$queryRaw`SELECT "id" FROM "ProductModel" WHERE "id"=${modelId} FOR UPDATE`;
+          await tx.$queryRaw`SELECT "id" FROM "ProductSku" WHERE "id"=${modelId} FOR UPDATE`;
           const prior = await tx.inventoryMovement.findUnique({ where: { key: input.key } });
           if (prior) return replay(prior);
-          const model = await tx.productModel.findUnique({ where: { id: modelId } });
+          const model = await tx.productSku.findUnique({ where: { id: modelId } });
           if (!model) throw new InventoryError(404, 'Modelo no encontrado.');
           const after = nextQuantity(model.quantity, model.version, input);
-          await tx.productModel.update({ where: { id: modelId }, data: { quantity: after, version: { increment: 1 } } });
-          const row = await tx.inventoryMovement.create({ data: { key: input.key, type: input.type, quantity: input.quantity, reason: input.reason, id: randomUUID(), fingerprint, modelId, actorId, before: model.quantity, after, delta: after - (model.quantity ?? 0) } });
+          await tx.productSku.update({ where: { id: modelId }, data: { quantity: after, version: { increment: 1 } } });
+          const row = await tx.inventoryMovement.create({ data: { key: input.key, type: input.type, quantity: input.quantity, reason: input.reason, id: randomUUID(), fingerprint, modelId:model.modelId, skuId:model.id, actorId, before: model.quantity, after, delta: after - (model.quantity ?? 0) } });
           return dto(row);
         }, { maxWait: 5000, timeout: 10000 });
       } catch (error) {
@@ -76,15 +79,15 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${productId} FOR UPDATE`;
         const product = await tx.product.findUnique({ where: { id: productId } });
         if (!product) throw new InventoryError(404, 'Producto no encontrado.');
-        if (input.image && ![product.imageUrl, ...product.images].includes(input.image)) throw new InventoryError(400, 'La imagen debe pertenecer a la galería del producto.');
+        if (input.image && ![product.imageUrl,catalogImage(product.id,product.imageUrl??''), ...product.images].includes(input.image)) throw new InventoryError(400, 'La imagen debe pertenecer a la galería del producto.');
         if (id) {
           const model = await tx.productModel.findUnique({ where: { id } });
           if (model?.productId !== productId) throw new InventoryError(404, 'Modelo no encontrado.');
-          if (mode === 'enforce' && input.active && model.quantity === null) throw new InventoryError(409, 'Captura primero el conteo antes de activar este modelo.');
+          if (mode === 'enforce' && input.active && (!await tx.productSku.count({where:{modelId:id}})||await tx.productSku.count({where:{modelId:id,quantity:null}}))) throw new InventoryError(409, 'Captura primero el conteo antes de activar este modelo.');
           return tx.productModel.update({ where: { id }, data: { name: input.name, image: input.image || null, active: input.active } });
         }
         const uuid = randomUUID();
-        return tx.productModel.create({ data: { id: uuid, productId, sku: 'MP-' + uuid, name: input.name, image: input.image || null, active: mode === 'enforce' ? false : input.active } });
+        return tx.productModel.create({ data: { id: uuid, productId, sku: 'MP-' + uuid, name: input.name, image: input.image || null, active: mode === 'enforce' ? false : input.active, skus:{create:{id:uuid,code:'MP-'+uuid,size:'one'}} } });
       });
     },
     async quote(input) {
@@ -96,15 +99,15 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         const product = snapshots.get(line.productId);
         if (!product) throw new InventoryError(409, 'Un producto ya no está disponible. Revisa el carrito.');
         const models = product.models?.filter(model => model.active) ?? [];
-        const model = line.modelId ? models.find(model => model.id === line.modelId) : models.length === 1 ? models[0] : undefined;
-        if (models.length && !model) throw new InventoryError(409, 'Selecciona el modelo del producto antes de cotizar.');
-        if (mode === 'enforce' && (!model || model.quantity === null)) throw new InventoryError(409, 'Modelo sin disponibilidad confirmada.');
-        if (model) {
-          const total = (totals.get(model.id) ?? 0) + line.quantity; totals.set(model.id, total);
-          if (mode === 'enforce' && total > model.quantity!) throw new InventoryError(409, 'La cantidad supera las existencias de ' + model.name + '.');
-        }
+        const chosenId=line.skuId??line.modelId;
+        const model=chosenId?models.find(m=>m.skus?.some(s=>s.id===chosenId)||m.id===chosenId):models.length===1?models[0]:undefined;
+        const skus=model?.skus??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
+        const sku=chosenId?skus.find(s=>s.id===chosenId)??(skus.length===1?skus[0]:undefined):skus.length===1?skus[0]:undefined;
+        if((models.length&&!model)||(model&&!sku))throw new InventoryError(409,'Selecciona diseño y talla antes de cotizar.');
+        if(mode==='enforce'&&(!sku||sku.quantity===null))throw new InventoryError(409,'SKU sin disponibilidad confirmada.');
+        if(sku){const total=(totals.get(sku.id)??0)+line.quantity;totals.set(sku.id,total);if(mode==='enforce'&&total>sku.quantity!)throw new InventoryError(409,'La cantidad supera las existencias de '+model!.name+'.');}
         if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? [])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');
-        lines.push({ ...line, modelId: model?.id, modelName: model?.name, sku: model?.sku, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
+        lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, modelName: model?.name, sku: sku?.code, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
       }
       return { lines, mode, notice: 'Disponibilidad sujeta a confirmación. Esta cotización no reserva existencias.' };
     },
