@@ -1,3 +1,4 @@
+import type { Product } from '@/types/product';
 import { productService } from '@/features/catalog/services/productService';
 import { productImages } from '@/shared/lib/productMedia';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,6 +15,7 @@ export function useInventory(params: URLSearchParams) {
   const [revision, setRevision] = useState(0);
   const [history, setHistory] = useState<MovementPage>();
   const [historyId, setHistoryId] = useState('');
+  const [category,setCategory]=useState<Product['category']>('accessories');
   const [gallery,setGallery]=useState<string[]>([]);
   const [saved,setSaved]=useState(0);
   const inFlight = useRef(false);
@@ -27,8 +29,9 @@ export function useInventory(params: URLSearchParams) {
     finally { inFlight.current = false; setBusy(false); }
   }, []);
   const loadHistory = (id: string, page = 1) => run(async () => { setHistory(await inventoryService.history(id, page)); setHistoryId(id); });
-  return { data, error, notice, loading, busy, history, historyId, saved, gallery, run,
-    loadGallery:(productId:string)=>run(async()=>{setGallery(productImages(await productService.getAdminById(productId)));}), loadHistory,
+  return { data, error, notice, loading, busy, history, historyId, saved, gallery, category, run,
+    addSku:(modelId:string,size:string)=>run(async()=>{await inventoryService.addSku(modelId,size);setNotice('Talla creada con cantidad pendiente.');}),
+    loadGallery:(productId:string)=>run(async()=>{const product=await productService.getAdminById(productId);setGallery(productImages(product));setCategory(product.category);}), loadHistory,
     move: (row: InventoryRow, input: Omit<MovementInput, 'key'>) => run(async () => {
       const signature = JSON.stringify([row.id, input]);
       if (retry.current?.signature !== signature) retry.current = { signature, key: crypto.randomUUID() };

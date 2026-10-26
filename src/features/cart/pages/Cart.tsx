@@ -1,3 +1,4 @@
+import { sizeLabel } from '../../../../shared/sizes';
 import { cartEntryKey } from '../services/cartService';
 import { safeInternalPath } from '@/shared/lib/safeInternalPath';
 import { Button } from '@/shared/components/Button';
@@ -15,13 +16,13 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
     {!cart.loading && !cart.lines.length && !cart.missing.length && <div className="state-panel"><p className="eyebrow">Tu historia empieza aquí</p><p>Tu carrito está vacío. Explora el catálogo para comenzar.</p><Link to="/#catalogo" className="shop-button">Explorar catálogo</Link></div>}
     {cart.missing.map(item => <div className="shop-panel" key={cartEntryKey(item)}>
       <p>Producto o imagen elegida ya no disponible ({item.productId}). Retíralo para continuar.</p>
-      <button className="shop-button" onClick={() => cart.remove(item.productId, item.selectedImage, item.modelId)}>Retirar</button>
+      <button className="shop-button" onClick={() => cart.remove(item.productId, item.selectedImage, item.skuId??item.modelId)}>Retirar</button>
     </div>)}
     {cart.lines.map(line => <article className="shop-panel cart-line flex flex-wrap items-center gap-5" key={cartEntryKey(line)}>
       <img loading="lazy" decoding="async" width={96} height={96} className="h-24 w-24 rounded object-cover" src={line.selectedImage || line.product.image} alt={line.product.name} />
-      <div className="cart-line-info flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link>{line.modelName && <p>Modelo: {line.modelName} · {line.sku}</p>}{line.selectedImage && <p>Diseño según la imagen elegida</p>}<p>{money(line.product.price)} por unidad</p></div>
+      <div className="cart-line-info flex-1"><Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(line.productId)}`)}>{line.product.name}</Link>{line.modelName && <p>Modelo: {line.modelName} · Talla: {sizeLabel(line.size??'one')} · {line.sku}</p>}{line.selectedImage && <p>Diseño según la imagen elegida</p>}<p>{money(line.product.price)} por unidad</p></div>
       <label>Cantidad
-        <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value), line.selectedImage, line.modelId)} aria-label={`Cantidad de ${line.product.name}`} />
+        <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value), line.selectedImage, line.skuId??line.modelId)} aria-label={`Cantidad de ${line.product.name}`} />
       </label>
       <strong>{money(line.subtotal)}</strong>
       <button aria-label={`Eliminar ${line.product.name} del carrito`} className="shop-link" onClick={() => cart.remove(line.productId, line.selectedImage, line.modelId)}>Eliminar</button>

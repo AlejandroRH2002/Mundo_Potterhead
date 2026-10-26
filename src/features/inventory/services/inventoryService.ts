@@ -1,6 +1,7 @@
 import { requestJson } from '@/shared/lib/httpClient';
 import type { InventoryPage, MovementInput, MovementPage, MovementResult, InventoryRow } from '../../../../shared/inventory.ts';
 export const inventoryService = {
+  addSku:(modelId:string,size:string)=>requestJson('/admin/inventory/'+encodeURIComponent(modelId)+'/skus',{method:'POST',body:JSON.stringify({size})}),
   list: (params: URLSearchParams, signal?: AbortSignal) => requestJson<InventoryPage>('/admin/inventory?' + params, { signal }),
   history: (id: string, page: number) => requestJson<MovementPage>(`/admin/inventory/${encodeURIComponent(id)}/movements?page=${page}`),
   move: (id: string, input: MovementInput) => requestJson<MovementResult>(`/admin/inventory/${encodeURIComponent(id)}/movements`, { method: 'POST', body: JSON.stringify(input) }),

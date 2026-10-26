@@ -2,8 +2,7 @@ import { requestJson } from '@/shared/lib/httpClient';
 import type { CartLine } from '../services/cartService';
 import { useState, useSyncExternalStore } from 'react';
 import { cartService, resolveCart, whatsappOrder } from '../services/cartService';
-import { useProducts } from '@/features/catalog/hooks/useProducts';
-import { productService } from '@/features/catalog/services/productService';
+import { useCartProducts,loadCartProducts } from './useCartProducts';
 import { errorMessage } from '@/shared/lib/money';
 export function useCartCount() {
   const entries = useSyncExternalStore(cartService.subscribe, cartService.getSnapshot);
@@ -19,7 +18,7 @@ export function useAddToCart() {
 }
 export function useCart() {
   const entries = useSyncExternalStore(cartService.subscribe, cartService.getSnapshot);
-  const catalog = useProducts();
+  const catalog = useCartProducts(entries.map(entry=>entry.productId));
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const resolved = resolveCart(entries, catalog.products);
@@ -31,7 +30,7 @@ export function useCart() {
     setError(''); setSending(true);
     try {
       // Resolve again at checkout to avoid stale prices, quantities or deleted products.
-      const products = await productService.list();
+      const products = await loadCartProducts(cartService.getSnapshot().map(entry=>entry.productId));
       const latest = resolveCart(cartService.getSnapshot(), products);
       catalog.setProducts(products);
       if (latest.missing.length) throw new Error('Retira los productos o imágenes elegidas que ya no están disponibles antes de enviar.');

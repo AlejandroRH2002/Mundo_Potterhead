@@ -25,6 +25,7 @@ export function useCatalog(universe: Product['universe']) {
   }, [key, revision]);
   const change = (patch: Record<string, string | undefined>) => {
     const next = serializeCatalogQuery(query);
+    if ('category' in patch || 'universe' in patch) next.delete('size');
     if ('universe' in patch) { next.delete('category'); next.delete('subcategory'); }
     else if ('category' in patch) next.delete('subcategory');
     if (!('page' in patch)) next.set('page', '1');
