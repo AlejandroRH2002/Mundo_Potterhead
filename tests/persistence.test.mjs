@@ -1,4 +1,6 @@
 import { createInventory, assertInventoryReady } from '../server/repositories/inventory.ts';
+import { createCatalogManagement } from '../server/repositories/catalogManagement.ts';
+import { templateRow } from '../shared/catalogFiles.ts';
 import { randomUUID } from 'node:crypto';
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,9 +23,10 @@ const origin = 'https://shop.test.invalid';
 await bootstrapAdmin(db, email, password);
 const auth = await createDatabaseAuth(db, secret);
 const products = createDatabaseProducts(db);
+const catalogManagement=createCatalogManagement(db,secret);
 const entries = [];
 const api = createApi({ auth, products, origin, secureCookies: true, sameSite: 'None', registrationEnabled: true,
-  limiter: databaseLoginLimiter(db, secret), logger: entry => entries.push(entry), ready: async () => { await db.$queryRaw`SELECT 1`; } });
+  catalogManagement,limiter: databaseLoginLimiter(db, secret), logger: entry => entries.push(entry), ready: async () => { await db.$queryRaw`SELECT 1`; } });
 await new Promise(resolve => api.listen(0, '127.0.0.1', resolve));
 after(async () => { await new Promise(resolve => api.close(resolve)); await db.$disconnect(); });
 const base = 'http://127.0.0.1:' + api.address().port;
@@ -208,4 +211,57 @@ test('real PostgreSQL sized SKU uniqueness, category constraint and lightweight 
  assert.equal(result.total,1);assert.equal(result.items[0].modelCount,1);assert.equal(result.items[0].available,true);
  for(const key of ['models','skus','images','imageThumbnails'])assert.equal(key in result.items[0],false);
  assert.ok((await repository.get(product.id)).models[0].skus.some(sku=>sku.size==='xs'&&sku.quantity===2));
+});
+
+test('catalog management: admin authorization, draft visibility, galleries, colors and legacy order references',async()=>{
+ const rows=[{...templateRow,productCode:'TEST-'+randomUUID(),modelCode:'MODEL-'+randomUUID(),sku:'SKU-'+randomUUID(),images:'https://images.test.invalid/first.webp',status:'draft'}];
+ const input={key:randomUUID(),rows,images:{}};
+ const ownerSession=await auth.authenticate(email,password);const ownerCookie='__Host-mp_session='+ownerSession.token;
+ assert.equal((await send('/api/admin/catalog/preview',{method:'POST',payload:input})).status,401);
+ const customer=await db.user.create({data:{email:randomUUID()+'@test.invalid',password:'fixture',role:'CUSTOMER'}});
+ const client=await createDatabaseAuth(db,secret);
+ const customerHash=await import('../server/security/password.ts');await db.user.update({where:{id:customer.id},data:{password:await customerHash.hashPassword(password)}});
+ const customerSession=await client.authenticate(customer.email,password);
+ assert.equal((await send('/api/admin/catalog/preview',{method:'POST',payload:input,cookie:'__Host-mp_session='+customerSession.token})).status,403);
+ const previewResponse=await send('/api/admin/catalog/preview',{method:'POST',payload:input,cookie:ownerCookie});assert.equal(previewResponse.status,200);const preview=await previewResponse.json();assert.equal(preview.report.valid,true);
+ assert.equal((await send('/api/admin/catalog/preview',{method:'POST',payload:input,cookie:ownerCookie,from:'https://outside.test.invalid'})).status,403);
+ assert.equal((await send('/api/admin/catalog/preview',{method:'POST',payload:input,cookie:ownerCookie,headers:{'X-Requested-With':''}})).status,403);
+ assert.equal((await send('/api/admin/catalog/preview',{method:'POST',payload:{...input,extra:true},cookie:ownerCookie})).status,400);
+ const applied=await send('/api/admin/catalog/import',{method:'POST',payload:{request:input,token:preview.token},cookie:ownerCookie});assert.equal(applied.status,200);
+ const product=await db.product.findUniqueOrThrow({where:{code:rows[0].productCode}});assert.equal(product.archived,true);assert.equal(await products.get(product.id),null);
+ let managed=await catalogManagement.get(product.id);const model=managed.models[0],first=model.variants[0];
+ model.images=['https://images.test.invalid/first.webp','https://images.test.invalid/second.webp'];
+ model.variants.push({code:'SKU-'+randomUUID(),size:first.size,color:'Rojo',images:['https://images.test.invalid/second.webp'],active:true});managed.status='active';
+ managed=await catalogManagement.save(customerSession.user.id,managed).then(()=>{throw Error('Customer write allowed');},error=>{assert.equal(error.status,403);return managed;});
+ const owner=await db.user.findUniqueOrThrow({where:{email}});managed=await catalogManagement.save(owner.id,managed);assert.ok(await products.get(product.id));
+ const details=await products.get(product.id);assert.equal(details.models[0].skus.length,2);assert.equal(details.models[0].images.length,2);
+ await assert.rejects(()=>db.productSku.create({data:{modelId:model.id,code:'OTHER-'+randomUUID(),size:first.size,color:' rojo '}}));
+ const order=await db.order.create({data:{userId:owner.id,total:780,items:{create:{productId:product.id,quantity:1,price:780}}}});
+ const oldRevision=managed.revision;managed.product.name='Updated catalog fixture';await catalogManagement.save(owner.id,managed);
+ await assert.rejects(()=>catalogManagement.save(owner.id,{...managed,revision:oldRevision}),/cambió/);
+ assert.equal((await db.orderItem.findFirst({where:{orderId:order.id}})).productId,product.id);
+ const copy=await catalogManagement.duplicate(owner.id,product.id);assert.equal(copy.status,'draft');assert.notEqual(copy.models[0].variants[0].id,first.id);assert.equal((await db.productSku.findUnique({where:{id:copy.models[0].variants[0].id}})).quantity,null);
+ const batch=[await catalogManagement.get(product.id),copy].sort((a,b)=>a.id.localeCompare(b.id));await assert.rejects(()=>catalogManagement.bulk(owner.id,{items:batch.map((item,i)=>({id:item.id,revision:item.revision+(i===1?1:0)})),status:'archived'}),/cambió/);assert.equal((await catalogManagement.get(batch[0].id)).status,batch[0].status);
+ const history=await catalogManagement.history(1);assert.ok(history.some(item=>item.id===input.key));
+ const before=await catalogManagement.get(product.id);await catalogManagement.bulk(owner.id,{items:[{id:product.id,revision:before.revision}],status:'archived'});assert.equal(await products.get(product.id),null);assert.equal(await db.order.count({where:{id:order.id}}),1);
+});
+
+test('catalog import: preview is read-only, same-file retries are idempotent and stock changes are ledgered atomically',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}});
+ const row={...templateRow,productCode:'IMP-'+randomUUID(),modelCode:'MODEL-'+randomUUID(),sku:'SKU-'+randomUUID(),images:'https://images.test.invalid/import.webp',quantity:'3',inventoryMode:'replace',reason:'Physical fixture count'};
+ const input={key:randomUUID(),rows:[row],images:{}};const count=await db.product.count();const preview=await catalogManagement.preview(input);assert.equal(await db.product.count(),count);
+ const result=await catalogManagement.apply(owner.id,input,preview.token);assert.equal(result.created,1);
+ const sku=await db.productSku.findUniqueOrThrow({where:{code:row.sku}});assert.equal(sku.quantity,3);
+ const repeated=await catalogManagement.apply(owner.id,{...input,key:randomUUID()},preview.token);assert.equal(repeated.skipped,1);assert.equal((await db.productSku.findUnique({where:{id:sku.id}})).quantity,3);
+ const increase={key:randomUUID(),rows:[{...row,quantity:'2',inventoryMode:'increment',reason:'Receipt fixture'}],images:{}};const p=await catalogManagement.preview(increase);
+ const secondRequest={...increase,key:randomUUID()},secondPreview=await catalogManagement.preview(secondRequest);
+ const concurrent=await Promise.all([catalogManagement.apply(owner.id,increase,p.token),catalogManagement.apply(owner.id,secondRequest,secondPreview.token)]);assert.equal(concurrent[0].id,concurrent[1].id);
+ assert.equal((await db.productSku.findUnique({where:{id:sku.id}})).quantity,5);assert.equal(await db.inventoryMovement.count({where:{skuId:sku.id}}),2);
+ const revision=await catalogManagement.get((await db.product.findUnique({where:{code:row.productCode}})).id);revision.models[0].variants[0].color='Changed';await assert.rejects(()=>catalogManagement.save(owner.id,revision),/movimientos/);
+ const bad={...input,key:randomUUID(),rows:[{...row,quantity:'-2'}]};assert.equal((await catalogManagement.preview(bad)).report.valid,false);
+ await assert.rejects(async()=>catalogManagement.apply(owner.id,bad,(await catalogManagement.preview(bad)).token),/filas/);
+ const changed={key:randomUUID(),rows:[{...row,name:'Changed after preview',quantity:''}],images:{}};const old=await catalogManagement.preview(changed);
+ const inventory=createInventory(db,products,'capture');await inventory.move(owner.id,sku.id,{key:randomUUID(),type:'SALE',quantity:1,reason:'Concurrent fixture sale'});
+ await assert.rejects(()=>catalogManagement.apply(owner.id,changed,old.token),/Simula/);
+ assert.equal((await db.productSku.findUnique({where:{id:sku.id}})).quantity,4);
 });

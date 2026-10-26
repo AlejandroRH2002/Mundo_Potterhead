@@ -1,4 +1,5 @@
 import { loadLocalDevelopment } from './localDevelopment.ts';
+import { createCatalogManagement } from './repositories/catalogManagement.ts';
 import { startupDiagnostic } from './lib/startupDiagnostic.ts';
 import { createInventory, inventoryMode, assertInventoryReady } from './repositories/inventory.ts';
 import { databaseDiagnostic } from './lib/databaseDiagnostic.ts';
@@ -32,7 +33,7 @@ async function start() {
   await probeDb.$connect();
   const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;await probeDb.productSku.findFirst({select:{id:true,quantity:true,version:true}});}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
   const server = createApi({ auth, users: createDatabaseUsers(db), products, adminProducts, inventory:createInventory(db,products,mode,lowStockThreshold), ...config,
-    limiter: databaseLoginLimiter(db, config.sessionSecret),
+    catalogManagement:createCatalogManagement(db,config.sessionSecret),limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
   });
   server.requestTimeout = 15_000;

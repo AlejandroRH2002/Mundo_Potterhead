@@ -29,19 +29,19 @@ export function inventoryMode(env: NodeJS.ProcessEnv): InventoryMode {
 }
 export async function assertInventoryReady(db: PrismaClient, mode: InventoryMode) {
   if (mode !== 'enforce') return;
-  const pending = await db.product.count({ where: { archived: false, OR: [{ models: { none: {} } }, {models:{some:{active:true,OR:[{skus:{none:{}}},{skus:{some:{quantity:null}}}]}}}] } });
+  const pending = await db.product.count({ where: { archived: false, OR: [{ models: { none: {} } }, {models:{some:{active:true,OR:[{skus:{none:{}}},{skus:{some:{active:true,quantity:null}}}]}}}] } });
   if (pending) throw new Error('INVENTORY_MODE=enforce requiere capturar todos los modelos activos de productos no archivados.');
 }
 export function createInventory(db: PrismaClient, products: ProductRepository, mode: InventoryMode, lowStockThreshold=10): InventoryRepository {
   return {
     async addSku(actorId,modelId,size) {return db.$transaction(async tx=>{await actor(tx,actorId);const model=await tx.productModel.findUnique({where:{id:modelId},include:{product:{select:{category:true}}}});if(!model)throw new InventoryError(404,'Modelo no encontrado.');if(!sizedSkuSchema.safeParse({category:model.product.category,size}).success)throw new InventoryError(400,'La talla no pertenece a la categoría.');const id=randomUUID();return tx.productSku.create({data:{id,modelId,code:'MP-'+id,size}});});},
-    async archive(actorId, productId, archived) { await db.$transaction(async tx=>{await actor(tx,actorId);if(!archived && mode==='enforce' && await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{}}},{skus:{some:{quantity:null}}}]}}))throw new InventoryError(409,'Captura los modelos pendientes antes de mostrar el producto.');await tx.product.update({where:{id:productId},data:{archived}});}); },
-    async get(id) { const row=await db.productSku.findUnique({where:{id},include:{model:{include:{product:{select:{name:true,archived:true}}}}}});if(!row)throw new InventoryError(404,'SKU no encontrado.');const {model,...sku}=row;return {...model,id:sku.id,modelId:model.id,size:sku.size,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived}; },
+    async archive(actorId, productId, archived) { await db.$transaction(async tx=>{await actor(tx,actorId);if(!archived && mode==='enforce' && await tx.productModel.count({where:{productId,active:true,OR:[{skus:{none:{}}},{skus:{some:{active:true,quantity:null}}}]}}))throw new InventoryError(409,'Captura los modelos pendientes antes de mostrar el producto.');await tx.product.update({where:{id:productId},data:{archived}});}); },
+    async get(id) { const row=await db.productSku.findUnique({where:{id},include:{model:{include:{product:{select:{name:true,archived:true}}}}}});if(!row)throw new InventoryError(404,'SKU no encontrado.');const {model,...sku}=row;return {...model,id:sku.id,modelId:model.id,size:sku.size,color:sku.color,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived}; },
     async list(query) {
       const status:Prisma.ProductSkuWhereInput=query.status==='pending'?{quantity:null}:query.status==='empty'?{quantity:0}:query.status==='low'?{quantity:{gt:0,lte:lowStockThreshold}}:query.status==='available'?{quantity:{gt:0}}:{};
       const where:Prisma.ProductSkuWhereInput={...status,...(query.productId?{model:{productId:query.productId}}:{}),...(query.q?{OR:[{code:{contains:query.q,mode:'insensitive'}},{model:{name:{contains:query.q,mode:'insensitive'}}},{model:{product:{name:{contains:query.q,mode:'insensitive'}}}},{model:{productId:{contains:query.q}}}]}:{})};
       const [rows,total]=await Promise.all([db.productSku.findMany({where,include:{model:{include:{product:{select:{name:true,archived:true}}}}},orderBy:[{modelId:'asc'},{size:'asc'}],skip:(query.page-1)*query.pageSize,take:query.pageSize}),db.productSku.count({where})]);
-      return {items:rows.map(({model,...sku})=>({...model,id:sku.id,modelId:model.id,size:sku.size,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived})),total,page:query.page,pageSize:query.pageSize,lowStockThreshold};
+      return {items:rows.map(({model,...sku})=>({...model,id:sku.id,modelId:model.id,size:sku.size,color:sku.color,sku:sku.code,quantity:sku.quantity,version:sku.version,productName:model.product.name,archived:model.product.archived})),total,page:query.page,pageSize:query.pageSize,lowStockThreshold};
     },
     async history(modelId, query) {
       const where = { skuId:modelId };
@@ -84,7 +84,7 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
           const model = await tx.productModel.findUnique({ where: { id } });
           if (model?.productId !== productId) throw new InventoryError(404, 'Modelo no encontrado.');
           if (mode === 'enforce' && input.active && (!await tx.productSku.count({where:{modelId:id}})||await tx.productSku.count({where:{modelId:id,quantity:null}}))) throw new InventoryError(409, 'Captura primero el conteo antes de activar este modelo.');
-          return tx.productModel.update({ where: { id }, data: { name: input.name, image: input.image || null, active: input.active } });
+          return tx.productModel.update({ where: { id }, data: { name: input.name, image: input.image || model.images?.[0] || null, images: input.image ? [input.image,...(model.images??[]).filter(image=>image!==input.image)] : model.images??[], active: input.active } });
         }
         const uuid = randomUUID();
         return tx.productModel.create({ data: { id: uuid, productId, sku: 'MP-' + uuid, name: input.name, image: input.image || null, active: mode === 'enforce' ? false : input.active, skus:{create:{id:uuid,code:'MP-'+uuid,size:'one'}} } });
@@ -101,13 +101,13 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         const models = product.models?.filter(model => model.active) ?? [];
         const chosenId=line.skuId??line.modelId;
         const model=chosenId?models.find(m=>m.skus?.some(s=>s.id===chosenId)||m.id===chosenId):models.length===1?models[0]:undefined;
-        const skus=model?.skus??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
+        const skus=model?.skus?.filter(s=>s.active!==false)??(model?[{id:model.id,code:model.sku,size:'one',quantity:model.quantity,version:model.version}]:[]);
         const sku=chosenId?skus.find(s=>s.id===chosenId)??(skus.length===1?skus[0]:undefined):skus.length===1?skus[0]:undefined;
         if((models.length&&!model)||(model&&!sku))throw new InventoryError(409,'Selecciona diseño y talla antes de cotizar.');
         if(mode==='enforce'&&(!sku||sku.quantity===null))throw new InventoryError(409,'SKU sin disponibilidad confirmada.');
         if(sku){const total=(totals.get(sku.id)??0)+line.quantity;totals.set(sku.id,total);if(mode==='enforce'&&total>sku.quantity!)throw new InventoryError(409,'La cantidad supera las existencias de '+model!.name+'.');}
         if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? [])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');
-        lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, modelName: model?.name, sku: sku?.code, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
+        lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, color:sku&&'color' in sku?sku.color:undefined, modelName: model?.name, sku: sku?.code, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
       }
       return { lines, mode, notice: 'Disponibilidad sujeta a confirmación. Esta cotización no reserva existencias.' };
     },

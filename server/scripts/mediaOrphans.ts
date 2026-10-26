@@ -10,8 +10,8 @@ const referenced=new Set<string>();
 let cursor:string|undefined,token:string|undefined,objects=0,orphans=0,bytes=0;
 const keep=(value:unknown)=>{if(typeof value==='string'&&value.startsWith(prefix))referenced.add(value.slice(prefix.length));};
 try {
- while(true){const rows=await db.product.findMany({take:100,orderBy:{id:'asc'},...(cursor?{cursor:{id:cursor},skip:1}:{}),select:{id:true,imageUrl:true,images:true,imageThumbnails:true,models:{select:{image:true}}}});if(!rows.length)break;
-  for(const row of rows){keep(row.imageUrl);row.images.forEach(keep);row.models.forEach(model=>keep(model.image));if(row.imageThumbnails&&typeof row.imageThumbnails==='object')Object.values(row.imageThumbnails).forEach(keep);}cursor=rows[rows.length-1].id;
+ while(true){const rows=await db.product.findMany({take:100,orderBy:{id:'asc'},...(cursor?{cursor:{id:cursor},skip:1}:{}),select:{id:true,imageUrl:true,images:true,imageThumbnails:true,models:{select:{image:true,images:true,skus:{select:{images:true}}}}}});if(!rows.length)break;
+  for(const row of rows){keep(row.imageUrl);row.images.forEach(keep);row.models.forEach(model=>{keep(model.image);model.images.forEach(keep);model.skus.forEach(sku=>sku.images.forEach(keep));});if(row.imageThumbnails&&typeof row.imageThumbnails==='object')Object.values(row.imageThumbnails).forEach(keep);}cursor=rows[rows.length-1].id;
  }
  do {const page=await s3.send(new ListObjectsV2Command({Bucket:process.env.S3_BUCKET,Prefix:'products/',ContinuationToken:token,MaxKeys:1000}));for(const object of page.Contents??[]){objects++;if(object.Key&&!referenced.has(object.Key)){orphans++;bytes+=object.Size??0;}}token=page.NextContinuationToken;}while(token);
  console.log(JSON.stringify({mode:'dry-run',objects,possibleOrphans:orphans,possibleOrphanBytes:bytes,deleted:0,notice:'Solo diagnóstico; revisar uploads en curso y referencias externas antes de cualquier limpieza futura.'}));

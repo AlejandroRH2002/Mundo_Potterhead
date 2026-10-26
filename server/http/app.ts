@@ -1,4 +1,6 @@
 import { skuInputSchema } from '../../shared/sizes.ts';
+import { z } from 'zod';
+import type { CatalogManagement } from '../repositories/catalogManagement.ts';
 import { InventoryError, inventoryQuerySchema, movementSchema, modelSchema, quoteSchema } from '../../shared/inventory.ts';
 import type { InventoryRepository } from '../repositories/inventory.ts';
 import { catalogImage } from '../../shared/productImage.ts';
@@ -41,9 +43,9 @@ function json(response: ServerResponse, status: number, value?: unknown) {
   response.end(value === undefined ? undefined : JSON.stringify(value));
 }
 export function createApi({ auth, products, origin, secureCookies = false, sameSite = 'Strict', trustProxy = false,
-  registrationEnabled = false, allowInlineImages = process.env.NODE_ENV !== 'production', limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users, inventory, adminProducts,
+  registrationEnabled = false, allowInlineImages = process.env.NODE_ENV !== 'production', limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users, inventory, adminProducts, catalogManagement,
 }: { auth: Auth; products: ProductRepository; origin: string; secureCookies?: boolean;
-  allowInlineImages?: boolean; inventory?: InventoryRepository; adminProducts?: ProductRepository; users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
+  allowInlineImages?: boolean; catalogManagement?:CatalogManagement; inventory?: InventoryRepository; adminProducts?: ProductRepository; users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
   limiter?: (key: string) => boolean | Promise<boolean>; ready?: () => Promise<void>; logger?: (entry: AuditEntry) => void;
 }) {
   if (sameSite === 'None' && !secureCookies) throw new Error('SameSite=None requires Secure.');
@@ -104,6 +106,22 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         const input=quoteSchema.safeParse(await body(request,256*1024));
         if (!input.success) throw new HttpError(400, 'Cotización inválida.');
         json(response,200,await inventory.quote(input.data));return;
+      }
+      if (path==='/api/admin/catalog' || path.startsWith('/api/admin/catalog/')) {
+        route='/api/admin/catalog';
+        if(!user)throw new HttpError(401,'Inicia sesión para continuar.');
+        if(user.role!=='admin')throw new HttpError(403,'Se requiere administrador.');
+        if(!catalogManagement)throw new HttpError(503,'Gestión del catálogo no disponible.');
+        const parts=path.split('/').filter(Boolean);
+        if(path==='/api/admin/catalog'&&method==='GET'){const params=new URL(request.url??'/','http://localhost').searchParams;const query=z.object({page:z.coerce.number().int().min(1).max(10000).default(1),q:z.string().max(150).optional(),category:z.string().max(50).optional()}).strict().parse(Object.fromEntries(params));json(response,200,await catalogManagement.list(query));return;}
+        if(path==='/api/admin/catalog/history'&&method==='GET'){const page=z.coerce.number().int().min(1).max(10000).parse(new URL(request.url??'/','http://localhost').searchParams.get('page')??1);json(response,200,await catalogManagement.history(page));return;}
+        if(path==='/api/admin/catalog/preview'&&method==='POST'){json(response,200,await catalogManagement.preview(await body(request,2*1024*1024)));return;}
+        if(path==='/api/admin/catalog/import'&&method==='POST'){const value=z.object({request:z.unknown(),token:z.string().max(200)}).strict().parse(await body(request,2*1024*1024));json(response,200,await catalogManagement.apply(user.id,value.request,value.token));return;}
+        if(path==='/api/admin/catalog/bulk'&&method==='PATCH'){json(response,200,await catalogManagement.bulk(user.id,await body(request)));return;}
+        if(path==='/api/admin/catalog'&&method==='POST'){json(response,201,await catalogManagement.save(user.id,await body(request,256*1024)));return;}
+        if(parts.length===4&&method==='GET'){json(response,200,await catalogManagement.get(resourceId(parts[3])));return;}
+        if(parts.length===5&&parts[4]==='duplicate'&&method==='POST'){json(response,201,await catalogManagement.duplicate(user.id,resourceId(parts[3])));return;}
+        throw new HttpError(405,'Operación de catálogo no permitida.');
       }
       if (path.startsWith('/api/admin/inventory') || path.startsWith('/api/admin/products')) {
         route='/api/admin/inventory';
@@ -286,6 +304,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       throw new HttpError(404, 'Ruta no encontrada.');
     };
     void handle().catch((error: unknown) => {
+      if(error instanceof z.ZodError){json(response,400,{message:error.issues[0]?.message??'Datos inválidos.'});return;}
       if (error instanceof InventoryError) { json(response,error.status,{message:error.message});return; }
       if (error instanceof MediaValidationError) { json(response, 400, { message: error.message }); return; }
       if (error instanceof UserManagementError) { json(response, error.status, { message: error.message }); return; }
