@@ -15,6 +15,7 @@ model User {
   role      Role     @default(CUSTOMER)
   isActive  Boolean  @default(true)
   inventoryMovements InventoryMovement[]
+  catalogImports CatalogImport[]
   sessions  Session[]
   orders    Order[]
   createdAt DateTime @default(now())
@@ -35,6 +36,9 @@ model Product {
   imageThumbnails Json @default("{}")
   searchText  String      @default("")
   archived    Boolean     @default(false)
+  status      String      @default("active")
+  code        String?     @unique
+  revision    Int         @default(0)
   models      ProductModel[]
   imageUrl    String?
   images      String[]    @default([])
@@ -101,6 +105,7 @@ model ProductModel {
   sku String @unique
   name String
   image String?
+  images String[] @default([])
   active Boolean @default(true)
   quantity Int?
   version Int @default(0)
@@ -138,9 +143,22 @@ model ProductSku {
  model ProductModel @relation(fields: [modelId], references: [id], onDelete: Restrict)
  code String @unique
  size String @default("one")
+ color String @default("")
+ images String[] @default([])
+ active Boolean @default(true)
  quantity Int?
  version Int @default(0)
  movements InventoryMovement[]
- @@unique([modelId, size])
+ @@unique([modelId, size, color])
  @@index([size, quantity])
+}
+
+model CatalogImport {
+ id String @id
+ actorId String
+ actor User @relation(fields: [actorId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+ fingerprint String @unique
+ summary Json
+ createdAt DateTime @default(now())
+ @@index([createdAt, id])
 }

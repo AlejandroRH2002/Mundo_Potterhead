@@ -30,7 +30,7 @@ test('controlled sizes accept category-specific values and default to one size',
  assert.equal(parseCatalogQuery(new URLSearchParams('category=clothing&size=m')).size,'m');
 });
 test('model and size are uniquely constrained; migration preserves legacy references and balances',()=>{
- const schema=readFileSync('prisma/schema.prisma','utf8');assert.match(schema,/@@unique\(\[modelId, size\]\)/);
+ const schema=readFileSync('prisma/schema.prisma','utf8');assert.match(schema,/@@unique\(\[modelId, size, color\]\)/);
  const sql=readFileSync('prisma/migrations/20261026000000_sized_skus_search/migration.sql','utf8');
  assert.match(sql,/UNIQUE \("modelId","size"\)/);assert.match(sql,/SELECT "id","id","sku","quantity","version" FROM "ProductModel"/);
  assert.match(sql,/UPDATE "InventoryMovement" SET "skuId"="modelId"/);assert.doesNotMatch(sql,/DROP TABLE|DELETE FROM|"stock"/);
