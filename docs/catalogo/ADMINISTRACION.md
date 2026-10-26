@@ -18,13 +18,25 @@ La existencia se obtiene de ProductSku.quantity: null significa conteo pendiente
 
 ## Uso del panel
 
-1. En Productos, abrir **Modelos e importación**. Buscar por producto/diseño y filtrar categoría.
+1. En Productos, abrir **Modelos e importación**. `/admin/catalogo` tiene cabecera y distribución propias, sin la navegación de la tienda. Sus secciones son **Modelos**, **Variantes**, **Imágenes** e **Importación masiva**, navegables también con flechas, Inicio y Fin en las pestañas.
 2. Crear un borrador o editar un producto existente. Los códigos se conservan: no renumerar productos, modelos ni SKU. Al primer guardado de un artículo antiguo se asigna como código su UUID existente.
 3. Añadir diseños y sus variantes de talla/color. Cada combinación solo puede aparecer una vez por modelo. Una variante con movimientos conserva talla/color: para cambiarla, desactivar y crear otra.
 4. Subir PNG/JPEG/WebP desde la galería general, del modelo o de la variante. Primera imagen = principal; las flechas cambian el orden. Una variante sin imágenes hereda las del modelo y, después, las generales.
 5. Guardar y revisar el detalle público. El selector de talla/color identifica un SKU; carrito y WhatsApp incluyen modelo, talla, color, SKU e imagen elegida, también desde el botón móvil.
-6. Para cantidades, abrir **Inventario e historial**. La cuadrícula agrupa por modelo y color y muestra las tallas. Cada conteo requiere confirmación y queda registrado. No borrar SKU para retirarlos: desactivarlos.
+6. Para cantidades, usar el bloque de existencias de **Variantes** o abrir **Inventario e historial**. La cuadrícula agrupa por modelo y color y muestra las tallas. Cada conteo requiere confirmación y queda registrado. El precio se muestra y edita como precio compartido del producto; no existen precios independientes por SKU.
 7. Duplicar crea otro producto borrador y nuevos códigos; copia asociaciones visuales, pero ninguna cantidad ni movimiento. La selección masiva permite cambiar estado o categoría y rechaza el lote completo si una revisión/talla dejó de ser válida.
+
+El listado desaparece al abrir un producto. El editor muestra un único diseño seleccionado y solo los campos de la sección activa. Cambiar entre Modelos, Variantes e Imágenes conserva el mismo borrador. Se indican los cambios sin guardar; Cancelar/Volver y el paso al importador piden confirmación si hay cambios. Recargar/cerrar la pestaña también avisa. Los conteos se guardan por separado y permanecen bloqueados mientras haya cambios de producto sin guardar.
+
+**Quitar variante:** una variante nueva se quita del formulario de inmediato. Para una guardada se pide confirmación y se deja el retiro pendiente hasta **Guardar cambios**. Cancelar no modifica la base. Al guardar, la API bloquea el producto y los SKU afectados, vuelve a comprobar la revisión y decide en una transacción:
+
+- Con movimientos, pedidos del producto, existencias positivas o una versión de inventario anterior, desactiva el SKU; no modifica saldo, versión, movimientos ni pedidos.
+- Sin esas dependencias, elimina físicamente el SKU. Su código puede reutilizarse en un guardado posterior.
+- Un SKU desactivado conserva su código y su combinación talla/color. Usar **Mostrar desactivadas → Reactivar variante**, sin crear otro con el mismo código.
+- No se puede quitar y reutilizar el mismo código dentro del mismo guardado. Tampoco se pueden retirar IDs de otro producto.
+- Los pedidos heredados no guardan SKU: por precaución, cualquier pedido del producto protege todas sus variantes. Si no quedan variantes activas, el modelo se desactiva y esos SKU dejan de admitirse en la cotización, incluso en capture.
+
+**Duplicar modelo** crea una copia sin guardar dentro del producto: nombre y códigos nuevos, imágenes compartidas y ninguna cantidad/historial copiados. La copia se inicia inactiva para revisarla antes de publicarla. Las operaciones de edición y duplicación no se envían dos veces por un doble clic.
 
 No se borran fotografías al quitarlas de una galería. `pnpm media:orphans -- --dry-run` conserva todas las referencias generales, de modelos, variantes y miniaturas; únicamente informa posibles huérfanos. No implementa borrado automático. Revisa también cargas en curso y referencias externas antes de decidir una eliminación manual.
 
