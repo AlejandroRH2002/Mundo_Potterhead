@@ -65,8 +65,8 @@ test('ZIP paths, expanded size, XML entities, macros and workbook formulas are r
 test('inventory renders one row per SKU, explicit stock/count columns and disabled unchanged saves',async()=>{
  const {InventoryMatrix}=await vite.ssrLoadModule('/src/features/inventory/components/InventoryMatrix.tsx');
  const rows=[{id:'a',modelId:'m',productName:'Chamarra',name:'Diseño A',sku:'A-M',size:'m',color:'Rojo',quantity:0,version:1,active:true},{id:'b',modelId:'m',productName:'Chamarra',name:'Diseño A',sku:'A-L',size:'l',quantity:null,version:0,active:false}];
- let saves=0;const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows,busy:false,save:async()=>{saves++;return true;}}));
- assert.equal((html.match(/<tr/g)||[]).length,3);assert.match(html,/Stock actual/);assert.match(html,/Conteo físico/);assert.match(html,/Agotado/);assert.match(html,/Pendiente de conteo/);assert.match(html,/inactivo/);
+ let saves=0;const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows,busy:false,showCodes:true,save:async()=>{saves++;return true;}}));
+ assert.equal((html.match(/<tr/g)||[]).length,4);assert.match(html,/Existencias actuales/);assert.match(html,/Nueva cantidad/);assert.match(html,/Agotado/);assert.match(html,/Pendiente de conteo/);assert.match(html,/desactivada/);
  assert.equal((html.match(/disabled=""/g)||[]).length,2);assert.equal(saves,0);assert.match(html,/data-label="SKU"/);assert.equal((html.match(/id="count-(?:a|b)"/g)||[]).length,2);
 });
 
@@ -120,5 +120,14 @@ test('wizard screens separate general information, options, photos and final con
 
 test('employee inventory keeps internal codes behind advanced options',async()=>{
  const {InventoryMatrix}=await vite.ssrLoadModule('/src/features/inventory/components/InventoryMatrix.tsx');const row={id:'a',productName:'Producto',name:'Diseño',sku:'PRIVATE-CODE',size:'one',quantity:2,version:1,active:true};
- const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows:[row],busy:false,save:async()=>true,showCodes:false}));assert.doesNotMatch(html,/<code>|data-label="SKU"/);assert.match(html,/Existencias por opción/);assert.match(html,/Conteo físico/);
+ const html=renderToStaticMarkup(createElement(InventoryMatrix,{rows:[row],busy:false,save:async()=>true,showCodes:false}));assert.doesNotMatch(html,/<code>|data-label="SKU"/);assert.match(html,/Existencias por opción/);assert.match(html,/Nueva cantidad/);
+});
+
+test('inventory groups options by product and design without confusing identical names',async()=>{
+ const {groupInventory}=await import('../src/features/inventory/services/inventoryPresentation.ts');const rows=[{id:'a',productId:'p1',modelId:'m1',name:'Hogwarts'},{id:'b',productId:'p1',modelId:'m1',name:'Hogwarts'},{id:'c',productId:'p2',modelId:'m2',name:'Hogwarts'}];const groups=groupInventory(rows);assert.equal(groups.length,2);assert.deepEqual(groups[0].rows.map(r=>r.id),['a','b']);assert.deepEqual(groups[1].rows.map(r=>r.id),['c']);
+});
+test('persisted thumbnails render after reload and missing design photos keep their own placeholder',async()=>{
+ const {GalleryEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/GalleryEditor.tsx'),{ModelPhotos}=await vite.ssrLoadModule('/src/features/admin-catalog/components/ModelPhotos.tsx');const full='https://images.test.invalid/saved-full.webp',thumb='https://images.test.invalid/saved-thumb.webp';
+ const gallery=renderToStaticMarkup(createElement(GalleryEditor,{images:[full],thumbnails:{[full]:thumb},label:'Fotos',onChange:()=>{}}));assert.ok(gallery.includes('src="'+thumb+'"'));assert.ok(!gallery.includes('src="'+full+'"'));
+ const value=planImport([row]).products[0];value.product.imageThumbnails={[full]:thumb};value.models=[{...value.models[0],code:'A',images:[full]},{...value.models[0],code:'B',name:'Otro diseño',images:[]}];const html=renderToStaticMarkup(createElement(ModelPhotos,{value,onChange:()=>{},onSelect:()=>{},onBusy:()=>{}}));assert.equal(html.split('src="'+thumb+'"').length-1,1);assert.match(html,/product-placeholder.svg/);
 });
