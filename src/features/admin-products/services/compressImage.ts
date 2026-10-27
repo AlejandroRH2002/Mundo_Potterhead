@@ -1,4 +1,5 @@
 export async function compressImage(file: File, maxSide = 1200): Promise<File> {
+  if (!['image/png','image/jpeg','image/webp'].includes(file.type)||!file.size)throw new Error('Selecciona una fotografía PNG, JPEG o WebP.');
   if (file.size > 10 * 1024 * 1024) throw new Error('El archivo original no puede superar 10 MB.');
   let bitmap: ImageBitmap;
   try { bitmap = await createImageBitmap(file); } catch { throw new Error('El navegador no pudo decodificar esta imagen.'); }
