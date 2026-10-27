@@ -1,3 +1,4 @@
+import {checkedImageSource} from '@/shared/lib/imageSource';
 import { compressImage } from './compressImage';
 import { ApiError, requestJson } from '@/shared/lib/httpClient';
 import { imageTypes, mediaConfigSchema, uploadPolicySchema, completedUploadSchema } from '../../../../shared/mediaSchema';
@@ -39,6 +40,6 @@ async function uploadPreparedImage(file: File,config:{enabled:boolean;maxBytes:n
 }
 
 async function verifyPublicImage(url:string):Promise<void>{
- const parsed=new URL(url);if(parsed.protocol!=='https:'||parsed.username||parsed.password)throw new Error('La dirección pública de la fotografía no es válida.');
- await new Promise<void>((resolve,reject)=>{const image=new Image();const timer=window.setTimeout(()=>finish(false),20_000);const finish=(ok:boolean)=>{window.clearTimeout(timer);image.onload=null;image.onerror=null;if(ok)resolve();else reject(new Error('La fotografía se cargó pero no puede verse. Pide revisar la conexión de lectura de imágenes en Pages y la dirección pública configurada en la API.'));};image.onload=()=>finish(true);image.onerror=()=>finish(false);image.src=url;});
+ const source=checkedImageSource(url);if(!source)throw new Error('La dirección pública de la fotografía no es válida.');
+ await new Promise<void>((resolve,reject)=>{const image=new Image();const timer=window.setTimeout(()=>finish(false),20_000);const finish=(ok:boolean)=>{window.clearTimeout(timer);image.onload=null;image.onerror=null;if(ok)resolve();else reject(new Error('La fotografía se cargó pero no puede verse. Pide revisar la conexión de lectura de imágenes en Pages y la dirección pública configurada en la API.'));};image.onload=()=>finish(true);image.onerror=()=>finish(false);image.src=source;});
 }

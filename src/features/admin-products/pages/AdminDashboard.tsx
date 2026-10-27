@@ -1,3 +1,4 @@
+import {SafeImage} from '@/shared/components/SafeImage';
 import { adminLabels } from '../../../../shared/adminLabels';
 import { safeInternalPath } from '@/shared/lib/safeInternalPath';
 import { Link } from 'react-router-dom';
@@ -14,7 +15,7 @@ export function AdminDashboard() {
     <div className="admin-table-scroll overflow-x-auto"><table className="admin-table"><caption className="sr-only">{adminLabels.products}</caption>
       <thead><tr><th scope="col">Imagen</th><th scope="col">Producto</th><th scope="col">Precio y etiquetas</th><th scope="col">Acciones</th></tr></thead>
       <tbody>{admin.filtered.map(product => <tr key={product.id}>
-        <td className="admin-thumbnail"><img src={product.thumbnail??product.image} alt={product.name} loading="lazy" decoding="async" width={80} height={80} /></td>
+        <td className="admin-thumbnail"><SafeImage src={product.thumbnail??product.image} alt={product.name} loading="lazy" decoding="async" width={80} height={80} /></td>
         <th scope="row" className="admin-name"><h2 className="line-clamp-2 break-words font-bold">{product.name}</h2><p className="font-normal">{product.description}</p></th>
         <td><strong>{money(product.price)}</strong><div className="admin-chips">{product.isOnSale && <span>Oferta</span>}{product.subcategory && <span>{product.subcategory}</span>}<span>Disponibilidad a confirmar</span></div></td>
         <td><div className="admin-actions">

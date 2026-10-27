@@ -15,6 +15,7 @@ export async function createTestViteServer() {
       configureServer(server) { server.config.server.hmr = false; },
     }],
     optimizeDeps: { noDiscovery: true, entries: [], include: [] },
+    define: {'import.meta.env.VITE_IMAGE_ORIGINS':JSON.stringify('https://images.test.invalid')},
     appType: 'custom',
   });
   return server;

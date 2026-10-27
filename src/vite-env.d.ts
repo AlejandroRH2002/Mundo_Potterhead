@@ -10,3 +10,5 @@ interface ImportMetaEnv { readonly VITE_SITE_URL?: string; }
 declare const __HAS_BANNER_2X__: boolean;
 
 interface ImportMetaEnv { readonly VITE_MAP_QUERY?: string; readonly VITE_MAP_EMBED_URL?: string; }
+
+interface ImportMetaEnv { readonly VITE_IMAGE_ORIGINS?: string; }
