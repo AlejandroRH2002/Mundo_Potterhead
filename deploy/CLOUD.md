@@ -102,3 +102,7 @@ Una galería contiene fotos, no inventario. Para indicar tres unidades de un dis
 ## Inventario por modelo: despliegue separado
 
 El modo backend INVENTORY_MODE es opcional y predetermina capture. No activar enforce antes de completar conteos y publicar frontend compatible. Ver [secuencia controlada](../docs/auditoria-inventario/10-despliegue-seguro.md) y [rollback](../docs/auditoria-inventario/11-rollback.md). La migración nueva es aditiva; no modifica stock legado ni R2. No se ha aplicado en esta rama.
+
+## Diagnóstico de fotografías e inventario
+
+Ver [diagnóstico y prueba aislada de R2](../docs/catalogo/DIAGNOSTICO-FOTOS-INVENTARIO.md). MEDIA_STORAGE=inline permite desarrollo sin objetos, pero el administrador informa que las fotografías no están habilitadas; no se convierten en referencias Base64 de sustitución. Configurar s3 y un perfil aislado para probar fotografías. Readiness de la API no valida los permisos ni el binding R2. El estado real de migraciones en Neon debe consultarse antes del release; no se deduce del resultado local.
