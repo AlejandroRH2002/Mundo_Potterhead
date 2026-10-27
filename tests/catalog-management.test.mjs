@@ -131,3 +131,10 @@ test('persisted thumbnails render after reload and missing design photos keep th
  const gallery=renderToStaticMarkup(createElement(GalleryEditor,{images:[full],thumbnails:{[full]:thumb},label:'Fotos',onChange:()=>{}}));assert.ok(gallery.includes('src="'+thumb+'"'));assert.ok(!gallery.includes('src="'+full+'"'));
  const value=planImport([row]).products[0];value.product.imageThumbnails={[full]:thumb};value.models=[{...value.models[0],code:'A',images:[full]},{...value.models[0],code:'B',name:'Otro diseño',images:[]}];const html=renderToStaticMarkup(createElement(ModelPhotos,{value,onChange:()=>{},onSelect:()=>{},onBusy:()=>{}}));assert.equal(html.split('src="'+thumb+'"').length-1,1);assert.match(html,/product-placeholder.svg/);
 });
+
+test('unsafe API/model/gallery sources never reach the rendered image URL',async()=>{
+ const {SafeImage}=await vite.ssrLoadModule('/src/shared/components/SafeImage.tsx');
+ for(const source of ['javascript:alert(1)','data:image/svg+xml,<svg onload=alert(1)>','blob:https://images.test.invalid/forged','https://evil.test/photo.png','/images/%253Csvg%253E']){const html=renderToStaticMarkup(createElement(SafeImage,{src:source,alt:'Preview'}));assert.match(html,/src="\/images\/product-placeholder.svg"/);assert.doesNotMatch(html,/onload=|javascript:|data:|blob:|evil.test/);}
+ const {GalleryEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/GalleryEditor.tsx');const html=renderToStaticMarkup(createElement(GalleryEditor,{images:['https://images.test.invalid/a.webp'],thumbnails:{'https://images.test.invalid/a.webp':'javascript:alert(1)'},label:'Gallery',onChange:()=>{}}));assert.doesNotMatch(html,/src="javascript:/);assert.match(html,/src="\/images\/product-placeholder.svg"/);
+ const good=renderToStaticMarkup(createElement(SafeImage,{src:'https://images.test.invalid/products/a.webp',alt:'Preview'}));assert.match(good,/src="https:\/\/images.test.invalid\/products\/a.webp"/);
+});

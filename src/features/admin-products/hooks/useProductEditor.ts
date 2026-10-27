@@ -1,33 +1,14 @@
+import {checkedImageSource} from '@/shared/lib/imageSource';
 import { productImages } from '@/shared/lib/productMedia';
 import { productPlaceholder } from '../../../../shared/productSchema';
 import { normalizePriceInput } from '../services/priceInput';
-import { createImagePreview } from '../services/imagePreview';
+import { createImagePreview, releaseImagePreview } from '../services/imagePreview';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { productService, type ProductDraft } from '@/features/catalog/services/productService';
 import { uploadProductImage, thumbnailForImage } from '../services/mediaService';
 import { errorMessage } from '@/shared/lib/money';
 const empty: ProductDraft = { name: '', description: '', price: 0, image: '', category: 'accessories', universe: 'harry-potter', isOnSale: false };
-const sanitizeImageSource = (value: string) => {
-  const source = value.trim();
-  if (!source) return '';
-  if (source.includes('\\')) return '';
-  if (/\s/.test(source) || Array.from(source).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '';
-  try {
-    const decoded = decodeURIComponent(source);
-    if (/\s/.test(decoded) || Array.from(decoded).some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) return '';
-  } catch {
-    return '';
-  }
-  if (source.startsWith('blob:')) return source;
-  if (source.startsWith('/')) return source.startsWith('//') ? '' : source;
-  try {
-    const url = new URL(source);
-    return url.protocol === 'https:' ? url.toString() : '';
-  } catch {
-    return '';
-  }
-};
 export function useProductEditor(editing: boolean) {
   const params = useParams<{ id: string }>();
   const [search] = useSearchParams();
@@ -37,9 +18,11 @@ export function useProductEditor(editing: boolean) {
   const [priceInput, setPriceInput] = useState('');
   const [originalPriceInput, setOriginalPriceInput] = useState('');
   const [preview, setPreview] = useState('');
+  const previewResource=useRef<string>();
+  const replacePreview=(value:string)=>{releaseImagePreview(previewResource.current);previewResource.current=value;setPreview(value);};
   const mounted = useRef(true);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(()=>()=>releaseImagePreview(previewResource.current),[]);
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -68,7 +51,7 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'originalPrice') setOriginalPriceInput(normalizePriceInput(value));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
-    else if (name === 'image') { setPreview(''); setUploadFailure(''); setDraft(current => ({ ...current, image: sanitizeImageSource(value) })); }
+    else if (name === 'image') { replacePreview(''); setUploadFailure(''); setDraft(current => ({ ...current, image: value })); }
     else if (name === 'name') setDraft(current => ({ ...current, name: value }));
     else if (name === 'description') setDraft(current => ({ ...current, description: value }));
     else if (name === 'universe') setDraft(current => ({ ...current, universe: value as ProductDraft['universe'] }));
@@ -76,16 +59,16 @@ export function useProductEditor(editing: boolean) {
   const gallery = productImages({ ...draft, id: id ?? '' }).filter(image => image !== productPlaceholder && !!image);
   const setPrimary = (image: string) => {
     if (uploading || saving) return;
-    const safeImage = sanitizeImageSource(image);
-    setPreview('');
+    const safeImage=checkedImageSource(image);if(!safeImage){setError('La fuente de la imagen no está permitida.');return;}
+    replacePreview('');
     setDraft(current => ({ ...current, image: safeImage, images: productImages({ ...current, id: id ?? '' }).filter(url => url !== safeImage && url !== productPlaceholder).slice(0, 7) }));
   };
   const removeImage = (image: string) => {
     if (uploading || saving) return;
-    setPreview('');
+    replacePreview('');
     setDraft(current => {
       const remaining = productImages({ ...current, id: id ?? '' }).filter(url => url !== image && url !== productPlaceholder);
-      const primary = current.image === image ? sanitizeImageSource(remaining.shift() ?? '') : sanitizeImageSource(current.image);
+      const primary = current.image === image ? remaining.shift() ?? '' : current.image;
       return { ...current, image: primary, images: remaining.filter(url => url !== primary) };
     });
   };
@@ -95,7 +78,7 @@ export function useProductEditor(editing: boolean) {
     try {
       if (gallery.length + files.length > 8) throw new Error('Puedes guardar hasta 8 imágenes por producto.');
       setUploadFailure('');
-      setPreview(sanitizeImageSource(createImagePreview(files[0])));
+      replacePreview(createImagePreview(files[0]));
       setUploading(true);
       for (const file of files) {
         const image = await uploadProductImage(file);
@@ -106,7 +89,7 @@ export function useProductEditor(editing: boolean) {
           return { ...current, image: all[0], images: all.slice(1) };
         });
       }
-      setPreview('');
+      replacePreview('');
     } catch (cause: unknown) { if (mounted.current) { const message = errorMessage(cause); setUploadFailure(message); setError(message); } }
     finally { if (mounted.current) setUploading(false); }
   };
@@ -126,5 +109,5 @@ export function useProductEditor(editing: boolean) {
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSaving(false); }
   };
-  return { gallery, setPrimary, removeImage, priceInput, originalPriceInput, preview: sanitizeImageSource(preview || draft.image), draft, loading, saving, uploading, ready, error, change, upload, save };
+  return { gallery, setPrimary, removeImage, priceInput, originalPriceInput, preview: preview || draft.image, draft, loading, saving, uploading, ready, error, change, upload, save };
 }
