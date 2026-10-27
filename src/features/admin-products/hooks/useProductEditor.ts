@@ -68,7 +68,7 @@ export function useProductEditor(editing: boolean) {
     else if (name === 'originalPrice') setOriginalPriceInput(normalizePriceInput(value));
     else if (name === 'category') setDraft(current => ({ ...current, category: value as ProductDraft['category'], subcategory: null }));
     else if (name === 'subcategory') setDraft(current => ({ ...current, subcategory: value || null }));
-    else if (name === 'image') { setPreview(''); setUploadFailure(''); setDraft(current => ({ ...current, image: value })); }
+    else if (name === 'image') { setPreview(''); setUploadFailure(''); setDraft(current => ({ ...current, image: sanitizeImageSource(value) })); }
     else if (name === 'name') setDraft(current => ({ ...current, name: value }));
     else if (name === 'description') setDraft(current => ({ ...current, description: value }));
     else if (name === 'universe') setDraft(current => ({ ...current, universe: value as ProductDraft['universe'] }));
@@ -76,15 +76,16 @@ export function useProductEditor(editing: boolean) {
   const gallery = productImages({ ...draft, id: id ?? '' }).filter(image => image !== productPlaceholder && !!image);
   const setPrimary = (image: string) => {
     if (uploading || saving) return;
+    const safeImage = sanitizeImageSource(image);
     setPreview('');
-    setDraft(current => ({ ...current, image, images: productImages({ ...current, id: id ?? '' }).filter(url => url !== image && url !== productPlaceholder).slice(0, 7) }));
+    setDraft(current => ({ ...current, image: safeImage, images: productImages({ ...current, id: id ?? '' }).filter(url => url !== safeImage && url !== productPlaceholder).slice(0, 7) }));
   };
   const removeImage = (image: string) => {
     if (uploading || saving) return;
     setPreview('');
     setDraft(current => {
       const remaining = productImages({ ...current, id: id ?? '' }).filter(url => url !== image && url !== productPlaceholder);
-      const primary = current.image === image ? remaining.shift() ?? '' : current.image;
+      const primary = current.image === image ? sanitizeImageSource(remaining.shift() ?? '') : sanitizeImageSource(current.image);
       return { ...current, image: primary, images: remaining.filter(url => url !== primary) };
     });
   };
@@ -94,7 +95,7 @@ export function useProductEditor(editing: boolean) {
     try {
       if (gallery.length + files.length > 8) throw new Error('Puedes guardar hasta 8 imágenes por producto.');
       setUploadFailure('');
-      setPreview(createImagePreview(files[0]));
+      setPreview(sanitizeImageSource(createImagePreview(files[0])));
       setUploading(true);
       for (const file of files) {
         const image = await uploadProductImage(file);
