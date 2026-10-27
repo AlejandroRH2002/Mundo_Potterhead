@@ -1,3 +1,7 @@
+import { loadLocalDevelopment } from './localDevelopment.ts';
+import { createCatalogManagement } from './repositories/catalogManagement.ts';
+import { startupDiagnostic } from './lib/startupDiagnostic.ts';
+import { createInventory, inventoryMode, assertInventoryReady } from './repositories/inventory.ts';
 import { databaseDiagnostic } from './lib/databaseDiagnostic.ts';
 import { PrismaClient } from '@prisma/client';
 import { readConfig, ConfigurationError, configurationWarnings } from './config.ts';
@@ -11,19 +15,25 @@ import { audit } from './logger.ts';
 import { createCleanup, cleanExpiredRecords } from './cleanup.ts';
 
 async function start() {
+  if(await loadLocalDevelopment())audit({event:'warning',code:'LOCAL_DATABASE_PORT_ALIGNED',reason:'Conexión local alineada al puerto publicado por Compose; .env no modificado.'});
   const config = readConfig(process.env);
+  let mode;try{mode=inventoryMode(process.env);}catch{throw new ConfigurationError('INVENTORY_MODE debe ser capture o enforce.');}
   const media = createMediaStorage(process.env);
   for (const reason of configurationWarnings(config)) audit({ event: 'warning', code: 'STARTUP_CONFIGURATION_WARNING', reason });
   const db = new PrismaClient({ datasources: { db: { url: config.databaseUrl } } });
   await db.$connect();
+  try{await assertInventoryReady(db,mode);}catch(error){if(mode==='enforce' && error instanceof Error && error.message.startsWith('INVENTORY_MODE'))throw new ConfigurationError(error.message);throw error;}
+  const lowStockThreshold=Number(process.env.INVENTORY_LOW_STOCK_THRESHOLD??10);if(!Number.isInteger(lowStockThreshold)||lowStockThreshold<1||lowStockThreshold>100)throw new ConfigurationError('INVENTORY_LOW_STOCK_THRESHOLD debe estar entre 1 y 100.');
+  const products=createDatabaseProducts(db,mode,false,lowStockThreshold);
+  const adminProducts=createDatabaseProducts(db,mode,true,lowStockThreshold);
   const auth = await createDatabaseAuth(db, config.sessionSecret);
   // One additional connection per replica: probes cannot queue behind catalog traffic.
   const probeUrl=new URL(config.databaseUrl);probeUrl.searchParams.set('connection_limit','1');
   const probeDb=new PrismaClient({datasources:{db:{url:probeUrl.toString()}}});
   await probeDb.$connect();
-  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
-  const server = createApi({ auth, users: createDatabaseUsers(db), products: createDatabaseProducts(db), ...config,
-    limiter: databaseLoginLimiter(db, config.sessionSecret),
+  const health = createReadiness(async () => {try {await probeDb.$queryRaw`SELECT 1`;await probeDb.productSku.findFirst({select:{id:true,quantity:true,version:true}});}catch(error:unknown){databaseDiagnostic(error,'readiness.query');throw error;} }, {timeoutMs:process.env.NODE_ENV==='production'?4500:1500});
+  const server = createApi({ auth, users: createDatabaseUsers(db), products, adminProducts, inventory:createInventory(db,products,mode,lowStockThreshold), ...config,
+    catalogManagement:createCatalogManagement(db,config.sessionSecret),limiter: databaseLoginLimiter(db, config.sessionSecret),
     ready: () => health.ready(), media,
   });
   server.requestTimeout = 15_000;
@@ -46,7 +56,7 @@ async function start() {
     }), 5000);
   };
   process.once('SIGTERM', stop); process.once('SIGINT', stop);
-  server.on('error', () => { audit({ event: 'failure', code: 'LISTEN_FAILED' }); process.exit(1); });
+  server.on('error', error => { audit({ event: 'failure', ...startupDiagnostic(error) }); process.exit(1); });
   server.listen(config.port, config.host, () => audit({ event: 'startup' }));
 }
-void start().catch((error: unknown) => { audit({ event: 'failure', code: error instanceof ConfigurationError ? 'SERVER_CONFIGURATION' : error instanceof MediaConfigError ? 'MEDIA_CONFIGURATION' : 'STARTUP_FAILED_CHECK_ENV_AND_DATABASE', ...(error instanceof MediaConfigError || error instanceof ConfigurationError ? { reason: error.message } : {}) }); process.exit(1); });
+void start().catch((error:unknown)=>{audit({event:'failure',...(error instanceof ConfigurationError?{code:'SERVER_CONFIGURATION',reason:error.message}:error instanceof MediaConfigError?{code:'MEDIA_CONFIGURATION',reason:error.message}:startupDiagnostic(error))});process.exit(1);});

@@ -39,6 +39,7 @@ export function createMediaStorage(env: NodeJS.ProcessEnv, suppliedClient?: S3Cl
     maxBytes,
     async sign(input) {
       const parsed = uploadInputSchema.parse(input);
+      if(parsed.sha256){try{const existing=await client.send(new HeadObjectCommand({Bucket:config.S3_BUCKET,Key:'products/sha256-'+parsed.sha256+'.'+extension(parsed.contentType)}));if(existing.Metadata?.sha256===parsed.sha256&&existing.ContentLength===parsed.size&&existing.ContentType===parsed.contentType)return {publicUrl:publicUrl('products/sha256-'+parsed.sha256+'.'+extension(parsed.contentType))};}catch(error){const status=error&&typeof error==='object'&&'$metadata' in error?(error.$metadata as {httpStatusCode?:number}).httpStatusCode:undefined;if(status!==404 && !(error instanceof Error && ['NotFound','NoSuchKey'].includes(error.name)))throw error;}}
       const id = randomUUID();
       const payload = Buffer.from(JSON.stringify({ ...parsed, id, expires: Date.now() + 5 * 60_000 })).toString('base64url');
       const key = '_pending/' + id;
@@ -63,11 +64,13 @@ export function createMediaStorage(env: NodeJS.ProcessEnv, suppliedClient?: S3Cl
       for await (const chunk of object.Body as AsyncIterable<Uint8Array>) { length += chunk.length; if (length > maxBytes) throw new MediaValidationError('Imagen demasiado grande.'); chunks.push(Buffer.from(chunk)); }
       const bytes = Buffer.concat(chunks);
       if (bytes.length !== data.size || imageMime(bytes) !== data.contentType) throw new MediaValidationError('El contenido no coincide con el MIME declarado.');
-      const target = 'products/' + data.id + '.' + extension(data.contentType);
+      const hash=createHash('sha256').update(bytes).digest('hex');
+      if(data.sha256 && data.sha256!==hash)throw new MediaValidationError('La huella de la imagen no coincide.');
+      const target = 'products/sha256-'+hash+'.'+extension(data.contentType);
       // Copy only the object version that was inspected; a reused PUT URL cannot replace it.
       if (!object.ETag) throw new MediaValidationError('No se pudo confirmar la versión cargada.');
       await client.send(new CopyObjectCommand({ Bucket: config.S3_BUCKET, Key: target, CopySource: encodeURIComponent(config.S3_BUCKET + '/' + key), CopySourceIfMatch: object.ETag,
-        MetadataDirective: 'REPLACE', ContentType: data.contentType, CacheControl: 'public,max-age=31536000,immutable' }));
+        MetadataDirective: 'REPLACE', Metadata:{sha256:hash}, ContentType: data.contentType, CacheControl: 'public,max-age=31536000,immutable' }));
       const confirmed = await client.send(new HeadObjectCommand({ Bucket: config.S3_BUCKET, Key: target }));
       if (confirmed.ContentLength !== data.size) throw new MediaValidationError('No se pudo confirmar la imagen publicada.');
       await client.send(new DeleteObjectCommand({ Bucket: config.S3_BUCKET, Key: key }));

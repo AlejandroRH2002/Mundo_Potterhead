@@ -1,8 +1,12 @@
+import type { InventoryMode } from '../../shared/inventory.ts';
 import { taxonomySearch } from '../../shared/catalogSearch.ts';
 import { Prisma, type PrismaClient } from '@prisma/client';
 import type { CatalogQuery, Facets } from '../../shared/catalogQuery.ts';
-export function catalogWhere(query: CatalogQuery, ignore: string[] = []): Prisma.Sql {
+export function catalogWhere(query: CatalogQuery, ignore: string[] = [], mode?: InventoryMode, admin = false): Prisma.Sql {
  const clauses: Prisma.Sql[] = [];
+ if (mode && !admin) clauses.push(Prisma.sql`"archived" = false`);
+ if (mode === 'enforce' && !admin) clauses.push(Prisma.sql`EXISTS (SELECT 1 FROM "ProductModel" m JOIN "ProductSku" s ON s."modelId"=m."id" WHERE m."productId"="Product"."id" AND m."active" AND s."quantity">0 AND s."active")`);
+ if(query.size)clauses.push(Prisma.sql`EXISTS(SELECT 1 FROM "ProductModel" sm JOIN "ProductSku" ss ON ss."modelId"=sm."id" WHERE sm."productId"="Product"."id" AND sm."active" AND ss."size"=${query.size} AND ss."active")`);
  if (query.universe && !ignore.includes('universe')) clauses.push(Prisma.sql`"universe" = ${query.universe}`);
  if (query.category && !ignore.includes('category')) clauses.push(Prisma.sql`"category" = ${query.category}`);
  if (query.subcategory && !ignore.includes('subcategory')) clauses.push(Prisma.sql`"subcategory" = ${query.subcategory}`);
@@ -12,7 +16,7 @@ export function catalogWhere(query: CatalogQuery, ignore: string[] = []): Prisma
  if (query.q) {
   // Escape LIKE metacharacters so search remains literal, not a wildcard input.
   const pattern = '%' + query.q.replace(/[\\%_]/g, value => '\\' + value) + '%';
-  const alternatives=[Prisma.sql`"name" ILIKE ${pattern}`,Prisma.sql`COALESCE("description", '') ILIKE ${pattern}`];
+  const alternatives=[Prisma.sql`"searchText" ILIKE ${pattern}`,Prisma.sql`COALESCE("description", '') ILIKE ${pattern}`];
   const terms=taxonomySearch(query.q);
   if(terms.category.length)alternatives.push(Prisma.sql`"category" IN (${Prisma.join(terms.category)})`);
   if(terms.universe.length)alternatives.push(Prisma.sql`"universe" IN (${Prisma.join(terms.universe)})`);
@@ -27,14 +31,14 @@ export function catalogOrder(query: CatalogQuery): Prisma.Sql {
  if (query.sort === 'descuento') return Prisma.sql`CASE WHEN "isOnSale" AND "originalPrice" > "price" THEN ("originalPrice"-"price")/"originalPrice" ELSE 0 END DESC, "id" ASC`;
  return Prisma.sql`"createdAt" DESC, "id" ASC`;
 }
-export async function catalogFacets(db: Prisma.TransactionClient | PrismaClient, query: CatalogQuery): Promise<Facets> {
+export async function catalogFacets(db: Prisma.TransactionClient | PrismaClient, query: CatalogQuery, mode?: InventoryMode, admin = false): Promise<Facets> {
  const facets: Facets = { universe: {}, category: {}, subcategory: {} };
  const specs = [
   { field: 'universe' as const, column: Prisma.sql`"universe"`, ignore: ['universe','category','subcategory'] },
   { field: 'category' as const, column: Prisma.sql`"category"`, ignore: ['category','subcategory'] },
   { field: 'subcategory' as const, column: Prisma.sql`"subcategory"`, ignore: ['subcategory'] },
  ];
- const parts=specs.map(spec=>Prisma.sql`SELECT ${spec.field}::text AS field, ${spec.column} AS value, COUNT(*) AS count FROM "Product" ${catalogWhere(query,spec.ignore)} GROUP BY ${spec.column}`);
+ const parts=specs.map(spec=>Prisma.sql`SELECT ${spec.field}::text AS field, ${spec.column} AS value, COUNT(*) AS count FROM "Product" ${catalogWhere(query,spec.ignore,mode,admin)} GROUP BY ${spec.column}`);
  const rows=await db.$queryRaw<{field:keyof Facets;value:string|null;count:bigint}[]>(Prisma.sql`${Prisma.join(parts,' UNION ALL ')}`);
  for(const row of rows)if(row.value!=null)facets[row.field][row.value]=Number(row.count);
  return facets;

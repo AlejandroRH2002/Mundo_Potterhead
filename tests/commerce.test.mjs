@@ -64,3 +64,28 @@ test('corrupt storage recovers; failed writes do not report a false success', ()
   try { assert.throws(() => store.set([1]), /Quota/); assert.deepEqual(store.getSnapshot(), []); }
   finally { localStorage.setItem = write; }
 });
+
+test('model cart groups one SKU across photos and WhatsApp includes model and product link',()=>{
+ cartService.clear();const product={...draft,id:'model-fixture',models:[{id:'model-a',sku:'MP-a',name:'Modelo A',active:true,quantity:2,version:1,image:null}],inventoryMode:'enforce'};
+ cartService.add(product.id,product.image,'model-a');cartService.add(product.id,'/images/other.webp','model-a');
+ assert.equal(cartService.getSnapshot().length,1);assert.equal(cartService.getSnapshot()[0].quantity,2);
+ const resolved=resolveCart(cartService.getSnapshot(),[product]);assert.equal(resolved.lines.length,1);
+ const message=new URL(whatsappOrder(resolved.lines,'521234567890','https://shop.test.invalid')).searchParams.get('text');assert.match(message,/Modelo A/);assert.match(message,/MP-a/);assert.match(message,/https:\/\/shop.test.invalid\/product\/model-fixture/);assert.match(message,/no reserva/);
+ cartService.setQuantity(product.id,3,product.image,'model-a');assert.equal(resolveCart(cartService.getSnapshot(),[product]).missing.length,1);
+ cartService.remove(product.id,product.image,'model-a');assert.equal(cartService.getSnapshot().length,0);
+});
+test('legacy cart cannot guess a model when a product has several independently sold designs',()=>{
+ const models=[{id:'a',name:'A',active:true,quantity:3},{id:'b',name:'B',active:true,quantity:2}];
+ assert.equal(resolveCart([{productId:'legacy',quantity:1}],[{...draft,id:'legacy',models,inventoryMode:'enforce'}]).missing.length,1);
+});
+
+test('a removed last SKU never becomes a generic legacy cart line',()=>{
+ const product={...draft,id:'retired',models:[],inventoryMode:'capture'};
+ const result=resolveCart([{productId:'retired',skuId:'removed-sku',quantity:1}],[product]);assert.equal(result.lines.length,0);assert.equal(result.missing.length,1);
+ assert.equal(resolveCart([{productId:'retired',quantity:1}],[product]).missing.length,1);
+});
+
+test('cart accepts the selected design photo without merging it into the parent gallery',async()=>{
+ const product={id:'design-parent',name:'Parent',description:'Base',price:50,image:'/images/product-placeholder.svg',category:'clothing',universe:'harry-potter',inventoryMode:'capture',models:[{id:'design',sku:'MODEL',name:'Design A',active:true,image:'https://images.test.invalid/a.webp',images:['https://images.test.invalid/a.webp'],quantity:2,version:1,skus:[{id:'sku',code:'SKU-A',size:'m',quantity:2,active:true,version:1}]}]};
+ const entry={productId:product.id,skuId:'sku',quantity:1,selectedImage:product.models[0].image};assert.equal(resolveCart([entry],[product]).lines.length,1);assert.equal(resolveCart([{...entry,selectedImage:'https://images.test.invalid/wrong.webp'}],[product]).missing.length,1);
+});

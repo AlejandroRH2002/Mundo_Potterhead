@@ -19,6 +19,8 @@ const Contact = lazy(() => import('@/features/content/pages/Contact').then(modul
 const ProductDetail = lazy(() => import('@/features/catalog/pages/ProductDetail').then(module => ({ default: module.ProductDetail })));
 const OtherUniverses = lazy(() => import('@/features/catalog/pages/OtherUniverses').then(module => ({ default: module.OtherUniverses })));
 const Login = lazy(() => import('@/features/auth/pages/Login').then(module => ({ default: module.Login })));
+const CatalogManagement = lazy(() => import('@/features/admin-catalog/pages/CatalogManagement').then(module => ({default:module.CatalogManagement})));
+const Inventory = lazy(() => import('@/features/inventory/pages/Inventory').then(module => ({ default: module.Inventory })));
 const AdminUsers = lazy(() => import('@/features/admin-users/pages/AdminUsers').then(module => ({ default: module.AdminUsers })));
 const AdminDashboard = lazy(() => import('@/features/admin-products/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
 const Profile = lazy(() => import('@/features/auth/pages/Profile').then(module => ({ default: module.Profile })));
@@ -63,6 +65,9 @@ function AnimatedRoutes() {
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/catalogo" element={<CatalogManagement />} />
+          <Route path="/admin/catalogo/:productId" element={<CatalogManagement />} />
+          <Route path="/admin/inventario" element={<Inventory />} />
           <Route path="/admin/usuarios" element={<AdminUsers />} />
           <Route path="/products/new" element={<AddProduct />} />
           <Route path="/products/edit" element={<EditProduct />} />
@@ -84,12 +89,18 @@ function RouteFooter() {
   return <Footer />;
 }
 
+function RouteHeader() {
+  const { pathname } = useLocation();
+  if (pathname.replace(/\/+$/, '') === '/admin/catalogo' || pathname.startsWith('/admin/catalogo/')) return null;
+  return <><Announcement /><Navbar /></>;
+}
+
 export default function App() {
   return <BrowserRouter>
     <MotionConfig reducedMotion="user"><LazyMotion features={loadMotion} strict><AuthProvider>
       <StorefrontShell>
         <a className="skip-link" href="#main-content">Saltar al contenido</a>
-        <Announcement /><Navbar />
+        <RouteHeader />
         <main id="main-content" tabIndex={-1} className="flex-grow"><RouteMetadata /><ScrollManager/><AnimatedRoutes /></main>
         <RouteFooter />
       </StorefrontShell>

@@ -1,0 +1,3 @@
+productCode,name,description,price,category,subcategory,universe,status,modelCode,modelName,sku,size,color,images,quantity,inventoryMode,reason
+"CHA-GRY","Chamarra universitaria","Describe materiales y diseño.","780","clothing","chamarras-capas","harry-potter","draft","GRY-A","Diseño A","GRY-A-M","m","Burdeos","modelo-a.jpg","","",""
+"CHA-GRY","Chamarra universitaria","Describe materiales y diseño.","780","clothing","chamarras-capas","harry-potter","draft","GRY-B","Modelo B","GRY-B-M","m","Burdeos","modelo-b.jpg","","",""

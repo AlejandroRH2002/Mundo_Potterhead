@@ -1,0 +1,47 @@
+# Archivos de esta implementaci?n
+
+Inventario de archivos modificados o creados durante esta tarea; no incluye cambios de fases anteriores ya confirmados.
+
+- `README.md`
+- `deploy/CLOUD.md`
+- `docs/catalogo/ADMINISTRACION.md`
+- `docs/catalogo/ARCHIVOS.md`
+- `docs/catalogo/DESPLIEGUE.md`
+- `docs/catalogo/PR.md`
+- `docs/catalogo/RESULTADOS.md`
+- `docs/catalogo/plantilla.csv`
+- `docs/catalogo/plantilla.xlsx`
+- `package.json`
+- `pnpm-lock.yaml`
+- `prisma/migrations/20261026010000_catalog_management/migration.sql`
+- `prisma/schema.prisma`
+- `server/http/app.ts`
+- `server/index.ts`
+- `server/repositories/catalog.ts`
+- `server/repositories/catalogManagement.ts`
+- `server/repositories/inventory.ts`
+- `server/repositories/products.ts`
+- `server/scripts/checkCatalog.ts`
+- `server/scripts/mediaOrphans.ts`
+- `shared/catalogFiles.ts`
+- `shared/catalogManagement.ts`
+- `shared/inventory.ts`
+- `shared/seo.ts`
+- `src/app/App.tsx`
+- `src/features/admin-catalog/components/CatalogEditor.tsx`
+- `src/features/admin-catalog/components/CatalogImporter.tsx`
+- `src/features/admin-catalog/components/GalleryEditor.tsx`
+- `src/features/admin-catalog/hooks/useCatalogImport.ts`
+- `src/features/admin-catalog/hooks/useCatalogManagement.ts`
+- `src/features/admin-catalog/pages/CatalogManagement.tsx`
+- `src/features/admin-catalog/services/catalogService.ts`
+- `src/features/admin-products/pages/AdminDashboard.tsx`
+- `src/features/cart/pages/Cart.tsx`
+- `src/features/cart/services/cartService.ts`
+- `src/features/catalog/pages/ProductDetail.tsx`
+- `src/features/inventory/components/InventoryMatrix.tsx`
+- `src/features/inventory/pages/Inventory.tsx`
+- `src/index.css`
+- `tests/catalog-management.test.mjs`
+- `tests/persistence.test.mjs`
+- `tests/sizes.test.mjs`

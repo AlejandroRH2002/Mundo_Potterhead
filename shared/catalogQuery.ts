@@ -1,3 +1,4 @@
+import { validSize, sizeTaxonomy } from './sizes.ts';
 import { catalogImage } from './productImage.ts';
 import { matchesSearch } from './catalogSearch.ts';
 import { z } from 'zod';
@@ -6,12 +7,14 @@ import type { Product } from '../src/types/product.ts';
 const price = z.string().regex(/^\d+(\.\d{1,2})?$/).transform(Number).pipe(z.number().min(0).max(1_000_000));
 const integer = (max: number) => z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().max(max));
 export const catalogQuerySchema = z.object({
+ size:z.string().max(12).optional(),
  universe: z.enum(universes).optional(), category: z.enum(categories).optional(), subcategory: z.string().min(1).max(80).optional(),
  onSale: z.enum(['true', 'false']).transform(value => value === 'true').optional(),
  minPrice: price.optional(), maxPrice: price.optional(), q: z.string().trim().max(150).optional(),
  sort: z.enum(['novedad', 'precio-asc', 'precio-desc', 'descuento']).default('novedad'),
- page: integer(100_000).default('1'), pageSize: integer(100).default('24'),
+ page: integer(100_000).default(1), pageSize: integer(100).default(24),
 }).strict().superRefine((query, context) => {
+ if(query.size && (query.category ? !validSize(query.category,query.size) : !Object.keys(sizeTaxonomy).some(category=>validSize(category,query.size!))))context.addIssue({code:'custom',path:['size'],message:'Talla inválida.'});
  if (query.subcategory && (!query.category || !belongsToCategory(query.category, query.subcategory))) context.addIssue({ code: 'custom', path: ['subcategory'], message: 'Selecciona una subcategoría de la categoría indicada.' });
  if (query.minPrice !== undefined && query.maxPrice !== undefined && query.minPrice > query.maxPrice) context.addIssue({ code: 'custom', path: ['maxPrice'], message: 'El máximo debe ser mayor o igual al mínimo.' });
 });
@@ -41,7 +44,7 @@ export function parseCatalogUrl(params: URLSearchParams, legacyUniverse?: Produc
 }
 export const discount = (product: Product): number => product.isOnSale && product.originalPrice && product.originalPrice > product.price ? (product.originalPrice - product.price) / product.originalPrice : 0;
 export function matchesCatalog(product: Product, query: CatalogQuery, ignore: string[] = []): boolean {
- return (ignore.includes('universe') || !query.universe || product.universe === query.universe) &&
+ return (!query.size || product.models?.some(model=>model.skus?.some(sku=>sku.size===query.size))===true) && (ignore.includes('universe') || !query.universe || product.universe === query.universe) &&
   (ignore.includes('category') || !query.category || product.category === query.category) &&
   (ignore.includes('subcategory') || !query.subcategory || product.subcategory === query.subcategory) &&
   (query.onSale === undefined || Boolean(product.isOnSale) === query.onSale) &&

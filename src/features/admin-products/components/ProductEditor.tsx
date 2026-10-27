@@ -8,7 +8,7 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
   return <section className="shop-page admin-page"><Link className="shop-link" to="/admin">← {adminLabels.products}</Link>
     <h1 className="shop-title">{editing ? 'Editar producto' : 'Nuevo producto'}</h1>
     {editor.error && <p role="alert" className="shop-error">{editor.error}</p>}
-    {editor.loading ? <p role="status">Cargando producto…</p> : <form aria-busy={editor.saving || editor.uploading} className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
+    {editor.loading ? <p role="status">Cargando producto…</p> : <><p>Las existencias se administran por modelo en <Link className="shop-link" to="/admin/inventario">Inventario</Link>, sin modificar el saldo al guardar esta ficha.</p><form aria-busy={editor.saving || editor.uploading} className="shop-panel grid gap-5 md:grid-cols-2" onSubmit={event => { event.preventDefault(); void editor.save(); }}>
       <label>Nombre<input className="shop-input" name="name" required maxLength={150} value={editor.draft.name} onChange={editor.change} /></label>
       <label>Precio (MXN)<input className="shop-input" name="price" type="number" min="0.01" max="1000000" step="0.01" required value={editor.priceInput} onChange={editor.change} /></label>
       <label className="md:col-span-2">Descripción<textarea className="shop-input" name="description" required maxLength={5000} rows={4} value={editor.draft.description} onChange={editor.change} /></label>
@@ -23,6 +23,6 @@ export function ProductEditor({ editing = false }: { editing?: boolean }) {
       <div className="admin-gallery md:col-span-2" aria-label="Imágenes del producto">{editor.gallery.map((image, index) => <article key={image} className="admin-gallery-item"><img src={image} alt={'Imagen ' + (index + 1) + ' del producto'} width={160} height={160} loading="lazy" decoding="async"/><div className="admin-actions"><button type="button" className="shop-link" disabled={editor.uploading || editor.saving} aria-pressed={editor.draft.image === image} onClick={() => editor.setPrimary(image)}>{editor.draft.image === image ? 'Principal' : 'Hacer principal'}</button><button type="button" className="shop-link" disabled={editor.uploading || editor.saving} aria-label={'Quitar imagen ' + (index + 1)} onClick={() => editor.removeImage(image)}>Quitar</button></div></article>)}</div>
       <p className="md:col-span-2 text-sm" role="status">{editor.gallery.length} de 8 imágenes. Puedes mostrar distintos modelos en esta misma ficha; la imagen principal aparece en el catálogo.</p>
       <div className="admin-actions self-end"><button className="shop-button" aria-busy={editor.saving || editor.uploading} disabled={editor.saving || editor.uploading || !editor.ready}>{editor.uploading ? 'Cargando imagen…' : editor.saving ? 'Guardando…' : 'Guardar producto'}</button></div>
-    </form>}
+    </form></>}
   </section>;
 }

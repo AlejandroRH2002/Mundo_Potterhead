@@ -27,16 +27,18 @@ function search(query:CatalogQuery,signal?:AbortSignal){const key=serializeCatal
 export const productService = {
   search,
   subscribe: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; },
-  list: async (): Promise<Product[]> => {
+  list: async (admin = false): Promise<Product[]> => {
     const items: Product[] = [];
     let page = 1;
     while (true) {
-      const result = await search(parseCatalogQuery(new URLSearchParams({ page: String(page), pageSize: '100', sort: 'novedad' })));
+      const query = parseCatalogQuery(new URLSearchParams({ page: String(page), pageSize: '100', sort: 'novedad' }));
+      const result = admin ? await requestJson<CatalogPage>('/admin/products?' + serializeCatalogQuery(query)) : await search(query);
       items.push(...result.items);
       if (!result.items.length || items.length >= result.total) return items;
       page++;
     }
   },
+  getAdminById: async (id: string) => parseProduct(await requestJson<unknown>('/admin/products/' + encodeURIComponent(id))),
   getById: async (id: string, signal?: AbortSignal) => parseProduct(await requestJson<unknown>(`/products/${encodeURIComponent(id)}`, { signal })),
   create: async (draft: ProductDraft): Promise<Product> => {
     const product = parseProduct(await requestJson<unknown>('/products', { method: 'POST', body: JSON.stringify(validateDraft(draft)) }));

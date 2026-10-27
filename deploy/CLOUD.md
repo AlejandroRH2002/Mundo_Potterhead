@@ -1,12 +1,14 @@
 # Despliegue sin dominio: Pages + Render + Neon + R2
 
+Para actualizar modelos, colores e importación, seguir primero [el procedimiento de catálogo](../docs/catalogo/DESPLIEGUE.md): ensayo en una rama aislada de Neon, respaldo, migración, API completa y después frontend. Revisar los auto-deploys antes del merge; no publicar el nuevo editor sobre una API antigua.
+
 Guía verificada con documentación oficial el 2 de octubre de 2026. Los recursos y secretos se configuran manualmente; no se desplegó ni se conectó a una base cloud. Se mantiene catálogo → cotización por WhatsApp, sin pagos.
 
 ## 1. Variables por plataforma
 
 | Variable / binding | Obligatoria | Dónde | Valor / comprobación |
 | --- | --- | --- | --- |
-| NODE_VERSION / PNPM_VERSION | Sí para Pages | Pages, build | 24 / 11.21.0; Render también debe usar Node 24 y pnpm del package.json |
+| NODE_VERSION / PNPM_VERSION | Sí para Pages | Pages, build | 24.22.1 / 11.21.0; Render también debe usar Node 24.22.1 y pnpm del package.json |
 | VITE_API_URL | Sí | Pages, build | /api; nunca URL de Render en el navegador |
 | VITE_SITE_URL | Sí para publicar SEO | Pages, build | Origen HTTPS estable del proyecto *.pages.dev, sin ruta |
 | VITE_WHATSAPP_NUMBER, VITE_LEGAL_NAME, VITE_LEGAL_EMAIL | Sí para lanzamiento | Pages, build | Datos públicos reales; no credenciales |
@@ -96,3 +98,11 @@ Readiness 200 comprueba conexión; no garantiza que las migraciones estén aplic
 ### Siguiente fase: existencias por modelo
 
 Una galería contiene fotos, no inventario. Para indicar tres unidades de un diseño y dos de otro, cada modelo necesitará identificador estable, nombre, imagen asociada y stock; las tallas requerirán variantes de ese modelo. Las líneas del carrito y el mensaje de WhatsApp deberán conservar modelo/talla y validar cantidades contra stock. En este flujo de cotización no se descontará inventario automáticamente al abrir WhatsApp, porque no confirma una venta; el administrador actualizará existencias tras confirmar la operación. Esta fase todavía no está implementada.
+
+## Inventario por modelo: despliegue separado
+
+El modo backend INVENTORY_MODE es opcional y predetermina capture. No activar enforce antes de completar conteos y publicar frontend compatible. Ver [secuencia controlada](../docs/auditoria-inventario/10-despliegue-seguro.md) y [rollback](../docs/auditoria-inventario/11-rollback.md). La migración nueva es aditiva; no modifica stock legado ni R2. No se ha aplicado en esta rama.
+
+## Diagnóstico de fotografías e inventario
+
+Ver [diagnóstico y prueba aislada de R2](../docs/catalogo/DIAGNOSTICO-FOTOS-INVENTARIO.md). MEDIA_STORAGE=inline permite desarrollo sin objetos, pero el administrador informa que las fotografías no están habilitadas; no se convierten en referencias Base64 de sustitución. Configurar s3 y un perfil aislado para probar fotografías. Readiness de la API no valida los permisos ni el binding R2. El estado real de migraciones en Neon debe consultarse antes del release; no se deduce del resultado local.

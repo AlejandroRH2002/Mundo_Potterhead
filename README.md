@@ -6,7 +6,7 @@ Una tienda de catálogo para descubrir productos de Harry Potter y otros univers
 
 - Buscar productos y filtrar por universo, categoría, subcategoría, ofertas y precio.
 - Explorar una galería de hasta ocho imágenes por producto.
-- Elegir una imagen de referencia y añadirla a la cotización: distintas imágenes de una misma ficha se conservan como líneas separadas.
+- Elegir diseño y talla para añadir un SKU a la cotización; la imagen identifica el diseño y las cantidades se agrupan por SKU.
 - Ajustar cantidades, revisar el total estimado y abrir WhatsApp con productos e imágenes seleccionadas.
 - Consultar información de contacto, aviso de privacidad y términos de cotización.
 
@@ -14,9 +14,9 @@ El carrito se conserva en el navegador. Antes de enviarlo se consultan nuevament
 
 ## Administración
 
-El panel permite gestionar productos, galerías y cuentas de usuarios según los permisos asignados. Las imágenes PNG, JPEG y WebP se comprimen antes de subirlas; se puede elegir cuál aparece como principal en el catálogo.
+El panel permite gestionar productos, galerías y cuentas de usuarios según los permisos asignados. En **Modelos e importación** se administran diseños, variantes de talla/color, borradores y cargas CSV/Excel con simulación y confirmación. Las imágenes PNG, JPEG y WebP se comprimen antes de subirlas; se puede elegir cuál aparece como principal y asociarlas a modelos o variantes.
 
-La elección por imagen permite reconocer visualmente un diseño. Todavía no existe inventario por modelo, selección de talla ni precios independientes por variante. Para esa siguiente etapa se recomiendan modelos con nombres estables y tallas asociadas.
+Los modelos vendibles se identifican mediante un SKU estable y pueden tener existencias propias e historial de entradas, ventas y ajustes. La fotografía es una referencia visual, no una unidad de inventario. La incorporación es gradual: los conteos pendientes no se interpretan como cero y la restricción pública se activa por separado. Los SKU corresponden a diseño × talla; la imagen pertenece al diseño y cada SKU tiene su propio conteo. No hay reservas ni precios independientes por SKU.
 
 ## Diseño
 
@@ -39,7 +39,7 @@ React, TypeScript, Vite, Tailwind CSS y Framer Motion en el frontend. API Node.j
 
 ## Desarrollo
 
-Requiere Node.js 24, pnpm 11.21.0 y una base de desarrollo preparada. Instalar dependencias con pnpm install --frozen-lockfile y ejecutar pnpm dev. La configuración pública de ejemplo está en .env.example; no contiene credenciales reales.
+Requiere Node.js 24.22.1, pnpm 11.21.0 y una base de desarrollo preparada. Instalar dependencias con pnpm install --frozen-lockfile y ejecutar pnpm dev. La configuración pública de ejemplo está en .env.example; no contiene credenciales reales.
 
 | Comando | Uso |
 | --- | --- |
@@ -53,6 +53,16 @@ Requiere Node.js 24, pnpm 11.21.0 y una base de desarrollo preparada. Instalar d
 ## Documentación
 
 - [Despliegue y operación: Pages, Render, Neon y R2](deploy/CLOUD.md).
+- [Manual de inventario](docs/auditoria-inventario/08-manual-administrador-inventario.md).
+- [Modelos, variantes, galerías e importación](docs/catalogo/ADMINISTRACION.md).
+- [Validación en Neon, integración y despliegue del catálogo](docs/catalogo/DESPLIEGUE.md).
+- [Preparación del despliegue de inventario](docs/auditoria-inventario/10-despliegue-seguro.md).
 - [Referencia del diseño](deploy/design/FIGMA.md).
 
 Las instrucciones de infraestructura y base de datos se mantienen en la guía operativa. Los entornos privados, claves, bases locales y configuraciones específicas de despliegue quedan fuera de Git.
+
+## Diagnóstico local
+
+Compose publica PostgreSQL en loopback:15432 para evitar reservas de puertos de Windows. Ejecuta pnpm dev:check antes de pnpm dev; el ajuste de puerto es solo en memoria y no modifica .env. No expongas Vite a redes ni túneles públicos.
+
+[Informe de recuperación y revisión de dependencias](docs/security/2026-10-26.md).

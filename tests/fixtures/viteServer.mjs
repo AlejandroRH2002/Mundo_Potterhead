@@ -11,7 +11,7 @@ export async function createTestViteServer() {
     server: { hmr: false, middlewareMode: true },
     plugins: [{
       name: 'tests-no-network-hmr',
-      configResolved(config) { config.server.hmr = { server: transport }; },
+      configResolved(config) { config.server.hmr = { server: transport }; config.optimizeDeps.noDiscovery = true; config.optimizeDeps.include = []; config.optimizeDeps.entries = []; },
       configureServer(server) { server.config.server.hmr = false; },
     }],
     optimizeDeps: { noDiscovery: true, entries: [], include: [] },

@@ -42,7 +42,7 @@ test('catalog without query never selects a universe, including invalid bookmark
 
 test('concurrent database listings serialize consumers and aggregate facets once',async()=>{
  const {createDatabaseProducts}=await import('../server/repositories/products.ts');let active=0,max=0,facets=0;
- const db={$queryRaw:async sql=>{active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,4));active--;if(sql.text.includes('UNION ALL')){facets++;return [{field:'category',value:'clothing',count:1n}];}return [{items:[{...draft,id:'fixture',imageUrl:draft.image,originalPrice:null,isOnSale:false}],total:1n}];}};
+ const db={productModel:{findMany:async()=>[]},$queryRaw:async sql=>{active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,4));active--;if(sql.text.includes('UNION ALL')){facets++;return [{field:'category',value:'clothing',count:1n}];}return [{items:[{...draft,id:'fixture',imageUrl:draft.image,originalPrice:null,isOnSale:false}],total:1n}];}};
  const repository=createDatabaseProducts(db);const q=parseCatalogQuery(new URLSearchParams());const pages=await Promise.all(Array.from({length:6},()=>repository.search(q)));
  assert.equal(pages.length,6);assert.equal(max,1);assert.equal(facets,1);assert.equal(pages[0].facets.category.clothing,1);
  const auth=await createAuth([]);const api=createApi({auth,products:repository,origin:'http://localhost:5173',logger:()=>{}});await new Promise(resolve=>api.listen(0,'127.0.0.1',resolve));
