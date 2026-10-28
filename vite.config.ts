@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => {
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     server: {
       host: '127.0.0.1', port: 5173, strictPort: true,
+      watch: { ignored: ['**/.tools/**'] },
       proxy: { '/api': { target: 'http://127.0.0.1:' + port, changeOrigin: false } },
       fs: { strict: true, allow: [root], deny: ['.env', '.env.*', '**/*.pem', '**/*.crt', '**/.git/**', '**/server/**', '**/dist-server/**', '**/prisma/**', '**/tests/**', '**/node_modules.previous*/**'] },
     },
