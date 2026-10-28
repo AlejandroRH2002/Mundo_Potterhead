@@ -9,7 +9,7 @@ import { useAddToCart } from '@/features/cart/hooks/useCart';
 import { money } from '@/shared/lib/money';
 import { m, useReducedMotion } from 'framer-motion';
 import { taxonomy } from '../../../shared/catalogTaxonomy.ts';
-export function ProductCard({ product, priority = false, index = 0 }: { product: Product; priority?: boolean; index?: number }) {
+export function ProductCard({ product, priority = false, index = 0, mediaSizing }: { product: Product; priority?: boolean; index?: number; mediaSizing?:'natural' }) {
   const navigate=useNavigate();
   const models=product.models?.filter(model=>model.active)??[];
   const secondary = productImages(product)[1];
@@ -21,8 +21,8 @@ export function ProductCard({ product, priority = false, index = 0 }: { product:
   useEffect(()=>{ if(!noticeVersion)return; const timer=window.setTimeout(()=>setNotice(false),3500); return ()=>window.clearTimeout(timer); },[noticeVersion]);
   const percentage = product.isOnSale && product.originalPrice ? Math.round((1-product.price/product.originalPrice)*100) : 0;
   const label = taxonomy[product.category].find(item => item.slug === product.subcategory)?.label;
-  return <m.article className="product-card" initial={{ opacity: 0, y: reduce ? 0 : 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: reduce ? 0.14 : 0.45, delay: reduce ? 0 : (index % 3)*0.09 }} whileHover={reduce ? undefined : { y: -4 }}>
-    <Link className="product-image-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}><SafeImage src={product.thumbnail ?? product.image} alt={product.name} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" width={600} height={400} className="w-full aspect-[3/2] object-cover" />{secondary && <SafeImage className="product-secondary" src={secondary} alt="" loading="lazy" decoding="async" width={600} height={400}/>} {isNew && !product.isOnSale && <span className="sale-badge">Nuevo</span>}{product.isOnSale && <span className="sale-badge">Oferta{percentage > 0 ? ` · −${percentage}%` : ''}</span>}</Link>
+  return <m.article className={'product-card'+(mediaSizing==='natural'?' product-card-contained':'')} initial={{ opacity: 0, y: reduce ? 0 : 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.1 }} transition={{ duration: reduce ? 0.14 : 0.45, delay: reduce ? 0 : (index % 3)*0.09 }} whileHover={reduce ? undefined : { y: -4 }}>
+    <Link className="product-image-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}><SafeImage src={product.thumbnail ?? product.image} alt={product.name} loading={priority ? "eager" : "lazy"} fetchPriority={priority ? "high" : "auto"} decoding="async" width={600} height={400} className="w-full aspect-[3/2] object-cover" />{secondary && <SafeImage className="product-secondary" src={mediaSizing==='natural'?product.imageThumbnails?.[secondary]??secondary:secondary} alt="" loading="lazy" decoding="async" width={600} height={400}/>} {isNew && !product.isOnSale && <span className="sale-badge">Nuevo</span>}{product.isOnSale && <span className="sale-badge">Oferta{percentage > 0 ? ` · −${percentage}%` : ''}</span>}</Link>
     <div className="p-5 flex flex-col flex-1"><p className="product-universe">{product.universe==='harry-potter'?'Harry Potter':'Otros universos'}</p>
       {label && <span className="subcategory-chip">{label}</span>}
       <Link className="font-cinzel text-xl font-bold line-clamp-2" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}>{product.name}</Link>
