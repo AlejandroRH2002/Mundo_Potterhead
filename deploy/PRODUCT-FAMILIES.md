@@ -23,6 +23,12 @@ Los enlaces y carritos anteriores no se redirigen silenciosamente a otra selecci
 
 Una familia en borrador puede agruparse sin fotografías nuevas y permanece oculta. Publicar requiere revisar los diseños activos y completar fotografías y opciones; los conflictos estructurales siguen bloqueando la agrupación. Ver [guía actualizada de categorías, R2 de pruebas y release](CATALOG-RELEASE.md).
 
+La simulación reconoce las fotografías que ya pertenecen al diseño, sus opciones o, cuando solo hay un diseño, su producto original. No exige subirlas de nuevo ni hace peticiones al almacenamiento. Antes se reconocía la fotografía general en los orígenes, pero no en el destino; esto podía disparar el mensaje genérico de publicación aunque el producto ya tuviera fotografía.
+
+Sin elegir un cambio de publicación se conserva el estado del destino. Si le faltan requisitos para permanecer público, la simulación nombra el diseño y el requisito concreto. Puede seleccionarse **Guardar la familia como borrador, sin publicarla** y volver a simular: los pendientes de publicación pasan a advertencias, mientras categoría, universo, códigos y demás conflictos estructurales siguen bloqueando. Esta decisión es explícita y no activa ni desactiva diseños o tallas. Publicar y guardar como borrador son opciones excluyentes.
+
+Las cantidades sin registrar se conservan como null y se muestran como advertencias; no se convierten en cero. En capture no impiden agrupar un destino público que ya reúne sus requisitos de fotografía y opciones. Si el entorno ya usa enforce, conservar o solicitar publicación sigue exigiendo conteos completos: agrupar como borrador permite continuar sin eludir esa regla. El registro de una venta sin conteo continúa rechazándose en cualquier modo. Para confirmar, el empleado debe aceptar expresamente las advertencias y el estado resultante. No se añaden migraciones ni se modifica el historial de movimientos.
+
 ## Prueba y despliegue controlados
 
 1. En una copia desechable, aplicar `20261027000000_product_families` mediante `pnpm db:migrate`, con conexión explícita a esa copia. Nunca usar credenciales de producción en las pruebas.
