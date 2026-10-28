@@ -138,3 +138,13 @@ test('unsafe API/model/gallery sources never reach the rendered image URL',async
  const {GalleryEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/GalleryEditor.tsx');const html=renderToStaticMarkup(createElement(GalleryEditor,{images:['https://images.test.invalid/a.webp'],thumbnails:{'https://images.test.invalid/a.webp':'javascript:alert(1)'},label:'Gallery',onChange:()=>{}}));assert.doesNotMatch(html,/src="javascript:/);assert.match(html,/src="\/images\/product-placeholder.svg"/);
  const good=renderToStaticMarkup(createElement(SafeImage,{src:'https://images.test.invalid/products/a.webp',alt:'Preview'}));assert.match(good,/src="https:\/\/images.test.invalid\/products\/a.webp"/);
 });
+
+import {groupingRequestSchema,applyGroupingSchema} from '../shared/productGrouping.ts';
+test('product grouping requires distinct sources, a destination and explicit apply confirmation',()=>{
+ const request={key:crypto.randomUUID(),targetId:'target',sourceIds:['a','b']};assert.equal(groupingRequestSchema.safeParse(request).success,true);
+ for(const invalid of [{...request,sourceIds:[]},{...request,sourceIds:['a','a']},{...request,sourceIds:['target']},{...request,extra:true}])assert.equal(groupingRequestSchema.safeParse(invalid).success,false);
+ assert.equal(applyGroupingSchema.safeParse({request,token:'test',confirmed:false}).success,false);assert.equal(applyGroupingSchema.safeParse({request,token:'test',confirmed:true}).success,true);
+});
+test('grouping UI starts with simulation, not an immediate write or technical SKU selection',async()=>{
+ const {GroupExistingProducts}=await vite.ssrLoadModule('/src/features/admin-catalog/components/GroupExistingProducts.tsx');const html=renderToStaticMarkup(createElement(GroupExistingProducts,{onClose:()=>{},onApplied:()=>{},onOpen:()=>{}}));assert.match(html,/Simular agrupación/);assert.match(html,/Volver sin aplicar cambios/);assert.doesNotMatch(html,/Confirmar agrupación|<code>/);assert.match(html,/Producto de destino/);
+});

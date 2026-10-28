@@ -18,6 +18,8 @@ El panel permite gestionar productos, galerías y cuentas de usuarios según los
 
 Los modelos vendibles se identifican mediante un SKU estable y pueden tener existencias propias e historial de entradas, ventas y ajustes. La fotografía es una referencia visual, no una unidad de inventario. La incorporación es gradual: los conteos pendientes no se interpretan como cero y la restricción pública se activa por separado. Los SKU corresponden a diseño × talla; la imagen pertenece al diseño y cada SKU tiene su propio conteo. No hay reservas ni precios independientes por SKU.
 
+Para reunir fichas compatibles en una familia con diseños y tallas independientes, consulta [Agrupar productos existentes](deploy/PRODUCT-FAMILIES.md). La operación se simula antes de confirmar y conserva pedidos e inventario históricos.
+
 ## Diseño
 
 Interfaz responsive en crema, burdeos y dorado, con fuentes autoalojadas, navegación por teclado y transiciones ligeras que respetan la preferencia de movimiento reducido.
