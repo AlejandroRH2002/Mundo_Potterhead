@@ -16,6 +16,7 @@ model User {
   isActive  Boolean  @default(true)
   inventoryMovements InventoryMovement[]
   catalogImports CatalogImport[]
+  productGroupings ProductGrouping[]
   sessions  Session[]
   orders    Order[]
   createdAt DateTime @default(now())
@@ -39,6 +40,10 @@ model Product {
   status      String      @default("active")
   code        String?     @unique
   revision    Int         @default(0)
+  groupedIntoId String?
+  groupedInto Product? @relation("ProductFamilies",fields:[groupedIntoId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  groupedSources Product[] @relation("ProductFamilies")
+  groupingOperations ProductGrouping[]
   models      ProductModel[]
   imageUrl    String?
   images      String[]    @default([])
@@ -50,6 +55,7 @@ model Product {
   orderItems  OrderItem[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+  @@index([groupedIntoId])
   @@index([universe, category, subcategory])
   @@index([createdAt, id])
   @@index([isOnSale, price])
@@ -161,4 +167,16 @@ model CatalogImport {
  summary Json
  createdAt DateTime @default(now())
  @@index([createdAt, id])
+}
+
+model ProductGrouping {
+ id String @id
+ actorId String
+ actor User @relation(fields:[actorId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ targetId String
+ target Product @relation(fields:[targetId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ fingerprint String @unique
+ report Json
+ createdAt DateTime @default(now())
+ @@index([targetId,createdAt])
 }

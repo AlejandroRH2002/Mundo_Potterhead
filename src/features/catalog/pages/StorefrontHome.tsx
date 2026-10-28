@@ -10,7 +10,7 @@ const desktop = figmaAssets.homeDesktop, mobile = figmaAssets.homeMobile;
 const collections = [
  { title: 'Harry Potter', note: 'Castillos, varitas y reliquias', desktop: desktop.imgImagen, mobile: mobile.imgImagen, to: '/?universe=harry-potter#catalogo', className: '' },
  { title: 'Ropa y accesorios', note: 'Lleva tu historia', desktop: desktop.imgImagen1, mobile: mobile.imgImagen1, to: '/?category=clothing#catalogo', className: '' },
- { title: 'Hogar mágico', note: 'Detalles para tus espacios', desktop: desktop.imgImagen2, mobile: desktop.imgImagen2, to: '/?category=accessories#catalogo', className: 'figma-desktop-collection' },
+ { title: 'Hogar mágico', note: 'Detalles para tus espacios', desktop: desktop.imgImagen2, mobile: desktop.imgImagen2, to: '/?category=home#catalogo', className: 'figma-desktop-collection' },
  { title: 'Coleccionables', note: 'Piezas para descubrir', desktop: desktop.imgImagen3, mobile: desktop.imgImagen3, to: '/?category=toys#catalogo', className: 'figma-desktop-collection' },
  { title: 'Otros universos', note: 'Más mundos por descubrir', desktop: mobile.imgImagen2, mobile: mobile.imgImagen2, to: '/otros-universos', className: 'figma-mobile-collection' },
 ];

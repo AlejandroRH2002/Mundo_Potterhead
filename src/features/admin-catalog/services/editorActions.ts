@@ -1,4 +1,4 @@
-import type { ManagedProduct } from '../../../../shared/catalogManagement';
+import {gallerySchema,type ManagedProduct} from '../../../../shared/catalogManagement.ts';
 import { sizeTaxonomy } from '../../../../shared/sizes.ts';
 import { categories } from '../../../../shared/catalogTaxonomy.ts';
 
@@ -30,4 +30,11 @@ export function singleDesign(value:ManagedProduct,name='Único'):ManagedProduct{
 export function removeDesign(value:ManagedProduct,index:number):ManagedProduct{
  const model=value.models[index];if(!model)return value;
  return {...value,models:model.id?value.models.map((m,i)=>i===index?{...m,active:false,variants:m.variants.filter(s=>!!s.id).map(s=>({...s,active:false}))}:m):value.models.filter((_,i)=>i!==index)};
+}
+
+// A completed upload belongs to a stable design identity, never the currently selected row.
+export function assignModelPhoto(value:ManagedProduct,target:{productCode:string;modelCode:string},image:string):ManagedProduct {
+ gallerySchema.parse([image]);
+ if(value.code!==target.productCode||!value.models.some(model=>model.code===target.modelCode))throw new Error('El diseño cambió durante la carga. Vuelve a abrirlo y selecciona su fotografía.');
+ return {...value,models:value.models.map(model=>model.code===target.modelCode?{...model,images:[image,...model.images.filter(url=>url!==image)].slice(0,8)}:model)};
 }

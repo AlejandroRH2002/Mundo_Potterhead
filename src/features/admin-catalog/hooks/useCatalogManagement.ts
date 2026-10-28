@@ -14,7 +14,7 @@ export function newManagedProduct():ManagedProduct {
  const id=crypto.randomUUID();return {code:'P-'+id,status:'draft',product:{name:'',description:'',price:0,category:'clothing',subcategory:null,universe:'harry-potter',images:[]},models:[]};
 }
 export function useCatalogManagement(){
- const [items,setItems]=useState<CatalogRow[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[q,setQ]=useState(''),[category,setCategory]=useState('');
+ const [items,setItems]=useState<CatalogRow[]>([]),[total,setTotal]=useState(0),[page,setPage]=useState(1),[q,setQ]=useState(''),[category,setCategory]=useState(''),[subcategory,setSubcategory]=useState('');
  const [draft,setDraft]=useState<ManagedProduct>(),[selected,setSelected]=useState<string[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
  const [baseline,setBaseline]=useState('');
  const [loading,setLoading]=useState(true);
@@ -23,10 +23,10 @@ export function useCatalogManagement(){
  const begin=(value:ManagedProduct)=>{setDraft(value);setBaseline(JSON.stringify(value));setError('');setMessage('');};
  const close=()=>{if(dirty&&!window.confirm('Tienes cambios sin guardar. ¿Descartarlos y volver al listado?'))return false;setDraft(undefined);setBaseline('');setError('');return true;};
  useEffect(()=>{if(!dirty)return;const beforeUnload=(event:BeforeUnloadEvent)=>{event.preventDefault();event.returnValue='';};window.addEventListener('beforeunload',beforeUnload);return()=>window.removeEventListener('beforeunload',beforeUnload);},[dirty]);
- const refresh=useCallback(async()=>{const result=await catalogService.list(new URLSearchParams({page:String(page),...(q?{q}:{}),...(category?{category}:{})}));setItems(result.items);setTotal(result.total);},[page,q,category]);
+ const refresh=useCallback(async()=>{const result=await catalogService.list(new URLSearchParams({page:String(page),...(q?{q}:{}),...(category?{category}:{}),...(subcategory?{subcategory}:{})}));setItems(result.items);setTotal(result.total);},[page,q,category,subcategory]);
  const run=useCallback(async<T>(operation:()=>Promise<T>):Promise<T|undefined>=>{if(inFlight.current)return;inFlight.current=true;setBusy(true);setError('');setMessage('');try{return await operation();}catch(error){setError(errorMessage(error));}finally{inFlight.current=false;setBusy(false);}},[]);
  useEffect(()=>{let ignore=false;setLoading(true);void catalogService.list(new URLSearchParams({page:String(page),...(q?{q}:{}),...(category?{category}:{})})).then(value=>{if(!ignore){setItems(value.items);setTotal(value.total);setSelected([]);}}).catch(error=>{if(!ignore)setError(errorMessage(error));}).finally(()=>{if(!ignore)setLoading(false);});return()=>{ignore=true;};},[page,q,category]);
- return {items,total,page,setPage,q,setQ,category,setCategory,draft,setDraft,begin,close,dirty,selected,setSelected,busy,loading,error,message,run,refresh:()=>run(refresh),
+ return {items,total,page,setPage,q,setQ,category,setCategory,subcategory,setSubcategory,draft,setDraft,begin,close,dirty,selected,setSelected,busy,loading,error,message,run,refresh:()=>run(refresh),
   open:(id:string)=>run(async()=>{const value=await catalogService.get(id);begin(value);return value;}),
   save:(override?:ManagedProduct)=>run(async()=>{const value=override??draft;if(value){const parsed=managedProductSchema.safeParse(value);if(!parsed.success)throw new Error('Revisa '+parsed.error.issues.map(issue=>fieldLabel(issue.path)+': '+issue.message).slice(0,3).join(' · '));const removed=value.removedVariantIds??[];const saved=await catalogService.save(parsed.data);begin(saved);const remaining=new Set(saved.models.flatMap(model=>model.variants.map(sku=>sku.id)));const deactivated=removed.filter(id=>remaining.has(id)).length;setMessage(removed.length?`Guardado: ${removed.length-deactivated} opciones eliminadas y ${deactivated} desactivadas para conservar sus referencias.`:'Cambios guardados correctamente.');await refresh();return saved;}}),
   duplicate:(id:string)=>run(async()=>{const saved=await catalogService.duplicate(id);begin(saved);setMessage('Copia creada como borrador, sin existencias.');await refresh();return saved;}),

@@ -4,7 +4,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 import type { CatalogQuery, Facets } from '../../shared/catalogQuery.ts';
 export function catalogWhere(query: CatalogQuery, ignore: string[] = [], mode?: InventoryMode, admin = false): Prisma.Sql {
  const clauses: Prisma.Sql[] = [];
- if (mode && !admin) clauses.push(Prisma.sql`"archived" = false`);
+ if (mode && !admin) clauses.push(Prisma.sql`"archived" = false AND "groupedIntoId" IS NULL`);
  if (mode === 'enforce' && !admin) clauses.push(Prisma.sql`EXISTS (SELECT 1 FROM "ProductModel" m JOIN "ProductSku" s ON s."modelId"=m."id" WHERE m."productId"="Product"."id" AND m."active" AND s."quantity">0 AND s."active")`);
  if(query.size)clauses.push(Prisma.sql`EXISTS(SELECT 1 FROM "ProductModel" sm JOIN "ProductSku" ss ON ss."modelId"=sm."id" WHERE sm."productId"="Product"."id" AND sm."active" AND ss."size"=${query.size} AND ss."active")`);
  if (query.universe && !ignore.includes('universe')) clauses.push(Prisma.sql`"universe" = ${query.universe}`);
