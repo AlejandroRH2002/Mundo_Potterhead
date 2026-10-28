@@ -42,17 +42,17 @@ export function useCatalog(universe: Product['universe']) {
 }
 export function useProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const [state, setState] = useState<{ product?: Product; loading: boolean; error: string }>({ loading: true, error: '' });
+  const [state, setState] = useState<{ id?:string; product?: Product; loading: boolean; error: string }>({ id,loading: true, error: '' });
   useEffect(() => {
     const controller = new AbortController();
-    setState({ loading: true, error: '' });
+    setState({ id,loading: true, error: '' });
     if (!id) { setState({ loading: false, error: 'Producto no encontrado.' }); return; }
     void productService.getById(id, controller.signal).then(product => {
-      if (!controller.signal.aborted) setState({ product, loading: false, error: '' });
+      if (!controller.signal.aborted) setState({ id,product, loading: false, error: '' });
     }).catch((cause: unknown) => {
       if (!controller.signal.aborted) setState({ loading: false, error: errorMessage(cause) });
     });
     return () => controller.abort();
   }, [id]);
-  return state;
+  return state.id===id?state:{id,product:undefined,loading:true,error:''};
 }
