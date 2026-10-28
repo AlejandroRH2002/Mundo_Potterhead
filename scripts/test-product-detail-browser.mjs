@@ -28,6 +28,10 @@ server.on('request',async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
   const json=value=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));};
   if(url.pathname==='/api/auth/session'){json({user:null});return;}
+  if(url.pathname==='/api/products/old-product'){json({...fixture,resolvedFrom:{id:'old-product',modelId:'model-b'}});return;}
+  if(url.pathname==='/api/products/archived-product'){res.statusCode=404;json({message:'Producto no disponible.',code:'PRODUCT_UNAVAILABLE'});return;}
+  if(url.pathname==='/api/products/private-alias'){res.statusCode=404;json({message:'Producto no disponible.',code:'PRODUCT_UNAVAILABLE'});return;}
+  if(url.pathname==='/api/products/server-failure'){res.statusCode=503;json({message:'Servicio no disponible.'});return;}
   if(url.pathname==='/api/products/detail-fixture'){json(fixture);return;}
   if(url.pathname==='/api/products'){
    relatedRequests++;const count=Number(url.searchParams.get('pageSize')??24);
@@ -117,8 +121,15 @@ try{
  await evaluate('window.__detailQaReloadMarker=true');await call('Page.reload');
  await wait("typeof window.__detailQaReloadMarker==='undefined'&&document.querySelectorAll('.design-choice').length===3",'Product did not reload');
  const restored=await evaluate("import('/src/features/cart/services/cartService.ts').then(module=>module.cartService.getSnapshot())");assert.equal(restored[0].skuId,'sku-b-one');assert.equal(restored[0].selectedImage,'/test-media/b.svg');
+ for(const width of [390,1440]){
+  await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});
+  for(const [id,title] of [['missing-product','Producto no encontrado'],['archived-product','Producto no disponible'],['private-alias','Producto no disponible'],['server-failure','No pudimos cargar el producto']]){
+   await call('Page.navigate',{url:origin+'/product/'+id});await wait("document.querySelector('h1')?.textContent==='"+title+"'",'Error state remained loading: '+id);assert.equal(await evaluate("document.body.textContent.includes('Cargando producto')"),false);assert.ok(await evaluate("[...document.querySelectorAll('a')].some(link=>link.textContent==='Volver al catálogo')"));
+  }
+  await call('Page.navigate',{url:origin+'/product/old-product'});await wait("location.pathname==='/product/detail-fixture'&&document.querySelector('.design-choice[aria-pressed=true]')?.getAttribute('aria-label')?.includes('Reliquias')",'Historical resolution failed');assert.equal(await evaluate("new URLSearchParams(location.search).get('design')"),'model-b');assert.ok(await evaluate("document.querySelector('.product-gallery>img').getAttribute('src').includes('/b.svg')"));await evaluate("document.querySelector('.product-detail-actions button').click()");await wait("document.body.textContent.includes('Producto agregado al carrito.')",'Historical selection could not be added to the cart');assert.equal(await evaluate("import('/src/features/cart/services/cartService.ts').then(module=>module.cartService.getSnapshot().some(entry=>entry.productId==='old-product'))"),false);
+ }
  assert.deepEqual(browserErrors,[],'Unexpected browser runtime errors');
- console.log('Browser PASS: related 0/1/2/4; widths 320/360/390/768/1024/1440; uniform choices; no overflow; natural-size media; keyboard; design/title/gallery/SKU; cart/WhatsApp and reload persistence; no redundant related requests.');
+ console.log('Browser PASS: related 0/1/2/4; widths 320/360/390/768/1024/1440; uniform choices; no overflow; natural-size media; keyboard; design/title/gallery/SKU; cart/WhatsApp and reload persistence; 404/503/archive states without infinite loading; historical family/design redirect; no redundant related requests.');
 }catch(error){console.error(JSON.stringify({browserErrors}));try{console.error(JSON.stringify((await call('Runtime.evaluate',{expression:"({heading:document.querySelector('h1')?.textContent,focused:document.activeElement?.className,selected:[...document.querySelectorAll('.design-choice')].map(button=>button.getAttribute('aria-pressed'))})",returnByValue:true})).result.value));}catch{}throw error;}finally{
  try{await call('Browser.close',{},null);}catch{}socket?.close();
  if(browser.exitCode===null){await Promise.race([new Promise(resolve=>browser.once('exit',resolve)),pause(3000)]);if(browser.exitCode===null)browser.kill();}

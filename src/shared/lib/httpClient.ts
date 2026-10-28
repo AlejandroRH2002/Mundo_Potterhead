@@ -1,7 +1,8 @@
 export const SESSION_INVALID = 'mp:session-invalid';
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) { super(message); this.status = status; }
+  code?:string;
+  constructor(status: number, message: string, code?:string) { super(message); this.status = status;this.code=code; }
 }
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Ruta API inválida.');
@@ -26,7 +27,7 @@ export async function requestJson<T>(path: string, init?: RequestInit): Promise<
     const body: unknown = await response.json().catch(() => null);
     const message = body && typeof body === 'object' && 'message' in body && typeof body.message === 'string'
       ? body.message : 'No se pudo completar la solicitud.';
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message,body&&typeof body==='object'&&'code' in body&&typeof body.code==='string'?body.code:undefined);
   }
   return response.status === 204 ? undefined as T : response.json() as Promise<T>;
 }

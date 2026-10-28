@@ -280,9 +280,11 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
             const page = products.search ? await products.search(query) : filterCatalog(await products.list(), query);
             json(response, 200, { ...page, items: page.items.map(item => ({ ...item, image: catalogImage(item.id, item.image) })) }); return;
           }
-          const result = await products.get(id);
+          const resolution=products.resolvePublic?await products.resolvePublic(id):undefined;
+          if(resolution?.kind==='unavailable'){json(response,404,{message:'Producto no disponible.',code:'PRODUCT_UNAVAILABLE'});return;}
+          const result=resolution?(resolution.kind==='product'?resolution.product:null):await products.get(id);
           if (!result) throw new HttpError(404, 'Producto no encontrado.');
-          json(response, 200, Array.isArray(result) ? result.map(item => ({ ...item, image: catalogImage(item.id, item.image) })) : result); return;
+          json(response,200,{...result,...(resolution?.kind==='product'&&resolution.historical?{resolvedFrom:{id,...(resolution.modelId?{modelId:resolution.modelId}:{})}}:{})});return;
         }
         // Check authorization before parsing input or accessing mutation handlers.
         if (!user) throw new HttpError(401, 'Inicia sesión para continuar.');

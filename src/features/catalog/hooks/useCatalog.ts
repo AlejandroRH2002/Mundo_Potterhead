@@ -1,3 +1,4 @@
+import {ApiError} from '@/shared/lib/httpClient';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useParams } from 'react-router-dom';
 import { productService } from '../services/productService';
@@ -42,17 +43,17 @@ export function useCatalog(universe: Product['universe']) {
 }
 export function useProductDetail() {
   const { id } = useParams<{ id: string }>();
-  const [state, setState] = useState<{ id?:string; product?: Product; loading: boolean; error: string }>({ id,loading: true, error: '' });
+  const [state, setState] = useState<{ id?:string;unavailable?:boolean; product?: Product; loading: boolean; error: string }>({ id,loading: true, error: '' });
   useEffect(() => {
     const controller = new AbortController();
     setState({ id,loading: true, error: '' });
-    if (!id) { setState({ loading: false, error: 'Producto no encontrado.' }); return; }
+    if (!id) { setState({ id,loading: false, error: 'Producto no encontrado.' }); return; }
     void productService.getById(id, controller.signal).then(product => {
       if (!controller.signal.aborted) setState({ id,product, loading: false, error: '' });
     }).catch((cause: unknown) => {
-      if (!controller.signal.aborted) setState({ loading: false, error: errorMessage(cause) });
+      if (!controller.signal.aborted) setState(cause instanceof ApiError&&cause.status===404?{id,loading:false,error:'',unavailable:cause.code==='PRODUCT_UNAVAILABLE'}:{id,loading:false,error:errorMessage(cause)});
     });
     return () => controller.abort();
   }, [id]);
-  return state.id===id?state:{id,product:undefined,loading:true,error:''};
+  return state.id===id?state:{id,product:undefined,loading:true,error:'',unavailable:false};
 }

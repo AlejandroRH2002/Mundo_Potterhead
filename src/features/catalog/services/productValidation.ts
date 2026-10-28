@@ -8,8 +8,9 @@ export function validateDraft(draft: unknown): ProductDraft {
   if (!result.success) throw new Error(result.error.issues.find(issue => issue.path[0] === 'subcategory')?.message ?? 'Revisa el nombre, la descripción, los precios, la categoría y la imagen del producto.');
   return result.data;
 }
+const resolutionSchema=z.object({id:z.string().min(1).max(100),modelId:z.string().min(1).max(100).optional()}).strict();
 const modelsSchema=z.array(z.object({id:z.string(),sku:z.string(),name:z.string(),image:z.string().nullable(),active:z.boolean(),quantity:z.number().int().nonnegative().nullable(),version:z.number().int().nonnegative()}));
 export function isProduct(value: unknown): value is Product {
-  return !!value && typeof value === 'object' && 'id' in value && typeof value.id === 'string' && productDraftSchema.safeParse(value).success && (!('models' in value) || modelsSchema.safeParse(value.models).success) && (!('inventoryMode' in value) || value.inventoryMode === 'capture' || value.inventoryMode === 'enforce');
+  return !!value && typeof value === 'object' && 'id' in value && typeof value.id === 'string' && productDraftSchema.safeParse(value).success && (!('models' in value) || modelsSchema.safeParse(value.models).success) && (!('resolvedFrom' in value)||resolutionSchema.safeParse(value.resolvedFrom).success) && (!('inventoryMode' in value) || value.inventoryMode === 'capture' || value.inventoryMode === 'enforce');
 }
 export const isProductList = (value: unknown): value is Product[] => Array.isArray(value) && value.every(isProduct);

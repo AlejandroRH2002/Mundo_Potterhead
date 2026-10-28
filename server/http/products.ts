@@ -1,7 +1,10 @@
 import type { Product } from '../../src/types/product.ts';
 import type { CatalogQuery, CatalogPage } from '../../shared/catalogQuery.ts';
+export type PublicProductResolution = {kind:'product';product:Product;modelId?:string;historical?:boolean}|{kind:'unavailable'}|{kind:'not-found'};
+
 type Result<T> = T | Promise<T>;
 export interface ProductRepository {
+  resolvePublic?(id:string):Result<PublicProductResolution>;
   search?(query: CatalogQuery): Result<CatalogPage>;
   list(): Result<Product[]>;
   get(id: string): Result<Product | null | undefined>;
