@@ -19,6 +19,10 @@ No se combinan diseños o tallas por nombre ni precio. Dos diseños de Gryffindo
 
 Los enlaces y carritos anteriores no se redirigen silenciosamente a otra selección: las fichas agrupadas dejan de ser públicas y el cliente debe volver a elegir su diseño. No existe desagrupación automática; un cambio posterior requiere revisión específica.
 
+## Borradores y publicación
+
+Una familia en borrador puede agruparse sin fotografías nuevas y permanece oculta. Publicar requiere revisar los diseños activos y completar fotografías y opciones; los conflictos estructurales siguen bloqueando la agrupación. Ver [guía actualizada de categorías, R2 de pruebas y release](CATALOG-RELEASE.md).
+
 ## Prueba y despliegue controlados
 
 1. En una copia desechable, aplicar `20261027000000_product_families` mediante `pnpm db:migrate`, con conexión explícita a esa copia. Nunca usar credenciales de producción en las pruebas.
