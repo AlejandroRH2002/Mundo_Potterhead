@@ -37,6 +37,7 @@ try {
   run(process.execPath, ['scripts/migrate.mjs'], { env: migrationEnv }); // Idempotent release retry.
   console.log('Versioned migrations applied to disposable PostgreSQL.');
   run(process.execPath, ['--test', 'tests/persistence.test.mjs'], { env: testEnv, stdio: 'inherit' });
+  run(process.execPath, ['--test', 'tests/product-history.integration.mjs'], { env: {...testEnv,MP_HISTORY_ISOLATED:'true',NODE_ENV:'development'}, stdio: 'inherit' });
   if (imageName) {
     const apiEnv = { ...testEnv, DATABASE_URL: `postgresql://mp_test:${password}@${name}:5432/mp_test`, APP_ORIGIN: 'https://shop.test.invalid' };
     apiEnv.DIRECT_DATABASE_URL = apiEnv.DATABASE_URL;

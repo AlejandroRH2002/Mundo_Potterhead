@@ -31,7 +31,8 @@
     "media:orphans": "node server/scripts/mediaOrphans.ts",
     "dev:check": "node scripts/diagnose-local.mjs",
     "catalog:check": "node server/scripts/checkCatalog.ts",
-    "test:product-ui": "node scripts/test-product-detail-browser.mjs"
+    "test:product-ui": "node scripts/test-product-detail-browser.mjs",
+    "test:product-history": "node scripts/test-product-history.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1142.0",
