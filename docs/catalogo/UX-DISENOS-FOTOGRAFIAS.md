@@ -52,3 +52,16 @@ Las reglas de inventario y publicación del servidor siguen siendo la autoridad.
 No hay cambios de esquema, migraciones, contratos de API ni variables nuevas.
 Tras revisar la PR y completar la integración pendiente, el frontend se despliega
 por el procedimiento habitual de Pages. No requiere actualizar la base de datos.
+
+## Resultado de esta entrega
+
+Lint, typecheck, las 158 pruebas unitarias, build y build:web pasan. Chrome
+instalado comprueba los seis anchos, la tira de 1/5/20/50 diseños, teclado,
+desplazamiento táctil, selección para WhatsApp y el editor con fotografías
+simuladas: compresión, cola, cambio de diseño, guardado, recarga y reintento.
+Las respuestas de almacenamiento y guardado del fixture son simuladas; esto
+**no acredita una subida a R2 real ni persistencia en PostgreSQL**.
+
+Se intentó `pnpm test:integration`, pero Docker Desktop no estaba disponible:
+no pudo abrirse el motor Linux y no se creó PostgreSQL desechable. Debe repetirse
+con Docker iniciado antes de integrar. No se modificó ninguna base existente.
