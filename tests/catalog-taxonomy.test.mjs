@@ -29,3 +29,12 @@ test('backfill defaults to dry-run, batches, skips classified rows and is idempo
  const unknown=[];const dry=await backfillSubcategories(store,undefined,product=>unknown.push(product));assert.equal(dry.classified,203);assert.equal(dry.unclassified,1);assert.equal(writes,0);assert.equal(calls,4);assert.deepEqual(Object.keys(unknown[0]),['id','name']);
  const applied=await backfillSubcategories(store,true);assert.equal(applied.written,203);const again=await backfillSubcategories(store,true);assert.equal(again.written,0);assert.equal(writes,203);
 });
+
+
+test('expanded merchandise categories preserve legacy identifiers and validate every controlled subcategory',async()=>{
+ const {categories,categoryLabels}=await import('../shared/catalogTaxonomy.ts');const {validSize}=await import('../shared/sizes.ts');const {parseCatalogQuery,filterCatalog}=await import('../shared/catalogQuery.ts');
+ assert.equal(categories.length,11);assert.equal(new Set(categories).size,11);
+ for(const category of categories){assert.ok(categoryLabels[category]);assert.ok(taxonomy[category].some(item=>item.slug==='otros'));assert.ok(validSize(category,'one'));for(const entry of taxonomy[category])assert.equal(productDraftSchema.safeParse({...draft,category,subcategory:entry.slug}).success,true);const query=parseCatalogQuery(new URLSearchParams({category,subcategory:'otros'}));assert.equal(filterCatalog([{...draft,id:category,category,subcategory:'otros'}],query).total,1);assert.equal(productDraftSchema.safeParse({...draft,category,subcategory:'not-a-subcategory'}).success,false);}
+ for(const [category,subcategory] of [['accessories','joyeria'],['accessories','varitas'],['accessories','tazas-termos'],['accessories','papeleria'],['clothing','chamarras-capas'],['clothing','disfraces-kimonos'],['bags','bolsos-cangureras'],['toys','coleccionables']])assert.equal(productDraftSchema.safeParse({...draft,category,subcategory}).success,true);
+ assert.equal(productDraftSchema.safeParse({...draft,category:'home',subcategory:'anillos'}).success,false);assert.equal(validSize('home','m'),false);
+});

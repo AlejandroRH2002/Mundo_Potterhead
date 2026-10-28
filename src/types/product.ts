@@ -1,3 +1,4 @@
+import type {Category} from '../../shared/catalogTaxonomy';
 import type { SellableModel, InventoryMode } from '../../shared/inventory.ts';
 export interface Product {
   id: string;
@@ -13,6 +14,6 @@ export interface Product {
   image: string;
   images?: string[];
   subcategory?: string | null;
-  category: 'accessories' | 'clothing' | 'footwear' | 'toys' | 'bags';
+  category: Category;
   universe: 'harry-potter' | 'otros-universos';
 }
