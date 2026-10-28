@@ -1,0 +1,7 @@
+import {z} from 'zod';
+export const groupingRequestSchema=z.object({key:z.string().uuid(),targetId:z.string().min(1).max(100),sourceIds:z.array(z.string().min(1).max(100)).min(1).max(20),names:z.record(z.string().max(100),z.string().trim().min(1).max(100)).default({}),acceptSharedDescription:z.boolean().default(false),publishTarget:z.boolean().default(false)}).strict().superRefine((value,ctx)=>{if(new Set(value.sourceIds).size!==value.sourceIds.length||value.sourceIds.includes(value.targetId))ctx.addIssue({code:'custom',path:['sourceIds'],message:'Selecciona productos distintos y excluye el destino.'});});
+export type GroupingRequest=z.infer<typeof groupingRequestSchema>;
+export interface GroupingOption {id:string;code:string;size:string;color:string;quantity:number|null;active:boolean;version:number;images:string[]}
+export interface GroupingDesign {id:string;sourceId:string;sourceName:string;beforeName:string;name:string;code:string;active:boolean;images:string[];movements:number;options:GroupingOption[]}
+export interface GroupingReport {id?:string;valid:boolean;target:{id:string;name:string;price:number;description:string;status:string};sources:{id:string;name:string;description:string;orders:number}[];designs:GroupingDesign[];conflicts:string[];warnings:string[];orders:number;movements:number;expiresAt?:number}
+export const applyGroupingSchema=z.object({request:groupingRequestSchema,token:z.string().max(4096),confirmed:z.literal(true)}).strict();

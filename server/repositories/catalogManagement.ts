@@ -1,3 +1,4 @@
+import {createProductGrouping} from './productGrouping.ts';
 import {planDesignImport} from '../lib/designImport.ts';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { Prisma, type PrismaClient } from '@prisma/client';
@@ -24,6 +25,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
  }
  async function save(tx:Tx,input:ManagedProduct,merge=false){
   const existing=input.id?await tx.product.findUnique({where:{id:input.id}}):await tx.product.findFirst({where:{OR:[{code:input.code},{id:input.code}]}});
+  if(existing?.groupedIntoId)throw new InventoryError(409,'Este producto ya está agrupado. Edita la familia de destino.');
   if(input.id&&!existing)throw new InventoryError(404,'Producto no encontrado.');
   if(existing?.code&&existing.code!==input.code)throw new InventoryError(409,'El código de producto es estable y no se puede renumerar.');
   if(existing){await tx.$queryRaw`SELECT "id" FROM "Product" WHERE "id"=${existing.id} FOR UPDATE`;
@@ -31,7 +33,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
   }
   if(input.removedVariantIds?.length){
    if(!existing)throw new InventoryError(400,'Solo se pueden quitar variantes del producto guardado.');
-   const hasOrders=await tx.orderItem.count({where:{productId:existing.id}})>0;
+   const hasOrders=await tx.orderItem.count({where:{product:{OR:[{id:existing.id},{groupedIntoId:existing.id}]}}})>0;
    for(const id of [...input.removedVariantIds].sort()){
     await tx.$queryRaw`SELECT "id" FROM "ProductSku" WHERE "id"=${id} FOR UPDATE`;
     const sku=await tx.productSku.findUnique({where:{id},include:{model:{select:{productId:true}}}});
@@ -96,8 +98,10 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
   for(const line of plan.inventory){const existing=await tx.productSku.findUnique({where:{code:line.sku},select:{quantity:true}});if(line.mode==='increment'&&existing?.quantity==null)plan.errors.push({row:request.rows.findIndex(row=>row.sku===line.sku)+2,message:'Captura el conteo inicial antes de incrementar.'});if(line.mode==='increment'&&existing?.quantity!==undefined&&existing.quantity!==null&&existing.quantity+line.quantity>1_000_000)plan.errors.push({row:request.rows.findIndex(row=>row.sku===line.sku)+2,message:'El incremento excede el saldo máximo.'});}
   return plan;
  }
+ const grouping=createProductGrouping(db,secret);
  return {
-  async list(query:{page:number;q?:string;category?:string}){const where:Prisma.ProductWhereInput={...(query.q?{OR:[{name:{contains:query.q,mode:'insensitive'}},{code:{contains:query.q,mode:'insensitive'}},{models:{some:{name:{contains:query.q,mode:'insensitive'}}}}]}:{}),...(query.category?{category:query.category}:{})};const [items,total]=await Promise.all([db.product.findMany({where,skip:(query.page-1)*20,take:20,orderBy:{id:'asc'},select:{id:true,code:true,name:true,status:true,category:true,price:true,revision:true,imageUrl:true,models:{where:{active:true},take:1,orderBy:{createdAt:'asc'},select:{image:true}},_count:{select:{models:true}}}}),db.product.count({where})]);return {items:items.map(({_count,imageUrl,models,...item})=>({...item,image:imageUrl&&imageUrl!==productPlaceholder?imageUrl:models[0]?.image??productPlaceholder,designCount:_count.models,price:Number(item.price)})),total,page:query.page};},
+  groupPreview:grouping.preview,groupApply:grouping.apply,
+  async list(query:{page:number;q?:string;category?:string}){const where:Prisma.ProductWhereInput={groupedIntoId:null,...(query.q?{OR:[{name:{contains:query.q,mode:'insensitive'}},{code:{contains:query.q,mode:'insensitive'}},{models:{some:{name:{contains:query.q,mode:'insensitive'}}}}]}:{}),...(query.category?{category:query.category}:{})};const [items,total]=await Promise.all([db.product.findMany({where,skip:(query.page-1)*20,take:20,orderBy:{id:'asc'},select:{id:true,code:true,name:true,status:true,category:true,price:true,revision:true,imageUrl:true,models:{where:{active:true},take:1,orderBy:{createdAt:'asc'},select:{image:true}},_count:{select:{models:true}}}}),db.product.count({where})]);return {items:items.map(({_count,imageUrl,models,...item})=>({...item,image:imageUrl&&imageUrl!==productPlaceholder?imageUrl:models[0]?.image??productPlaceholder,designCount:_count.models,price:Number(item.price)})),total,page:query.page};},
   get:(id:string)=>load(db,id),
   async save(actorId:string,value:unknown){const input=managedProductSchema.parse(value);if(input.id&&input.revision===undefined)throw new InventoryError(400,'La edición requiere la revisión actual del producto.');return db.$transaction(async tx=>{await lock(tx,actorId);if(!input.id&&await tx.product.findUnique({where:{code:input.code}}))throw new InventoryError(409,'El código ya existe; abre el producto para editarlo.');const result=await save(tx,input);return load(tx,result.id);},{timeout:15000});},
   async duplicate(actorId:string,id:string){return db.$transaction(async tx=>{await lock(tx,actorId);const source=await load(tx,id);delete source.id;delete source.revision;source.code='COPY-'+randomUUID();source.status='draft';source.product.name+=' (copia)';for(const model of source.models){delete model.id;model.code='MP-'+randomUUID();for(const variant of model.variants){delete variant.id;variant.code='MP-'+randomUUID();}}const result=await save(tx,source);return load(tx,result.id);},{timeout:15000});},
