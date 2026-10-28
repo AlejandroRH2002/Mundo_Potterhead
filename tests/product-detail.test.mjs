@@ -6,6 +6,10 @@ import {createTestViteServer} from './fixtures/viteServer.mjs';
 import {detailFixture,relatedFixtures} from './fixtures/productDetail.mjs';
 const vite=await createTestViteServer();after(()=>vite.close());
 const {resolveProductDetail,commercialProductTitle}=await vite.ssrLoadModule('/src/features/catalog/services/productDetailSelection.ts');
+test('design strip renders 1, 5, 20 and 50 designs with thumbnails and accessible navigation',async()=>{
+ const {DesignPicker}=await vite.ssrLoadModule('/src/features/catalog/components/DesignPicker.tsx');
+ for(const count of [1,5,20,50]){const product=detailFixture();const models=Array.from({length:count},(_,index)=>({...product.models[0],id:'design-'+index,name:'Diseño '+index}));const html=renderToStaticMarkup(createElement(DesignPicker,{product,models,selectedId:'design-0',onSelect:()=>{}}));assert.equal((html.match(/class="design-choice"/g)??[]).length,count);assert.match(html,/Diseños anteriores/);assert.match(html,/Más diseños/);assert.match(html,/loading="lazy"/);assert.match(html,/aria-pressed="true"/);}
+});
 test('one design selects its only SKU and multiple designs wait for an explicit choice',()=>{
  const product=detailFixture();assert.equal(resolveProductDetail(product).requiresModel,true);const single={...product,models:[product.models[1]]};const selected=resolveProductDetail(single);assert.equal(selected.selectedSku.id,'sku-b-one');assert.equal(selected.requiresModel,false);assert.equal(selected.selectedImage,'/test-media/b.svg');assert.equal(commercialProductTitle(product.name,'General'),product.name);assert.equal(commercialProductTitle(product.name,product.name),product.name);
 });

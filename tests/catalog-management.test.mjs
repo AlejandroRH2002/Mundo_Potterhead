@@ -7,9 +7,46 @@ import {zipSync,unzipSync,strToU8,strFromU8} from 'fflate';
 import {managedProductSchema,planImport} from '../shared/catalogManagement.ts';
 import {parseCsv,recordsFromRows,csvFile,workbookFile,parseWorkbook,safeArchive,templateRow} from '../shared/catalogFiles.ts';
 import {removeVariant,addVariant,duplicateModel} from '../src/features/admin-catalog/services/editorActions.ts';
+import {PhotoQueue} from '../src/features/admin-catalog/services/photoQueue.ts';
+import {designReadiness} from '../src/features/admin-catalog/services/designReadiness.ts';
 
 const row={...templateRow,images:'https://images.test.invalid/a.webp'};
 const vite=await createTestViteServer();after(()=>vite.close());
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
+test('photo queue is serial, suppresses repeated clicks and preserves stable design targets',async()=>{
+ const completions=[],applied=[];let active=0,maximum=0;
+ const queue=new PhotoQueue(file=>{active++;maximum=Math.max(maximum,active);return new Promise(resolve=>completions.push(()=>{active--;resolve('https://images.test.invalid/'+file.name);}));},(target,image)=>applied.push({target,image}));
+ const file=new File(['png'],'first.png',{type:'image/png',lastModified:1});
+ queue.enqueue({productCode:'parent',modelCode:'first'},'Primero',file);queue.enqueue({productCode:'parent',modelCode:'first'},'Primero',file);
+ queue.enqueue({productCode:'parent',modelCode:'second'},'Segundo',new File(['jpg'],'second.jpg',{type:'image/jpeg'}));
+ assert.deepEqual(queue.snapshot().map(job=>job.state),['uploading','pending']);completions.shift()();await settle();
+ assert.equal(applied[0].target.modelCode,'first');assert.equal(queue.snapshot()[0].file,undefined);completions.shift()();await settle();
+ assert.equal(maximum,1);assert.deepEqual(applied.map(item=>item.target.modelCode),['first','second']);assert.ok(queue.snapshot().every(job=>job.state==='ready'));queue.dispose();
+});
+test('storage failure retains the same retry job, never applies a failed image, and discards late completions',async()=>{
+ let attempts=0;const applied=[];let finish;
+ const queue=new PhotoQueue(async()=>{attempts++;if(attempts===1)throw Error('Almacenamiento sin respuesta');return 'https://images.test.invalid/retry.webp';},(target,image)=>applied.push(image));
+ const target={productCode:'parent',modelCode:'design'};queue.enqueue(target,'Diseño',new File(['x'],'photo.png'));await settle();
+ assert.equal(queue.snapshot()[0].state,'error');assert.equal(applied.length,0);const key=queue.snapshot()[0].key;queue.retry(key);queue.retry(key);await settle();assert.equal(attempts,2);assert.equal(applied.length,1);assert.equal(queue.snapshot().length,1);queue.dispose();
+ const abandoned=new PhotoQueue(()=>new Promise(resolve=>{finish=resolve;}),()=>assert.fail('Late upload attached after leaving editor'));abandoned.enqueue(target,'Diseño',new File(['x'],'late.png'));abandoned.dispose();finish('https://images.test.invalid/late.webp');await settle();
+});
+test('readiness separates optional color, publication requirements and stock without activating a draft',()=>{
+ const value=planImport([row]).products[0];const model=value.models[0];model.active=false;model.variants[0].color='';
+ const ready=designReadiness(value,model);assert.deepEqual(ready.publication,[]);assert.equal(ready.optional.length,1);assert.equal(ready.state,'Borrador o inactivo');assert.match(ready.sale,/existencias verificadas/);assert.equal(model.active,false);
+ model.images=[];model.variants=[];assert.deepEqual(designReadiness(value,model).publication,['Fotografía principal','Al menos una talla o presentación activa']);
+});
+test('retrying an association failure reuses a confirmed image without uploading it twice',async()=>{
+ let uploads=0,blocked=true,applications=0;
+ const queue=new PhotoQueue(async()=>{uploads++;return 'https://images.test.invalid/confirmed.webp';},()=>{if(blocked)throw Error('Revisa la galería');applications++;});
+ queue.enqueue({productCode:'parent',modelCode:'design'},'Diseño',new File(['x'],'photo.png'));await settle();assert.equal(queue.snapshot()[0].state,'error');assert.equal(queue.snapshot()[0].image,'https://images.test.invalid/confirmed.webp');
+ blocked=false;queue.retry(queue.snapshot()[0].key);await settle();assert.equal(uploads,1);assert.equal(applications,1);assert.equal(queue.snapshot()[0].state,'ready');queue.dispose();
+});
+test('editor explains draft publication separately from optional fields and saving',async()=>{
+ const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');const value=planImport([row]).products[0];value.status='draft';value.models[0].active=false;value.models[0].variants[0].color='';
+ const html=renderToStaticMarkup(createElement(CatalogEditor,{value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true,section:'variants'}));
+ assert.match(html,/Color sin especificar \(opcional\)/);assert.match(html,/Publicar diseño/);assert.match(html,/Los borradores no aparecen/);assert.match(html,/Guardar cambios/);
+ value.models[0].images=[];const missing=renderToStaticMarkup(createElement(CatalogEditor,{value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true,section:'variants'}));assert.match(missing,/Requisitos de publicación pendientes/);assert.match(missing,/Fotografía principal/);
+});
 test('editor sections render separate controls instead of mixing data, variants and galleries',async()=>{
  const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');
  const value=planImport([row]).products[0];const props={value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true};

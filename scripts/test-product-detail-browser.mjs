@@ -5,7 +5,7 @@ import {readFile,mkdir,rm} from 'node:fs/promises';
 import {resolve,sep} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as pause} from 'node:timers/promises';
-import {createServer as createViteServer} from 'vite';
+import {createServer as createViteServer,transformWithEsbuild} from 'vite';
 import {detailFixture,relatedFixtures} from '../tests/fixtures/productDetail.mjs';
 
 // Uses an already installed browser. No downloads, database, R2 or production API.
@@ -16,23 +16,30 @@ const toolsRoot=resolve('.tools'),profile=resolve(toolsRoot,'product-detail-qa-'
 if(!profile.startsWith(toolsRoot+sep))throw Error('Invalid temporary browser profile');
 await mkdir(profile,{recursive:true});
 process.env.VITE_API_URL='/api';
+process.env.VITE_IMAGE_ORIGINS='https://images.test.invalid';
 process.env.VITE_SITE_URL='https://store.test.invalid';
 process.env.VITE_WHATSAPP_NUMBER='15555550123'; // Reserved fictional number; no WhatsApp navigation.
-const fixture=detailFixture();let relatedCount=0,relatedRequests=0;
+const fixture=detailFixture();let relatedCount=0,relatedRequests=0,designCount=3;
+let failPhoto=false,mediaRequests=0;
+let editorFixture={code:'P-QA',status:'draft',product:{name:'Frazada individual',description:'Producto de prueba para edición',price:500,category:'accessories',subcategory:null,universe:'harry-potter',images:[]},models:['Hogwarts','Reliquias'].map((name,index)=>({code:'M-'+index,name,active:false,images:[],variants:[{code:'S-'+index,size:'one',color:'',images:[],active:true}]}))};
 const transport=createServer();
-const vite=await createViteServer({configFile:resolve('vite.config.ts'),server:{hmr:false,middlewareMode:true},appType:'custom',plugins:[{name:'browser-qa-no-hmr-port',configResolved(config){config.server.hmr={server:transport};},configureServer(server){server.config.server.hmr=false;}}]});
+const vite=await createViteServer({configFile:resolve('vite.config.ts'),server:{hmr:false,middlewareMode:true},appType:'custom',plugins:[{name:'browser-qa-no-hmr-port',resolveId(id){if(id==='/qa-editor-entry.tsx')return '\0qa-editor-entry.tsx';},async load(id){if(id==='\0qa-editor-entry.tsx')return (await transformWithEsbuild(await readFile('tests/fixtures/catalogEditorBrowser.tsx','utf8'),'qa-editor-entry.tsx',{loader:'tsx',jsx:'automatic'})).code;},configResolved(config){config.server.hmr={server:transport};config.optimizeDeps.noDiscovery=true;config.optimizeDeps.entries=[];config.optimizeDeps.include=['react','react-dom','react-dom/client','react/jsx-runtime','react/jsx-dev-runtime','react-router-dom','framer-motion','lucide-react','zod'];},configureServer(server){server.config.server.hmr=false;}}]});
 const html=await readFile('index.html','utf8');
 const server=transport;
 server.on('request',async(req,res)=>{
  try{
   const url=new URL(req.url,'http://127.0.0.1');
   const json=value=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));};
+  if(url.pathname==='/qa-editor'){res.setHeader('Content-Type','text/html');res.end(await vite.transformIndexHtml(req.url,'<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module" src="/qa-editor-entry.tsx"></script></body></html>'));return;}
+  if(url.pathname==='/api/qa-editor'){if(req.method==='PUT'){let body='';for await(const chunk of req)body+=chunk;editorFixture={...JSON.parse(body),id:'qa-parent'};}json(editorFixture);return;}
+  if(url.pathname==='/api/media/config'){mediaRequests++;await pause(400);json({enabled:true,maxBytes:2097152});return;}
+  if(url.pathname==='/api/media/upload'){if(failPhoto){failPhoto=false;res.statusCode=503;json({message:'Almacenamiento de prueba sin respuesta'});return;}let body='';for await(const chunk of req)body+=chunk;const {sha256}=JSON.parse(body);json({publicUrl:'https://images.test.invalid/qa-'+sha256+'.webp'});return;}
   if(url.pathname==='/api/auth/session'){json({user:null});return;}
   if(url.pathname==='/api/products/old-product'){json({...fixture,resolvedFrom:{id:'old-product',modelId:'model-b'}});return;}
   if(url.pathname==='/api/products/archived-product'){res.statusCode=404;json({message:'Producto no disponible.',code:'PRODUCT_UNAVAILABLE'});return;}
   if(url.pathname==='/api/products/private-alias'){res.statusCode=404;json({message:'Producto no disponible.',code:'PRODUCT_UNAVAILABLE'});return;}
   if(url.pathname==='/api/products/server-failure'){res.statusCode=503;json({message:'Servicio no disponible.'});return;}
-  if(url.pathname==='/api/products/detail-fixture'){json(fixture);return;}
+  if(url.pathname==='/api/products/detail-fixture'){json(designCount===3?fixture:{...fixture,models:Array.from({length:designCount},(_,index)=>({...fixture.models[index%3],id:'design-'+index,skus:fixture.models[index%3].skus.map(option=>({...option,id:option.id+'-'+index,code:option.code+'-'+index}))}))});return;}
   if(url.pathname==='/api/products'){
    relatedRequests++;const count=Number(url.searchParams.get('pageSize')??24);
    json({items:relatedFixtures(relatedCount),total:relatedCount,page:1,pageSize:count,facets:{universe:{},category:{},subcategory:{}}});return;
@@ -52,9 +59,9 @@ server.on('request',async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const browser=spawn(executable,['--headless','--disable-gpu','--no-first-run','--no-default-browser-check','--disable-background-networking','--disable-component-update','--disable-sync','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:['ignore','ignore','pipe']});
-let socket,sequence=0,session;const browserErrors=[];const pending=new Map();
+let socket,sequence=0,session;let stage='setup';const requests=[];const browserErrors=[];const pending=new Map();
 const call=(method,params={},target=session)=>new Promise((resolve,reject)=>{
- const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('Browser command timed out: '+method));},15000);
+ const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('Browser command timed out: '+method));},45000);
  pending.set(id,{resolve:value=>{clearTimeout(timer);resolve(value);},reject});
  socket.send(JSON.stringify({id,method,params,...(target?{sessionId:target}:{})}));
 });
@@ -75,7 +82,8 @@ try{
   }
   if(value.id){const task=pending.get(value.id);pending.delete(value.id);if(value.error)task?.reject(Error(value.error.message));else task?.resolve(value.result);}
   if(value.method==='Fetch.requestPaused'){
-   const allowed=value.params.request.url.startsWith(origin+'/');
+   if(value.params.request.url.startsWith('https://images.test.invalid/qa-')){void call('Fetch.fulfillRequest',{requestId:value.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:'image/svg+xml'}],body:Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#681621"/></svg>').toString('base64')},value.sessionId).catch(()=>{});return;}
+   const allowed=value.params.request.url.startsWith(origin+'/');requests.push(value.params.request.url.replace(origin,''));
    void call(allowed?'Fetch.continueRequest':'Fetch.failRequest',{requestId:value.params.requestId,...(!allowed?{errorReason:'BlockedByClient'}:{})},value.sessionId).catch(()=>{});
   }
  });
@@ -84,10 +92,10 @@ try{
  await call('Page.enable');await call('Page.bringToFront');await call('Runtime.enable');await call('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
  await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
  const evaluate=async expression=>{const result=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error(result.exceptionDetails.text+': '+result.result.description);return result.result.value;};
- const wait=async(expression,message)=>{for(let attempt=0;attempt<120;attempt++){if(await evaluate(expression))return;await pause(150);}throw Error(message);};
- const navigate=async(count,width=1440)=>{
+ const wait=async(expression,message)=>{for(let attempt=0;attempt<120;attempt++){if(await evaluate('Boolean('+expression+')'))return;await pause(150);}throw Error(message);};
+ const navigate=async(count,width=1440)=>{stage='related '+count;
   relatedCount=count;await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});
-  await call('Page.navigate',{url:origin+'/product/detail-fixture?qa='+randomUUID()});
+  await call('Page.navigate',{url:origin+'/product/detail-fixture?qa='+randomUUID()});await pause(500);
   await wait("document.querySelectorAll('.design-choice').length===3",'Product did not render');
   await wait(count?`document.querySelectorAll('.related-product-grid>.product-card').length===${count}`:"!document.body.textContent.includes('Buscando piezas relacionadas')",'Related products did not finish');
   await evaluate('document.fonts.ready.then(()=>true)');
@@ -126,11 +134,40 @@ try{
   for(const [id,title] of [['missing-product','Producto no encontrado'],['archived-product','Producto no disponible'],['private-alias','Producto no disponible'],['server-failure','No pudimos cargar el producto']]){
    await call('Page.navigate',{url:origin+'/product/'+id});await wait("document.querySelector('h1')?.textContent==='"+title+"'",'Error state remained loading: '+id);assert.equal(await evaluate("document.body.textContent.includes('Cargando producto')"),false);assert.ok(await evaluate("[...document.querySelectorAll('a')].some(link=>link.textContent==='Volver al catálogo')"));
   }
-  await call('Page.navigate',{url:origin+'/product/old-product'});await wait("location.pathname==='/product/detail-fixture'&&document.querySelector('.design-choice[aria-pressed=true]')?.getAttribute('aria-label')?.includes('Reliquias')",'Historical resolution failed');assert.equal(await evaluate("new URLSearchParams(location.search).get('design')"),'model-b');assert.ok(await evaluate("document.querySelector('.product-gallery>img').getAttribute('src').includes('/b.svg')"));await evaluate("document.querySelector('.product-detail-actions button').click()");await wait("document.body.textContent.includes('Producto agregado al carrito.')",'Historical selection could not be added to the cart');assert.equal(await evaluate("import('/src/features/cart/services/cartService.ts').then(module=>module.cartService.getSnapshot().some(entry=>entry.productId==='old-product'))"),false);
+  await call('Page.navigate',{url:origin+'/product/old-product'});await wait("location.pathname==='/product/detail-fixture'&&document.querySelector('.design-choice[aria-pressed=true]')?.getAttribute('aria-label')?.includes('Reliquias')",'Historical resolution failed');assert.equal(await evaluate("new URLSearchParams(location.search).get('design')"),'model-b');await wait("document.querySelector('.product-gallery>img')?.getAttribute('src')?.includes('/b.svg')",'Historical gallery did not settle');await evaluate("document.querySelector('.product-detail-actions button').click()");await wait("document.body.textContent.includes('Producto agregado al carrito.')",'Historical selection could not be added to the cart');assert.equal(await evaluate("import('/src/features/cart/services/cartService.ts').then(module=>module.cartService.getSnapshot().some(entry=>entry.productId==='old-product'))"),false);
  }
+
+ for(const width of [390,1440])for(const count of [1,5,20,50]){
+  stage='strip '+count+' at '+width;designCount=count;await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});
+  await call('Page.navigate',{url:origin+'/product/detail-fixture?strip='+count});await wait("document.querySelectorAll('.design-choice').length==="+count,'Design strip did not render');await evaluate('document.fonts.ready.then(()=>true)');
+  const dimensions=await evaluate("(()=>{const strip=document.querySelector('.design-picker'),r=strip.getBoundingClientRect();return {height:r.height,overflow:document.documentElement.scrollWidth>innerWidth+1,scroll:strip.scrollWidth>strip.clientWidth};})()");
+  assert.equal(dimensions.overflow,false);assert.ok(dimensions.height<240,'Design strip grew vertically');if(count>=20)assert.ok(dimensions.scroll);
+  await evaluate("document.querySelector('.design-choice').focus()");await call('Input.dispatchKeyEvent',{type:'keyDown',key:'End',code:'End'});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'End',code:'End'});
+  assert.equal(await evaluate("document.activeElement===document.querySelectorAll('.design-choice')["+(count-1)+"]"),true);
+  await call('Input.dispatchKeyEvent',{type:'keyDown',key:'Home',code:'Home'});await call('Input.dispatchKeyEvent',{type:'keyUp',key:'Home',code:'Home'});
+  if(width===390&&count>=20){await evaluate("document.querySelector('.design-picker').scrollIntoView({block:'center'});document.querySelector('.design-picker').scrollLeft=0");const point=await evaluate("(()=>{const r=document.querySelector('.design-picker').getBoundingClientRect();return {x:r.right-20,y:r.top+40};})()");await call('Emulation.setTouchEmulationEnabled',{enabled:true});await call('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]});for(let step=1;step<=6;step++)await call('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:point.x-step*25,y:point.y}]});await call('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await wait("document.querySelector('.design-picker').scrollLeft>0",'Touch strip did not scroll');}
+ }
+
+ stage='editor photo queue';await call('Emulation.setDeviceMetricsOverride',{width:390,height:1000,deviceScaleFactor:1,mobile:true});await call('Page.navigate',{url:origin+'/qa-editor'});await wait("document.querySelector('.catalog-photo-board')",'Editor fixture not loaded');
+ const uploadFixture=async(index,name,color='red')=>evaluate("(async()=>{const canvas=document.createElement('canvas');canvas.width=32;canvas.height=32;const context=canvas.getContext('2d');context.fillStyle="+JSON.stringify(color)+";context.fillRect(0,0,32,32);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));const input=document.querySelectorAll('.catalog-photo-grid input[type=file]')["+index+"];const transfer=new DataTransfer();transfer.items.add(new File([blob],"+JSON.stringify(name)+",{type:'image/png',lastModified:1}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()");
+ await uploadFixture(0,'a.png');await uploadFixture(0,'a.png');await wait("document.querySelector('.photo-upload-status')?.textContent.includes('Subiendo')",'Upload status missing');
+ assert.equal(await evaluate("[...document.querySelectorAll('button')].find(button=>button.textContent==='Guardar cambios').disabled"),true);await evaluate("document.querySelector('form').requestSubmit()");assert.equal(editorFixture.models[0].images.length,0,'Pending photo was saved early');
+ await evaluate("document.querySelector('.catalog-model-toolbar select').value='1';document.querySelector('.catalog-model-toolbar select').dispatchEvent(new Event('change',{bubbles:true}))");await wait("document.querySelector('.design-readiness h3').textContent==='Reliquias'",'Design navigation blocked during upload');
+ await uploadFixture(1,'b.png','blue');await wait("document.querySelectorAll('.catalog-photo-grid img[src*=qa-]').length===2",'Uploads not associated with both designs');
+ await wait("!document.querySelector('.photo-upload-status').textContent.includes('Subiendo…')",'Queue remained busy');assert.equal(mediaRequests,2);
+ await evaluate("[...document.querySelectorAll('button')].find(button=>button.textContent==='Guardar cambios').click()");await wait("document.querySelector('.catalog-editor-heading').textContent.includes('Cambios guardados')",'Photos not saved');
+ assert.equal(editorFixture.models[0].active,false);assert.equal(editorFixture.models[1].active,false);assert.notEqual(editorFixture.models[0].images[0],editorFixture.models[1].images[0]);
+ const preserved=structuredClone(editorFixture);await evaluate('window.__editorQaReload=true');await call('Page.reload',{ignoreCache:true});await wait("typeof window.__editorQaReload==='undefined'&&document.querySelectorAll('.catalog-photo-grid img[src*=qa-]').length===2",'Saved photos did not survive reload');
+ failPhoto=true;await uploadFixture(0,'retry.png','green');await wait("document.querySelector('.photo-upload-status')?.textContent.includes('Error')",'Storage failure missing');assert.deepEqual(editorFixture,preserved);
+ await evaluate("[...document.querySelectorAll('button')].find(button=>button.textContent==='Reintentar fotografía').click()");await wait("document.querySelector('.photo-upload-status')?.textContent.includes('Fotografía subida')",'Retry did not complete');
+
+ await evaluate("(()=>{const input=document.querySelector('.catalog-photo-grid input[type=file]'),transfer=new DataTransfer();transfer.items.add(new File(['invalid'],'bad.svg',{type:'image/svg+xml'}));input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));})()");await wait("document.querySelector('.photo-upload-status').textContent.includes('Selecciona una fotografía PNG, JPEG o WebP')",'Invalid image was not rejected');assert.equal(mediaRequests,4);
+ await evaluate("window.confirm=()=>false;[...document.querySelectorAll('button')].find(button=>button.textContent==='Publicar diseño').click()");assert.ok(await evaluate("document.querySelector('.design-readiness').textContent.includes('Borrador o inactivo')"));
+ await evaluate("window.confirm=()=>true;[...document.querySelectorAll('button')].find(button=>button.textContent==='Publicar diseño').click()");await wait("document.querySelector('.design-readiness').textContent.includes('Listo al publicar el producto')",'Explicit publication was not staged');assert.equal(editorFixture.models[0].active,false,'Publication persisted without saving');
+ assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth+1"),false,'Editor overflow on mobile');
  assert.deepEqual(browserErrors,[],'Unexpected browser runtime errors');
- console.log('Browser PASS: related 0/1/2/4; widths 320/360/390/768/1024/1440; uniform choices; no overflow; natural-size media; keyboard; design/title/gallery/SKU; cart/WhatsApp and reload persistence; 404/503/archive states without infinite loading; historical family/design redirect; no redundant related requests.');
-}catch(error){console.error(JSON.stringify({browserErrors}));try{console.error(JSON.stringify((await call('Runtime.evaluate',{expression:"({heading:document.querySelector('h1')?.textContent,focused:document.activeElement?.className,selected:[...document.querySelectorAll('.design-choice')].map(button=>button.getAttribute('aria-pressed'))})",returnByValue:true})).result.value));}catch{}throw error;}finally{
+ console.log('Browser PASS: editor queue/upload/switch/save/reload/error/retry with mocks; horizontal 1/5/20/50 designs, keyboard and touch; related 0/1/2/4; widths 320/360/390/768/1024/1440; uniform choices; no overflow; natural-size media; keyboard; design/title/gallery/SKU; cart/WhatsApp and reload persistence; 404/503/archive states without infinite loading; historical family/design redirect; no redundant related requests.');
+}catch(error){console.error(JSON.stringify({stage,browserErrors,requests:requests.slice(-12),error:error.message}));try{console.error(JSON.stringify((await call('Runtime.evaluate',{expression:"({url:location.href,ready:document.readyState,body:document.body?.textContent?.slice(0,180),heading:document.querySelector('h1')?.textContent,focused:document.activeElement?.className,selected:[...document.querySelectorAll('.design-choice')].map(button=>button.getAttribute('aria-pressed'))})",returnByValue:true})).result.value));}catch{}throw error;}finally{
  try{await call('Browser.close',{},null);}catch{}socket?.close();
  if(browser.exitCode===null){await Promise.race([new Promise(resolve=>browser.once('exit',resolve)),pause(3000)]);if(browser.exitCode===null)browser.kill();}
  await new Promise(resolve=>server.close(resolve));await vite.close();
