@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {groupingRequestSchema,groupingCompatibility,type GroupingRequest,type GroupingReport} from '../../shared/productGrouping.ts';
 import {gallerySchema} from '../../shared/catalogManagement.ts';
 import {productPlaceholder} from '../../shared/productSchema.ts';
-import {validSize} from '../../shared/sizes.ts';
+import {sizeLabel,validSize} from '../../shared/sizes.ts';
 import {InventoryError} from '../../shared/inventory.ts';
 type ReadDb=Pick<Prisma.TransactionClient,'product'|'productModel'|'productSku'>;
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value,(_key,item:unknown)=>item&&typeof item==='object'&&!Array.isArray(item)&&!(item instanceof Date)?Object.fromEntries(Object.entries(item).sort(([a],[b])=>a.localeCompare(b))):item)).digest('hex');
@@ -19,11 +19,14 @@ export function createProductGrouping(db:PrismaClient,secret:string){
   if(await reader.productModel.count({where:{productId:{in:ids}}})>200||await reader.productSku.count({where:{model:{productId:{in:ids}}}})>1000)throw new InventoryError(400,'Agrupa en lotes de hasta 200 diseños y 1000 opciones.');
   const rows=await reader.product.findMany({where:{id:{in:ids}},include:included,orderBy:{id:'asc'}}),target=rows.find(row=>row.id===input.targetId);
   if(!target||rows.length!==ids.length)throw new InventoryError(404,'No se encontró alguno de los productos seleccionados.');
-  const report:GroupingReport={valid:false,target:{id:target.id,name:target.name,description:target.description??'',price:Number(target.price),status:input.publishTarget?'active':target.status},sources:[],designs:[],conflicts:[],warnings:[],orders:0,movements:0};
+  const report:GroupingReport={valid:false,target:{id:target.id,name:target.name,description:target.description??'',price:Number(target.price),status:input.keepAsDraft?'draft':input.publishTarget?'active':target.status},sources:[],designs:[],conflicts:[],warnings:[],orders:0,movements:0};
   const conflict=(message:string)=>report.conflicts.push(message),warn=(message:string)=>report.warnings.push(message);
   if(target.groupedIntoId)conflict('El destino ya pertenece a otra familia.');
   if(target.stock!==0||target.models.some(model=>(model.quantity??0)!==0))conflict('El destino tiene cantidades antiguas sin asignación validada a tallas. Revisa su inventario antes de agrupar.');
-  const publishing=target.status==='active'||input.publishTarget;
+  const publishing=report.target.status==='active';
+  const pictures=(product:typeof target,model:typeof target.models[number])=>{const own=[model.image,...model.images].filter((image):image is string=>!!image&&image!==productPlaceholder);return [...new Set([...own,...(!own.length?model.skus.flatMap(sku=>sku.images):[]),...(product.models.length===1?[product.imageUrl,...product.images]:[])].filter((image):image is string=>!!image&&image!==productPlaceholder))];};
+  const targetPictures=target.models.map(model=>({id:model.id,name:model.name,active:model.active,images:pictures(target,model),options:model.skus}));
+  for(const model of targetPictures)if(!gallerySchema.safeParse(model.images).success)conflict(model.name+': fotografías existentes incompatibles o más de ocho; revisa su asociación.');
   if(!publishing)warn('La familia seguirá como borrador. No necesita fotografías nuevas para agruparse; completar fotografías y opciones es obligatorio antes de publicar.');
   const names=new Set(target.models.map(model=>normalize(model.name))),modelCodes=new Set(target.models.map(model=>model.sku)),skuCodes=new Set(target.models.flatMap(model=>model.skus.map(sku=>sku.code)));
   const thumbnails:Record<string,string>={...(target.imageThumbnails as Record<string,string>)};
@@ -41,10 +44,9 @@ export function createProductGrouping(db:PrismaClient,secret:string){
     const name=input.names[model.id]??(source.models.length===1?source.name:source.name+' · '+model.name).slice(0,100);
     if(names.has(normalize(name)))conflict('Nombre de diseño repetido: '+name);names.add(normalize(name));
     if(modelCodes.has(model.sku))conflict('Código de diseño repetido.');modelCodes.add(model.sku);
-    const rawImages=[...new Set([model.image,...model.images,...(source.models.length===1?general:[])].filter((image):image is string=>!!image&&image!==productPlaceholder))];
+    const rawImages=pictures(source,model);
     if(!gallerySchema.safeParse(rawImages).success)conflict(name+': fotografías incompatibles, inline o más de ocho. Deben alojarse y asignarse antes de agrupar.');
     const images=rawImages.filter(image=>gallerySchema.safeParse([image]).success).slice(0,8);
-    if(publishing&&model.active&&!images.length)conflict(name+': falta fotografía; completa o desactiva el diseño antes de agrupar.');
     if(!model.skus.length)conflict(name+': no tiene opciones de talla/presentación.');
     for(const sku of model.skus){if(skuCodes.has(sku.code))conflict(name+': código de opción repetido.');skuCodes.add(sku.code);if(!validSize(target.category,sku.size))conflict(name+': talla incompatible con la categoría del destino.');if(!gallerySchema.safeParse(sku.images).success)conflict(name+': fotografías de una opción no válidas.');}
     report.movements+=model._count.movements;report.designs.push({id:model.id,sourceId:source.id,sourceName:source.name,beforeName:model.name,name,code:model.sku,active:model.active,images,movements:model._count.movements,options:model.skus.map(sku=>({id:sku.id,code:sku.code,size:sku.size,color:sku.color,quantity:sku.quantity,active:sku.active,version:sku.version,images:sku.images.filter(image=>gallerySchema.safeParse([image]).success).slice(0,8)}))});
@@ -52,13 +54,23 @@ export function createProductGrouping(db:PrismaClient,secret:string){
   }
   if(Object.keys(input.names).some(id=>!report.designs.some(model=>model.id===id)))conflict('Se intentó renombrar un diseño ajeno a los productos seleccionados.');
   if(Object.keys(thumbnails).length>1600)conflict('El resultado supera el límite de miniaturas.');
-  const active=[...target.models.map(model=>({active:model.active,images:model.images.length?model.images:model.image?[model.image]:[],options:model.skus})),...report.designs];
-  if(publishing&&active.some(model=>model.active&&(!model.images.length||!model.options.some(sku=>sku.active))))conflict('Completa fotografía y opciones de cada diseño activo antes de publicar.');
-  if(publishing&&!active.some(model=>model.active&&model.images.length&&model.options.some(sku=>sku.active)))conflict('La familia necesita al menos un diseño con foto y una opción activa.');
-  if(publishing&&process.env.INVENTORY_MODE==='enforce'&&active.some(model=>model.active&&model.options.some(sku=>sku.active&&sku.quantity===null)))conflict('Completa los conteos antes de publicar con control de existencias.');
+  const active=[...targetPictures,...report.designs];
+  const publicationIssues:string[]=[];
+  for(const model of active){
+   if(!model.active)continue;
+   if(!model.images.length)publicationIssues.push(model.name+': falta una fotografía asociada al diseño.');
+   if(!model.options.some(sku=>sku.active))publicationIssues.push(model.name+': no tiene ninguna talla o presentación activa.');
+   for(const sku of model.options.filter(option=>option.active&&option.quantity===null)){
+    const message=model.name+' · '+sizeLabel(sku.size)+(sku.color?' · '+sku.color:'')+': existencias sin registrar; se conservarán pendientes.';
+    warn(message);
+    if(process.env.INVENTORY_MODE==='enforce')publicationIssues.push(model.name+' · '+sizeLabel(sku.size)+': registra el conteo antes de publicar con control de existencias.');
+   }
+  }
+  if(!active.some(model=>model.active&&model.images.length&&model.options.some(sku=>sku.active)))publicationIssues.push('La familia no tiene todavía un diseño con fotografía y una talla o presentación activa.');
+  for(const issue of publicationIssues){if(publishing)conflict(issue+' Para agrupar sin publicar, selecciona guardar la familia como borrador.');else warn('Pendiente para publicar: '+issue);}
   report.warnings.push('Al confirmar se ocultarán las fichas de origen del catálogo; se conservarán con sus pedidos y precios históricos. Los carritos anteriores deben revisarse y volver a seleccionar el diseño.');
   const cover=target.imageUrl&&target.imageUrl!==productPlaceholder?target.imageUrl:active.find(model=>model.active&&model.images.length)?.images[0];
-  report.valid=!report.conflicts.length;return {report,state:hash(rows),thumbnails,cover};
+  report.valid=!report.conflicts.length;return {report,state:hash(rows),thumbnails,cover,targetPictures};
  }
  return {
   async preview(value:unknown){const input=parse(value);const plan=await inspect(db,input);const {key:unused,...body}=input;void unused;const expires=Date.now()+15*60_000;const payload=Buffer.from(JSON.stringify({fingerprint:hash(body),state:plan.state,expires})).toString('base64url');return {report:{...plan.report,expiresAt:expires},token:payload+'.'+sign(payload)};},
@@ -79,7 +91,8 @@ export function createProductGrouping(db:PrismaClient,secret:string){
     const plan=await inspect(tx,input);if(signed.expires<Date.now()||signed.state!==plan.state||signed.fingerprint!==fingerprint)throw new InventoryError(409,'Los productos o existencias cambiaron o la simulación caducó. Simula de nuevo.');
     if(!plan.report.valid)throw new InventoryError(400,'Resuelve los conflictos antes de agrupar.');
     for(const model of plan.report.designs)await tx.productModel.update({where:{id:model.id},data:{productId:input.targetId,name:model.name,image:model.images[0]??null,images:model.images}});
-    await tx.product.update({where:{id:input.targetId},data:{imageThumbnails:plan.thumbnails,...(plan.cover?{imageUrl:plan.cover}:{}),...(input.publishTarget?{status:'active',archived:false}:{})}});
+    for(const model of plan.targetPictures)await tx.productModel.update({where:{id:model.id},data:{image:model.images[0]??null,images:model.images}});
+    await tx.product.update({where:{id:input.targetId},data:{imageThumbnails:plan.thumbnails,...(plan.cover?{imageUrl:plan.cover}:{}),...(input.keepAsDraft?{status:'draft',archived:true}:input.publishTarget?{status:'active',archived:false}:{})}});
     for(const id of input.sourceIds)await tx.product.update({where:{id},data:{groupedIntoId:input.targetId,status:'archived',archived:true}});
     for(const id of ids)await tx.$executeRaw`SELECT mp_refresh_search(${id})`;
     const report={...plan.report,id:key};await tx.productGrouping.create({data:{id:key,actorId,targetId:input.targetId,fingerprint,report:report as unknown as Prisma.InputJsonValue}});return report;
