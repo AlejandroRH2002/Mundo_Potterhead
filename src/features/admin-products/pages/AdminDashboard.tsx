@@ -19,7 +19,7 @@ export function AdminDashboard() {
         <th scope="row" className="admin-name"><h2 className="line-clamp-2 break-words font-bold">{product.name}</h2><p className="font-normal">{product.description}</p></th>
         <td><strong>{money(product.price)}</strong><div className="admin-chips">{product.isOnSale && <span>Oferta</span>}{product.subcategory && <span>{product.subcategory}</span>}<span>Disponibilidad a confirmar</span></div></td>
         <td><div className="admin-actions">
-          <Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)}>Ver</Link>
+          <Link className="shop-link" to={safeInternalPath(`/product/${encodeURIComponent(product.id)}`)} aria-label={'Ver ficha pública de '+product.name}>Ver ficha pública</Link>
           <Link className="shop-button" to={safeInternalPath(`/products/edit/${encodeURIComponent(product.id)}`)}>Editar</Link><Link className="shop-link" to={'/admin/inventario?productId='+encodeURIComponent(product.id)}>Existencias y modelos</Link>
           <button aria-label={`Archivar ${product.name}`} className="shop-link" disabled={admin.deleting !== null} onClick={() => void admin.remove(product.id)}>{admin.deleting === product.id ? 'Archivando…' : 'Archivar'}</button>
         </div></td>

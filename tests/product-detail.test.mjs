@@ -22,3 +22,8 @@ test('related selection handles zero, one, two and more results without returnin
 test('gallery is controlled and uses optimized thumbnails without altering the selected full image',async()=>{
  const {ProductGallery}=await vite.ssrLoadModule('/src/features/catalog/components/ProductGallery.tsx');const product=detailFixture();const view=resolveProductDetail(product,{model:{productId:product.id,id:'model-a'}});const html=renderToStaticMarkup(createElement(ProductGallery,{product:view.galleryProduct,selectedImage:view.selectedImage,onSelect:()=>{}}));assert.ok(html.includes('src="/test-media/a-thumb.svg"'));assert.ok(html.includes('src="/test-media/a.svg"'));assert.match(html,/aria-pressed="true"/);
 });
+
+
+test('historical resolution metadata is bounded and cannot provide an arbitrary redirect URL',async()=>{
+ const {isProduct}=await vite.ssrLoadModule('/src/features/catalog/services/productValidation.ts');const product=detailFixture();assert.equal(isProduct({...product,resolvedFrom:{id:'old-product',modelId:'model-b'}}),true);for(const resolvedFrom of [{id:null},{id:'x'.repeat(101)},{id:'old-product',url:'https://external.invalid/'}])assert.equal(isProduct({...product,resolvedFrom}),false);
+});

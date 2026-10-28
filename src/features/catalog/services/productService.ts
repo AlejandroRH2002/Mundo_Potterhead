@@ -39,7 +39,7 @@ export const productService = {
     }
   },
   getAdminById: async (id: string) => parseProduct(await requestJson<unknown>('/admin/products/' + encodeURIComponent(id))),
-  getById: async (id: string, signal?: AbortSignal) => parseProduct(await requestJson<unknown>(`/products/${encodeURIComponent(id)}`, { signal })),
+  getById: async (id: string, signal?: AbortSignal) => {const product=parseProduct(await requestJson<unknown>(`/products/${encodeURIComponent(id)}`, { signal }));if(product.id!==id&&product.resolvedFrom?.id!==id||product.resolvedFrom&&(product.id===id||product.resolvedFrom.id!==id))throw new Error('La referencia pública del producto no es válida.');return product;},
   create: async (draft: ProductDraft): Promise<Product> => {
     const product = parseProduct(await requestJson<unknown>('/products', { method: 'POST', body: JSON.stringify(validateDraft(draft)) }));
     notify();
