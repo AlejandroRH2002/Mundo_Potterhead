@@ -1,4 +1,4 @@
-import {applyGroupingSchema} from '../../shared/productGrouping.ts';
+import {applyGroupingSchema,adminCatalogQuerySchema} from '../../shared/productGrouping.ts';
 import { skuInputSchema } from '../../shared/sizes.ts';
 import { z } from 'zod';
 import type { CatalogManagement } from '../repositories/catalogManagement.ts';
@@ -114,7 +114,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         if(user.role!=='admin')throw new HttpError(403,'Se requiere administrador.');
         if(!catalogManagement)throw new HttpError(503,'Gestión del catálogo no disponible.');
         const parts=path.split('/').filter(Boolean);
-        if(path==='/api/admin/catalog'&&method==='GET'){const params=new URL(request.url??'/','http://localhost').searchParams;const query=z.object({page:z.coerce.number().int().min(1).max(10000).default(1),q:z.string().max(150).optional(),category:z.string().max(50).optional()}).strict().parse(Object.fromEntries(params));json(response,200,await catalogManagement.list(query));return;}
+        if(path==='/api/admin/catalog'&&method==='GET'){const params=new URL(request.url??'/','http://localhost').searchParams;const query=adminCatalogQuerySchema.parse(Object.fromEntries(params));json(response,200,await catalogManagement.list(query));return;}
         if(path==='/api/admin/catalog/group/preview'&&method==='POST'){json(response,200,await catalogManagement.groupPreview(await body(request,256*1024)));return;}
         if(path==='/api/admin/catalog/group/apply'&&method==='POST'){const value=applyGroupingSchema.parse(await body(request,256*1024));json(response,200,await catalogManagement.groupApply(user.id,value.request,value.token));return;}
         if(path==='/api/admin/catalog/history'&&method==='GET'){const page=z.coerce.number().int().min(1).max(10000).parse(new URL(request.url??'/','http://localhost').searchParams.get('page')??1);json(response,200,await catalogManagement.history(page));return;}

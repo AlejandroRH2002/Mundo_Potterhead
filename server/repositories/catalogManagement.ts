@@ -1,3 +1,4 @@
+import {groupingCompatibility} from '../../shared/productGrouping.ts';
 import {createProductGrouping} from './productGrouping.ts';
 import {planDesignImport} from '../lib/designImport.ts';
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
@@ -45,6 +46,7 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
     else await tx.productSku.delete({where:{id}});
    }
   }
+  if(input.status==='active'&&existing?.status!=='active'&&input.models.some(model=>model.active&&(!model.images.length||!model.variants.some(option=>option.active))))throw new InventoryError(400,'Completa fotografía y talla de cada diseño activo antes de publicar.');
   const draft=productDraftSchema.parse(input.product);
   const allImages=new Set([draft.image,...(draft.images??[]),...input.models.flatMap(model=>[...model.images,...model.variants.flatMap(sku=>sku.images)])].filter(image=>image!==productPlaceholder));
   if(process.env.NODE_ENV==='production'&&[...allImages].some(image=>!image.startsWith('https://')))throw new InventoryError(400,'Las im?genes requieren HTTPS en producci?n.');
@@ -101,7 +103,15 @@ export function createCatalogManagement(db:PrismaClient,secret:string){
  const grouping=createProductGrouping(db,secret);
  return {
   groupPreview:grouping.preview,groupApply:grouping.apply,
-  async list(query:{page:number;q?:string;category?:string}){const where:Prisma.ProductWhereInput={groupedIntoId:null,...(query.q?{OR:[{name:{contains:query.q,mode:'insensitive'}},{code:{contains:query.q,mode:'insensitive'}},{models:{some:{name:{contains:query.q,mode:'insensitive'}}}}]}:{}),...(query.category?{category:query.category}:{})};const [items,total]=await Promise.all([db.product.findMany({where,skip:(query.page-1)*20,take:20,orderBy:{id:'asc'},select:{id:true,code:true,name:true,status:true,category:true,price:true,revision:true,imageUrl:true,models:{where:{active:true},take:1,orderBy:{createdAt:'asc'},select:{image:true}},_count:{select:{models:true}}}}),db.product.count({where})]);return {items:items.map(({_count,imageUrl,models,...item})=>({...item,image:imageUrl&&imageUrl!==productPlaceholder?imageUrl:models[0]?.image??productPlaceholder,designCount:_count.models,price:Number(item.price)})),total,page:query.page};},
+  async list(query:{page:number;q?:string;category?:string;subcategory?:string;compatibleWith?:string;compatibleOnly?:boolean}){
+   const where:Prisma.ProductWhereInput={groupedIntoId:null,...(query.q?{OR:[{searchText:{contains:query.q,mode:'insensitive'}},{name:{contains:query.q,mode:'insensitive'}},{code:{contains:query.q,mode:'insensitive'}}]}:{}),...(query.category?{category:query.category}:{}),...(query.subcategory?{subcategory:query.subcategory}:{})};
+   const target=query.compatibleWith?await db.product.findUnique({where:{id:query.compatibleWith}}):null;
+   if(query.compatibleWith&&(!target||target.groupedIntoId))throw new InventoryError(404,'El producto de destino no está disponible.');
+   if(target){where.id={not:target.id};if(query.compatibleOnly)where.AND=[{category:target.category,subcategory:target.subcategory,universe:target.universe,price:target.price,originalPrice:target.originalPrice,isOnSale:target.isOnSale,stock:0,groupedSources:{none:{}},models:{some:{},none:{quantity:{not:0}}}}];}
+   const [items,total]=await Promise.all([db.product.findMany({where,skip:(query.page-1)*20,take:20,orderBy:{id:'asc'},select:{id:true,code:true,name:true,status:true,category:true,subcategory:true,universe:true,originalPrice:true,isOnSale:true,stock:true,groupedIntoId:true,price:true,revision:true,imageUrl:true,models:{where:{active:true},take:1,orderBy:{createdAt:'asc'},select:{image:true}},_count:{select:{models:true,groupedSources:true}}}}),db.product.count({where})]);
+   const candidate=(row:typeof items[number]|NonNullable<typeof target>)=>({...row,price:Number(row.price),originalPrice:row.originalPrice===null?null:Number(row.originalPrice)});
+   return {items:items.map(({_count,imageUrl,models,...item})=>({id:item.id,code:item.code,name:item.name,status:item.status,category:item.category,subcategory:item.subcategory,universe:item.universe,price:Number(item.price),revision:item.revision,image:imageUrl&&imageUrl!==productPlaceholder?imageUrl:models[0]?.image??productPlaceholder,designCount:_count.models,...(target?{compatibility:[...groupingCompatibility(candidate(target),candidate({...item,imageUrl,models,_count})),...(_count.groupedSources?['Es una familia con productos vinculados.']:[]),...(!_count.models?['No tiene diseños.']:[])]}:{})})),total,page:query.page};
+  },
   get:(id:string)=>load(db,id),
   async save(actorId:string,value:unknown){const input=managedProductSchema.parse(value);if(input.id&&input.revision===undefined)throw new InventoryError(400,'La edición requiere la revisión actual del producto.');return db.$transaction(async tx=>{await lock(tx,actorId);if(!input.id&&await tx.product.findUnique({where:{code:input.code}}))throw new InventoryError(409,'El código ya existe; abre el producto para editarlo.');const result=await save(tx,input);return load(tx,result.id);},{timeout:15000});},
   async duplicate(actorId:string,id:string){return db.$transaction(async tx=>{await lock(tx,actorId);const source=await load(tx,id);delete source.id;delete source.revision;source.code='COPY-'+randomUUID();source.status='draft';source.product.name+=' (copia)';for(const model of source.models){delete model.id;model.code='MP-'+randomUUID();for(const variant of model.variants){delete variant.id;variant.code='MP-'+randomUUID();}}const result=await save(tx,source);return load(tx,result.id);},{timeout:15000});},

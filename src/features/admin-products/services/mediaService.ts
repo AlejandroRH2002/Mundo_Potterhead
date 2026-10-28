@@ -17,7 +17,7 @@ export const imagePreview=(image:string,persisted?:Record<string,string>)=>thumb
 export async function uploadProductImage(file:File):Promise<string>{
  if(!imageTypes.some(type=>type===file.type)||!file.size)throw new Error('Selecciona una fotografía PNG, JPEG o WebP.');
  const config=mediaConfigSchema.parse(await mediaRequest('/media/config','Configuración de fotografías'));
- if(!config.enabled)throw new Error('Las fotografías no están habilitadas en este entorno. Pide al administrador configurar la conexión de imágenes de la API.');
+ if(!config.enabled)throw new Error('Las fotografías no están habilitadas en este entorno. Puedes guardar el producto como borrador sin fotografía. Pide al administrador configurar el almacenamiento de fotografías de la API para este entorno.');
  const full=await compressImage(file);const thumb=await compressImage(file,400);const thumbUrl=await uploadPreparedImage(thumb,config);const fullUrl=await uploadPreparedImage(full,config);thumbnails.set(fullUrl,thumbUrl);return fullUrl;
 }
 async function uploadPreparedImage(file: File,config:{enabled:boolean;maxBytes:number}): Promise<string> {

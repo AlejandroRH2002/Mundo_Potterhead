@@ -2,7 +2,7 @@ import type {GroupingRequest,GroupingReport} from '../../../../shared/productGro
 import { requestJson } from '@/shared/lib/httpClient';
 import { thumbnailForImage } from '@/features/admin-products/services/mediaService';
 import type { ManagedProduct, ImportRecord, ImportReport } from '../../../../shared/catalogManagement';
-export interface CatalogRow {image?:string;designCount?:number;id:string;code:string|null;name:string;status:ManagedProduct['status'];category:string;price:number;revision:number}
+export interface CatalogRow {compatibility?:string[];image?:string;designCount?:number;id:string;code:string|null;name:string;status:ManagedProduct['status'];category:string;price:number;revision:number}
 export interface ImportInput {parentId?:string;key:string;rows:ImportRecord[];images:Record<string,string>}
 const base='/admin/catalog';
 export const catalogService={

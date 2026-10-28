@@ -1,7 +1,7 @@
 import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
 import {Prisma,type PrismaClient} from '@prisma/client';
 import {z} from 'zod';
-import {groupingRequestSchema,type GroupingRequest,type GroupingReport} from '../../shared/productGrouping.ts';
+import {groupingRequestSchema,groupingCompatibility,type GroupingRequest,type GroupingReport} from '../../shared/productGrouping.ts';
 import {gallerySchema} from '../../shared/catalogManagement.ts';
 import {productPlaceholder} from '../../shared/productSchema.ts';
 import {validSize} from '../../shared/sizes.ts';
@@ -23,14 +23,14 @@ export function createProductGrouping(db:PrismaClient,secret:string){
   const conflict=(message:string)=>report.conflicts.push(message),warn=(message:string)=>report.warnings.push(message);
   if(target.groupedIntoId)conflict('El destino ya pertenece a otra familia.');
   if(target.stock!==0||target.models.some(model=>(model.quantity??0)!==0))conflict('El destino tiene cantidades antiguas sin asignación validada a tallas. Revisa su inventario antes de agrupar.');
-  if(target.status!=='active'&&!input.publishTarget)conflict('El destino no está publicado. Confirma publicar la familia resultante o elige un producto activo.');
+  const publishing=target.status==='active'||input.publishTarget;
+  if(!publishing)warn('La familia seguirá como borrador. No necesita fotografías nuevas para agruparse; completar fotografías y opciones es obligatorio antes de publicar.');
   const names=new Set(target.models.map(model=>normalize(model.name))),modelCodes=new Set(target.models.map(model=>model.sku)),skuCodes=new Set(target.models.flatMap(model=>model.skus.map(sku=>sku.code)));
   const thumbnails:Record<string,string>={...(target.imageThumbnails as Record<string,string>)};
   for(const source of rows.filter(row=>row.id!==target.id)){
    report.sources.push({id:source.id,name:source.name,description:source.description??'',orders:source._count.orderItems});report.orders+=source._count.orderItems;
    if(source.groupedIntoId||source._count.groupedSources)conflict(source.name+': ya está agrupado o es una familia con productos vinculados.');
-   if(source.category!==target.category||source.subcategory!==target.subcategory||source.universe!==target.universe)conflict(source.name+': categoría, subcategoría o universo incompatibles.');
-   if(!source.price.equals(target.price)||source.isOnSale!==target.isOnSale||String(source.originalPrice)!==String(target.originalPrice))conflict(source.name+': precio u oferta distintos; no se cambiarán automáticamente.');
+   for(const reason of groupingCompatibility({...target,price:Number(target.price),originalPrice:target.originalPrice===null?null:Number(target.originalPrice)},{...source,price:Number(source.price),originalPrice:source.originalPrice===null?null:Number(source.originalPrice)}))conflict(source.name+': '+reason);
    if(normalize(source.description??'')!==normalize(target.description??'')){warn(source.name+': la descripción pública pasará a ser la del destino; la original se conserva en la ficha antigua.');if(!input.acceptSharedDescription)conflict(source.name+': revisa medidas/materiales y confirma expresamente la descripción compartida.');}
    if(source.stock!==0||source.models.some(model=>(model.quantity??0)!==0))conflict(source.name+': tiene cantidades antiguas sin asignación validada a tallas. Registra y revisa el inventario antes de agrupar.');
    if(!source.models.length)conflict(source.name+': no tiene diseños registrados.');
@@ -44,7 +44,7 @@ export function createProductGrouping(db:PrismaClient,secret:string){
     const rawImages=[...new Set([model.image,...model.images,...(source.models.length===1?general:[])].filter((image):image is string=>!!image&&image!==productPlaceholder))];
     if(!gallerySchema.safeParse(rawImages).success)conflict(name+': fotografías incompatibles, inline o más de ocho. Deben alojarse y asignarse antes de agrupar.');
     const images=rawImages.filter(image=>gallerySchema.safeParse([image]).success).slice(0,8);
-    if(model.active&&!images.length)conflict(name+': falta fotografía; completa o desactiva el diseño antes de agrupar.');
+    if(publishing&&model.active&&!images.length)conflict(name+': falta fotografía; completa o desactiva el diseño antes de agrupar.');
     if(!model.skus.length)conflict(name+': no tiene opciones de talla/presentación.');
     for(const sku of model.skus){if(skuCodes.has(sku.code))conflict(name+': código de opción repetido.');skuCodes.add(sku.code);if(!validSize(target.category,sku.size))conflict(name+': talla incompatible con la categoría del destino.');if(!gallerySchema.safeParse(sku.images).success)conflict(name+': fotografías de una opción no válidas.');}
     report.movements+=model._count.movements;report.designs.push({id:model.id,sourceId:source.id,sourceName:source.name,beforeName:model.name,name,code:model.sku,active:model.active,images,movements:model._count.movements,options:model.skus.map(sku=>({id:sku.id,code:sku.code,size:sku.size,color:sku.color,quantity:sku.quantity,active:sku.active,version:sku.version,images:sku.images.filter(image=>gallerySchema.safeParse([image]).success).slice(0,8)}))});
@@ -53,8 +53,9 @@ export function createProductGrouping(db:PrismaClient,secret:string){
   if(Object.keys(input.names).some(id=>!report.designs.some(model=>model.id===id)))conflict('Se intentó renombrar un diseño ajeno a los productos seleccionados.');
   if(Object.keys(thumbnails).length>1600)conflict('El resultado supera el límite de miniaturas.');
   const active=[...target.models.map(model=>({active:model.active,images:model.images.length?model.images:model.image?[model.image]:[],options:model.skus})),...report.designs];
-  if(!active.some(model=>model.active&&model.images.length&&model.options.some(sku=>sku.active)))conflict('La familia necesita al menos un diseño con foto y una opción activa.');
-  if(process.env.INVENTORY_MODE==='enforce'&&active.some(model=>model.active&&model.options.some(sku=>sku.active&&sku.quantity===null)))conflict('Completa los conteos antes de publicar con control de existencias.');
+  if(publishing&&active.some(model=>model.active&&(!model.images.length||!model.options.some(sku=>sku.active))))conflict('Completa fotografía y opciones de cada diseño activo antes de publicar.');
+  if(publishing&&!active.some(model=>model.active&&model.images.length&&model.options.some(sku=>sku.active)))conflict('La familia necesita al menos un diseño con foto y una opción activa.');
+  if(publishing&&process.env.INVENTORY_MODE==='enforce'&&active.some(model=>model.active&&model.options.some(sku=>sku.active&&sku.quantity===null)))conflict('Completa los conteos antes de publicar con control de existencias.');
   report.warnings.push('Al confirmar se ocultarán las fichas de origen del catálogo; se conservarán con sus pedidos y precios históricos. Los carritos anteriores deben revisarse y volver a seleccionar el diseño.');
   const cover=target.imageUrl&&target.imageUrl!==productPlaceholder?target.imageUrl:active.find(model=>model.active&&model.images.length)?.images[0];
   report.valid=!report.conflicts.length;return {report,state:hash(rows),thumbnails,cover};
