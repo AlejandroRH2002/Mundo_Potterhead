@@ -55,6 +55,7 @@ Requiere Node.js 24.22.1, pnpm 11.21.0 y una base de desarrollo preparada. Insta
 ## Documentación
 
 - [Despliegue y operación: Pages, Render, Neon y R2](deploy/CLOUD.md).
+- [Sesiones administrativas y errores de publicación](deploy/ADMIN-SESSIONS.md).
 - [Manual de inventario](docs/auditoria-inventario/08-manual-administrador-inventario.md).
 - [Modelos, variantes, galerías e importación](docs/catalogo/ADMINISTRACION.md).
 - [Validación en Neon, integración y despliegue del catálogo](docs/catalogo/DESPLIEGUE.md).
