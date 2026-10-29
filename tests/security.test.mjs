@@ -150,3 +150,7 @@ test('optional product image uses placeholder and retains existing images with p
   const listed=await (await fetch(endpoint)).json();assert.ok((Array.isArray(listed) ? listed : listed.items).every(product=>typeof product.image==='string'));
  } finally { await new Promise(resolve => server.close(resolve)); }
 });
+
+test('administrative activity endpoint denies anonymous users and customers',async()=>{
+ assert.equal((await send('/auth/activity',{method:'POST',payload:{}})).status,401);const session=await auth.authenticate('client@test.invalid',password);const cookie='mp_session='+session.token;assert.equal((await send('/auth/activity',{method:'POST',cookie,payload:{}})).status,403);
+});
