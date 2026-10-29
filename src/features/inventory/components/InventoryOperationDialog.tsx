@@ -1,0 +1,6 @@
+import {useEffect,useRef,type ReactNode} from 'react';
+export function InventoryOperationDialog({children,busy,onClose,returnFocusTo}:{children:ReactNode;busy:boolean;onClose:()=>void;returnFocusTo?:HTMLElement|null}){
+ const dialog=useRef<HTMLDialogElement>(null),close=useRef(onClose);close.current=onClose;
+ useEffect(()=>{const node=dialog.current,previous=returnFocusTo??document.activeElement;node?.showModal();return()=>{node?.close();let frames=0;const restore=()=>{if(document.querySelector('dialog[open]'))return;if(previous instanceof HTMLElement&&previous.isConnected&&!previous.matches(':disabled'))previous.focus({preventScroll:true});else if(frames++<120)requestAnimationFrame(restore);};requestAnimationFrame(restore);};},[returnFocusTo]);
+ return <dialog ref={dialog} className="inventory-operation-dialog" aria-labelledby="inventory-operation-heading" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!busy)close.current();}}} onCancel={event=>{event.preventDefault();if(!busy)close.current();}}><header><h2 id="inventory-operation-heading">Movimiento de existencias</h2><button className="button-outline button-size-sm" type="button" disabled={busy} onClick={onClose}>Cancelar</button></header>{children}</dialog>;
+}

@@ -1,3 +1,4 @@
+import {AdminLayout} from '@/shared/components/AdminNavigation';
 import { useAuth } from '@/features/auth/services/authContext';
 import { StorefrontShell } from '@/features/marketing/components/StorefrontShell';
 import { lazy, Suspense } from 'react';
@@ -62,9 +63,10 @@ function AnimatedRoutes() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/cart" element={<Cart />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/profile" element={<Profile />} />
+          <Route element={<AdminLayout/>}><Route path="/profile" element={<Profile />} /></Route>
         </Route>
         <Route element={<ProtectedRoute role="admin" />}>
+          <Route element={<AdminLayout/>}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/catalogo" element={<CatalogManagement />} />
           <Route path="/admin/catalogo/:productId" element={<CatalogManagement />} />
@@ -76,6 +78,7 @@ function AnimatedRoutes() {
           <Route path="/products/edit/:id" element={<EditProduct />} />
           <Route path="/admin/edit-product/:id" element={<EditProduct />} />
           <Route path="/admin/add-product" element={<AddProduct />} />
+          </Route>
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes></PageTransition>
