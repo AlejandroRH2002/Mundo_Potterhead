@@ -1,3 +1,8 @@
+import {AdminNavigation} from '/src/shared/components/AdminNavigation';
+import {CatalogManagement} from '/src/features/admin-catalog/pages/CatalogManagement';
+import {Inventory} from '/src/features/inventory/pages/Inventory';
+import {AdminUsers} from '/src/features/admin-users/pages/AdminUsers';
+import {Profile} from '/src/features/auth/pages/Profile';
 import {AdminMenu} from '/src/shared/components/AdminMenu';
 import {Promotions} from '/src/features/promotions/pages/Promotions';
 // Browser-only fixture: real components, simulated HTTP and storage.
@@ -21,4 +26,4 @@ export function EditorFixture(){
  return <div data-qa-product-id={value.id??''}>{location.search.includes('wizard')?<ProductWizard {...common} onSave={save}/>:<CatalogEditor {...common} onClose={()=>{}} section="images" onSaveValue={save} onSave={()=>void save(value)}/>}</div>;
 }
 export function SessionEditorFixture(){const auth=useAuth();return <><button type="button" onClick={()=>void auth.logout()}>Cerrar sesión de prueba</button><EditorFixture/></>;}
-createRoot(document.getElementById('root')!).render(<StrictMode>{location.search.includes('promotions')?<BrowserRouter><AdminMenu/><Promotions/></BrowserRouter>:location.search.includes('session')?<AuthProvider><BrowserRouter><Routes><Route element={<ProtectedRoute role="admin"/>}><Route path="/qa-editor" element={<SessionEditorFixture/>}/><Route path="/qa-other" element={<p>Otra vista interna</p>}/></Route><Route path="/login" element={<p>Sesión cerrada; formulario descartado</p>}/></Routes></BrowserRouter></AuthProvider>:<EditorFixture/>}</StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode>{location.search.includes('responsive')?<AuthProvider><BrowserRouter><AdminMenu/><div className="admin-workspace-layout"><AdminNavigation/><Routes><Route path="/admin/inventario" element={<Inventory/>}/><Route path="/admin/promociones" element={<Promotions/>}/><Route path="/admin/usuarios" element={<AdminUsers/>}/><Route path="/profile" element={<Profile/>}/><Route path="*" element={<CatalogManagement/>}/></Routes></div></BrowserRouter></AuthProvider>:location.search.includes('promotions')?<BrowserRouter><AdminMenu/><Promotions/></BrowserRouter>:location.search.includes('session')?<AuthProvider><BrowserRouter><Routes><Route element={<ProtectedRoute role="admin"/>}><Route path="/qa-editor" element={<SessionEditorFixture/>}/><Route path="/qa-other" element={<p>Otra vista interna</p>}/></Route><Route path="/login" element={<p>Sesión cerrada; formulario descartado</p>}/></Routes></BrowserRouter></AuthProvider>:<EditorFixture/>}</StrictMode>);
