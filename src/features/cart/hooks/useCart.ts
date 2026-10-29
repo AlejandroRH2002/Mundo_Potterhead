@@ -1,3 +1,5 @@
+import {usePromotions} from '@/features/promotions/hooks/usePromotions';
+import {evaluateShipping,shippingEligibilitySchema} from '../../../../shared/promotions';
 import { requestJson } from '@/shared/lib/httpClient';
 import type { CartLine } from '../services/cartService';
 import { useState, useSyncExternalStore } from 'react';
@@ -22,6 +24,8 @@ export function useCart() {
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
   const resolved = resolveCart(entries, catalog.products);
+  const promotions=usePromotions();
+  const shipping=promotions?evaluateShipping(resolved.total,promotions.shipping):undefined;
   const change = (action: () => void) => {
     try { action(); setError(''); } catch (cause: unknown) { setError(errorMessage(cause)); }
   };
@@ -38,13 +42,13 @@ export function useCart() {
         throw new Error('Se actualizaron los precios. Revisa el nuevo total y vuelve a enviar el pedido.');
       }
       const phone = import.meta.env.VITE_WHATSAPP_NUMBER ?? '';
-      const validated = await requestJson<{lines:CartLine[]}>('/quote', {method:'POST',body:JSON.stringify({lines:cartService.getSnapshot()})});
+      const validated = await requestJson<{lines:CartLine[];shipping?:unknown}>('/quote', {method:'POST',body:JSON.stringify({lines:cartService.getSnapshot()})});
       if(validated.lines.some(line=>latest.lines.find(old=>old.productId===line.productId)?.product.price!==line.product.price))throw new Error('Los precios cambiaron. Revisa el carrito antes de cotizar.');
-      window.location.assign(whatsappOrder(validated.lines, phone, window.location.origin));
+      window.location.assign(whatsappOrder(validated.lines, phone, window.location.origin,validated.shipping===undefined?undefined:shippingEligibilitySchema.parse(validated.shipping)));
     } catch (cause: unknown) { setError(errorMessage(cause)); }
     finally { setSending(false); }
   };
-  return { ...resolved, loading: catalog.loading, error: error || catalog.error, sending, checkout,
+  return { ...resolved,shipping, loading: catalog.loading, error: error || catalog.error, sending, checkout,
     setQuantity: (id: string, quantity: number, selectedImage?: string, modelId?: string) => change(() => cartService.setQuantity(id, quantity, selectedImage, modelId)),
     remove: (id: string, selectedImage?: string, modelId?: string) => change(() => cartService.remove(id, selectedImage, modelId)),
     clear: () => change(cartService.clear),

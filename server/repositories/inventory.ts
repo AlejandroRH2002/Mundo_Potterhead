@@ -1,9 +1,12 @@
+import {quoteSubtotal,toCents} from '../../shared/money.ts';
+import type {Product} from '../../src/types/product.ts';
 import { sizedSkuSchema } from '../../shared/sizes.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma, type PrismaClient, type InventoryMovement } from '@prisma/client';
 import { InventoryError, nextQuantity, type InventoryMode, type InventoryQuery, type InventoryPage, type InventoryRow, type MovementInput, type MovementResult, type MovementPage } from '../../shared/inventory.ts';
 import type { z } from 'zod';
-import type { modelSchema, quoteSchema } from '../../shared/inventory.ts';
+import {quoteSchema} from '../../shared/inventory.ts';
+import type { modelSchema } from '../../shared/inventory.ts';
 import type { ProductRepository } from '../http/products.ts';
 import { catalogImage } from '../../shared/productImage.ts';
 
@@ -15,7 +18,7 @@ export interface InventoryRepository {
   history(modelId: string, query: InventoryQuery): Promise<MovementPage>;
   move(actorId: string, modelId: string, input: MovementInput): Promise<MovementResult>;
   model(actorId: string, productId: string, input: z.infer<typeof modelSchema>, id?: string): Promise<unknown>;
-  quote(input: z.infer<typeof quoteSchema>): Promise<unknown>;
+  quote(input: z.infer<typeof quoteSchema>): Promise<{lines:(z.infer<typeof quoteSchema>['lines'][number]&{product:Product;subtotal:number})[];mode:InventoryMode;notice:string;total:number}>;
 }
 const dto = (row: InventoryMovement): MovementResult => ({ id: row.id, modelId: row.modelId, skuId:row.skuId, type: row.type, quantity: row.quantity, before: row.before, after: row.after, delta: row.delta, reason: row.reason, actorId: row.actorId, createdAt: row.createdAt.toISOString() });
 async function actor(tx: Prisma.TransactionClient, id: string) {
@@ -93,6 +96,7 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
       });
     },
     async quote(input) {
+      input=quoteSchema.parse(input);
       const totals = new Map<string, number>();
       const snapshots=new Map<string,Awaited<ReturnType<ProductRepository['get']>>>();
       const lines = [];
@@ -109,9 +113,9 @@ export function createInventory(db: PrismaClient, products: ProductRepository, m
         if(mode==='enforce'&&(!sku||sku.quantity===null))throw new InventoryError(409,'SKU sin disponibilidad confirmada.');
         if(sku){const total=(totals.get(sku.id)??0)+line.quantity;totals.set(sku.id,total);if(mode==='enforce'&&total>sku.quantity!)throw new InventoryError(409,'La cantidad supera las existencias de '+model!.name+'.');}
         if (line.selectedImage && ![catalogImage(product.id, product.image), ...(product.images ?? []),model?.image,...(model?.images??[]),...(sku&&'images' in sku?sku.images??[]:[])].includes(line.selectedImage)) throw new InventoryError(409, 'La imagen elegida ya no está disponible.');
-        lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, color:sku&&'color' in sku?sku.color:undefined, modelName: model?.name, sku: sku?.code, product, subtotal: Math.round(product.price * 100) * line.quantity / 100 });
+        lines.push({ ...line, modelId: model?.id, skuId:sku?.id, size:sku?.size, color:sku&&'color' in sku?sku.color:undefined, modelName: model?.name, sku: sku?.code, product, subtotal: toCents(product.price) * line.quantity / 100 });
       }
-      return { lines, mode, notice: 'Disponibilidad sujeta a confirmación. Esta cotización no reserva existencias.' };
+      return { lines, total:quoteSubtotal(lines),mode, notice: 'Disponibilidad sujeta a confirmación. Esta cotización no reserva existencias.' };
     },
   };
 }

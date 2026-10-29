@@ -17,6 +17,7 @@ model User {
   inventoryMovements InventoryMovement[]
   catalogImports CatalogImport[]
   productGroupings ProductGrouping[]
+  promotionSettings PromotionSettings[]
   sessions  Session[]
   orders    Order[]
   createdAt DateTime @default(now())
@@ -179,4 +180,19 @@ model ProductGrouping {
  report Json
  createdAt DateTime @default(now())
  @@index([targetId,createdAt])
+}
+
+model PromotionSettings {
+ id String @id @default("store")
+ revision Int @default(0)
+ shippingEnabled Boolean @default(false)
+ shippingMinimum Decimal @default(1500) @db.Decimal(12,2)
+ shippingScope String @default("")
+ shippingConditions String @default("")
+ generalEnabled Boolean @default(false)
+ generalTitle String @default("")
+ generalMessage String @default("")
+ updatedById String?
+ updatedBy User? @relation(fields:[updatedById],references:[id],onDelete:Restrict,onUpdate:NoAction)
+ updatedAt DateTime @updatedAt
 }

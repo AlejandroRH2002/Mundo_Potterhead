@@ -1,3 +1,5 @@
+import {quoteSubtotal} from '../../../../shared/money.ts';
+import {shippingMessage,type ShippingEligibility} from '../../../../shared/promotions.ts';
 import { sizeLabel } from '../../../../shared/sizes';
 import { productImages } from '@/shared/lib/productMedia';
 import { validImage } from '../../../../shared/productSchema';
@@ -38,6 +40,7 @@ export function resolveCart(entries: CartEntry[], products: Product[]) {
   const lines: CartLine[] = [];
   const missing: CartEntry[] = [];
   for (const entry of entries) {
+    if(!Number.isInteger(entry.quantity)||entry.quantity<1||entry.quantity>99){missing.push(entry);continue;}
     const product = products.find(p => p.id === entry.productId);
     const models=product?.models?.filter(model=>model.active)??[];
     const chosen=entry.skuId??entry.modelId;
@@ -49,18 +52,19 @@ export function resolveCart(entries: CartEntry[], products: Product[]) {
     if (product && !overStock && (product.models===undefined || model&&sku) && (!entry.selectedImage || [...productImages(product),model?.image,...(model?.images??[]),...(sku&&'images' in sku?sku.images??[]:[])].includes(entry.selectedImage))) lines.push({ ...entry, product, modelName:model?.name,sku:sku?.code,size:sku?.size,color:sku&&'color' in sku?sku.color:undefined, subtotal: toCents(product.price) * entry.quantity / 100 });
     else missing.push(entry);
   }
-  return { lines, missing, total: lines.reduce((sum, line) => sum + toCents(line.subtotal), 0) / 100 };
+  return { lines, missing, total:quoteSubtotal(lines) };
 }
-export function whatsappOrder(lines: CartLine[], phone: string, origin?: string) {
+export function whatsappOrder(lines: CartLine[], phone: string, origin?: string, shipping?:ShippingEligibility) {
   if (!/^[1-9]\d{7,14}$/.test(phone)) throw new Error('Configura el número de WhatsApp con código de país, sin espacios ni signos.');
   if (!lines.length) throw new Error('Agrega productos antes de enviar el pedido.');
-  const total = lines.reduce((sum, line) => sum + toCents(line.product.price) * line.quantity, 0) / 100;
+  const total = quoteSubtotal(lines);
   const message = [
     'Hola, Mundo Potterhead. Quisiera solicitar el siguiente pedido:',
     '',
     ...lines.map((line, index) => `${index + 1}. ${line.product.name} (ID: ${line.productId})${line.modelName ? ' · Modelo: ' + line.modelName + ' · Talla: '+sizeLabel(line.size??'one')+(line.color?' / Color: '+line.color:'')+' · SKU: ' + line.sku : ''}${origin ? '\n   Producto: ' + new URL('/product/' + encodeURIComponent(line.productId), origin).href : ''}${line.selectedImage ? '\n   Imagen elegida: ' + (origin ? new URL(line.selectedImage, origin).href : line.selectedImage) : ''}\n   Cantidad: ${line.quantity} · Precio unitario: ${money(line.product.price)}\n   Subtotal: ${money(toCents(line.product.price) * line.quantity / 100)}`),
     '',
     `Total de productos: ${money(total)} MXN`,
+    ...(shipping&&shippingMessage(shipping)?['',shippingMessage(shipping),'']:[]),
     'Envío no incluido. Por favor confirmen disponibilidad, costo de entrega y forma de pago.',
     'Esta cotización no reserva existencias; disponibilidad sujeta a confirmación.',
     'Gracias.',
