@@ -1,3 +1,4 @@
+import {AdminMenu} from '/src/shared/components/AdminMenu';
 import {Promotions} from '/src/features/promotions/pages/Promotions';
 // Browser-only fixture: real components, simulated HTTP and storage.
 import {StrictMode,useEffect,useState} from 'react';
@@ -20,4 +21,4 @@ export function EditorFixture(){
  return <div data-qa-product-id={value.id??''}>{location.search.includes('wizard')?<ProductWizard {...common} onSave={save}/>:<CatalogEditor {...common} onClose={()=>{}} section="images" onSaveValue={save} onSave={()=>void save(value)}/>}</div>;
 }
 export function SessionEditorFixture(){const auth=useAuth();return <><button type="button" onClick={()=>void auth.logout()}>Cerrar sesión de prueba</button><EditorFixture/></>;}
-createRoot(document.getElementById('root')!).render(<StrictMode>{location.search.includes('promotions')?<BrowserRouter><Promotions/></BrowserRouter>:location.search.includes('session')?<AuthProvider><BrowserRouter><Routes><Route element={<ProtectedRoute role="admin"/>}><Route path="/qa-editor" element={<SessionEditorFixture/>}/><Route path="/qa-other" element={<p>Otra vista interna</p>}/></Route><Route path="/login" element={<p>Sesión cerrada; formulario descartado</p>}/></Routes></BrowserRouter></AuthProvider>:<EditorFixture/>}</StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode>{location.search.includes('promotions')?<BrowserRouter><AdminMenu/><Promotions/></BrowserRouter>:location.search.includes('session')?<AuthProvider><BrowserRouter><Routes><Route element={<ProtectedRoute role="admin"/>}><Route path="/qa-editor" element={<SessionEditorFixture/>}/><Route path="/qa-other" element={<p>Otra vista interna</p>}/></Route><Route path="/login" element={<p>Sesión cerrada; formulario descartado</p>}/></Routes></BrowserRouter></AuthProvider>:<EditorFixture/>}</StrictMode>);
