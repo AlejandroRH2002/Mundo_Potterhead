@@ -1,5 +1,5 @@
 import { BrandMark } from './BrandMark';
-import { adminLabels } from '../../../shared/adminLabels';
+import {AdminMenu} from './AdminMenu';
 import { CatalogSearch } from './CatalogSearch';
 import { useLocation } from 'react-router-dom';
 import { Link } from 'react-router-dom';
@@ -40,7 +40,7 @@ export function Navbar() {
       <m.div id="navigation-links" className={`navigation-links ${nav.open ? 'is-open' : ''}`} initial={false} animate={reduce?{opacity:nav.open?1:0.99}:{y:nav.open?0:-12,opacity:nav.open?1:0.99}} transition={reduce?{duration:0.14}:{type:'spring',stiffness:260,damping:26}}>
         <Link to="/" aria-current={pathname==='/'&&!catalogActive?'page':undefined}>Inicio</Link><Link to="/#catalogo" aria-current={catalogActive?'page':undefined}>Productos</Link><Link to="/otros-universos" aria-current={pathname==='/otros-universos'?'page':undefined}>Otros universos</Link><Link to="/contact" aria-current={pathname==='/contact'?'page':undefined}>Contacto</Link>
         <Link ref={trigger} className="shop-link" to="/cart" aria-label={`Carrito, ${nav.count} productos`} aria-haspopup="dialog" aria-expanded={drawer} onClick={event=>{if(!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey){event.preventDefault();trigger.current=event.currentTarget;setDrawer(true);}}}><FigmaIcon src={figmaAssets.homeDesktop.imgShoppingBag}/><span className="sr-only">Carrito</span> <m.span key={nav.count} className="cart-count" initial={{opacity:reduce?0.55:1,scale:reduce?1:0.7}} animate={{opacity:1,scale:1}} transition={reduce?{duration:0.14}:{type:'spring',stiffness:460,damping:12}} aria-hidden="true">{nav.count}</m.span></Link>
-        {nav.user?.role==='admin'&&<details className="nav-admin-menu"><summary>Administración</summary><div><Link to="/admin/catalogo">{adminLabels.products}</Link><Link to="/admin/inventario">Inventario</Link><Link to="/admin/promociones">Promociones</Link><Link to="/admin/usuarios">{adminLabels.users}</Link><Link to="/profile">Mi perfil</Link></div></details>}
+        {nav.user?.role==='admin'&&<AdminMenu/>}
         {nav.user ? <>{nav.user.role!=='admin'&&<Link to="/profile">Mi perfil</Link>}<button aria-busy={nav.busy} disabled={nav.busy} onClick={() => void nav.logout()}>Cerrar sesión</button></> : <Link to="/login">Ingresar</Link>}
       </m.div>
       {nav.error && <p role="alert">{nav.error}</p>}
