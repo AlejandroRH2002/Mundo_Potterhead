@@ -3,6 +3,8 @@ import type { UserSession } from '@/types/auth';
 export interface AuthContextValue {
   user: UserSession | null;
   isLoading: boolean;
+  expiredUser?: UserSession | null;
+  validationError?:string;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<UserSession | null>;

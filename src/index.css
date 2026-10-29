@@ -484,3 +484,5 @@ button.shop-link:disabled { opacity: .5; cursor: not-allowed; }
 @media(max-width:360px){.design-preparation li{flex-wrap:wrap}.design-preparation li button{margin-left:auto}}
 
 .design-preparation header>div,.product-review-designs li>div{min-width:0;flex:1;overflow-wrap:anywhere}.design-preparation h3{overflow-wrap:anywhere}
+
+.session-reauth-dialog{width:min(34rem,calc(100% - 2rem));max-height:90svh;overflow:auto;border:1px solid #c7aa69;border-radius:1rem;padding:1.5rem;background:#faf6ed;color:#42252a}.session-reauth-dialog::backdrop{background:#210409b3}.session-reauth-dialog label{display:block;margin-block:1rem}.session-reauth-dialog .admin-actions{align-items:stretch}.session-reauth-dialog h2{font-size:1.5rem}

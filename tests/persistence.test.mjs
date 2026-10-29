@@ -615,3 +615,25 @@ test('employee creation: draft resume, atomic ready designs, withdrawal, permiss
  const remaining=value.models.find(model=>model.active);value=await catalogManagement.save(owner.id,returnDesignToDraft(value,remaining.code));assert.equal(value.status,'draft');assert.equal(await products.get(value.id),null);
  const single={...value,id:undefined,revision:undefined,code:'SINGLE-'+randomUUID(),models:[{code:'M-'+randomUUID(),name:'Único',active:false,images:[],variants:[{code:'S-'+randomUUID(),size:'one',color:'',images:[],active:true}]}]};const savedSingle=await catalogManagement.save(owner.id,single);assert.equal(savedSingle.models.length,1);assert.equal(savedSingle.models[0].variants.length,1);assert.equal(savedSingle.status,'draft');
 });
+
+test('admin session expires during editing, explicit login resumes publication without automatic writes',async()=>{
+ let clock=Date.now();const clockAuth=await createDatabaseAuth(db,secret,30*60000,()=>clock);
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),newCode='AUTH-'+randomUUID();
+ let draftValue=await catalogManagement.save(owner.id,{code:newCode,status:'draft',product:{...draft,name:'Edición conservada'},models:[{code:'M-'+randomUUID(),name:'Diseño de prueba',images:[],active:false,variants:[{code:'S-'+randomUUID(),size:'one',color:'',images:[],active:true}]}]});
+ const edited=structuredClone(draftValue);edited.models[0].images=['https://images.test.invalid/session-photo.webp'];
+ const testApi=createApi({auth:clockAuth,products,catalogManagement,origin,secureCookies:true,logger:()=>{}});await new Promise(resolve=>testApi.listen(0,'127.0.0.1',resolve));const testBase='http://127.0.0.1:'+testApi.address().port;
+ const post=(path,payload,cookie,from=origin)=>fetch(testBase+path,{method:'POST',headers:{Origin:from,'X-Requested-With':'MundoPotterhead','Content-Type':'application/json',...(cookie?{Cookie:cookie}:{})},body:JSON.stringify(payload)});
+ try{
+  const login=await post('/api/auth/login',{email,password});assert.equal(login.status,200);let cookie=login.headers.get('set-cookie').split(';')[0];const oldToken=cookie.split('=')[1];assert.match(login.headers.get('set-cookie'),/HttpOnly/);assert.match(login.headers.get('set-cookie'),/Secure/);assert.match(login.headers.get('set-cookie'),/__Host-/);
+  const initial=await db.session.findUniqueOrThrow({where:{userId:owner.id}});clock+=3*60*60000;
+  const poll=await fetch(testBase+'/api/auth/session',{headers:{Cookie:cookie}});assert.ok((await poll.json()).user);assert.equal(poll.headers.get('set-cookie'),null);assert.equal(+(await db.session.findUniqueOrThrow({where:{userId:owner.id}})).expiresAt,+initial.expiresAt);
+  assert.equal((await post('/api/auth/activity',{},cookie,'https://outside.test.invalid')).status,403);assert.equal(+(await db.session.findUniqueOrThrow({where:{userId:owner.id}})).expiresAt,+initial.expiresAt);
+  assert.equal((await post('/api/auth/activity',{},cookie)).status,200);clock+=4*60*60000;
+  assert.equal((await post('/api/admin/catalog',preparePublication(edited).value,cookie)).status,401);assert.deepEqual(await catalogManagement.get(draftValue.id),draftValue);assert.ok(edited.models[0].images.length);assert.equal(edited.status,'draft');
+  const reauth=await post('/api/auth/login',{email,password});assert.equal(reauth.status,200);cookie=reauth.headers.get('set-cookie').split(';')[0];assert.equal(await clockAuth.session(oldToken,false),null);
+  assert.deepEqual(await catalogManagement.get(draftValue.id),draftValue); // Login alone never publishes.
+  const publish=await post('/api/admin/catalog',preparePublication(edited).value,cookie);assert.equal(publish.status,201);const confirmed=await publish.json();assert.equal(confirmed.status,'active');assert.equal(confirmed.models[0].active,true);assert.equal((await db.product.count({where:{code:newCode}})),1);
+  draftValue=await catalogManagement.get(draftValue.id);assert.equal(draftValue.models[0].images[0],edited.models[0].images[0]);
+  assert.equal((await post('/api/auth/logout',{},cookie)).status,204);assert.equal(await clockAuth.session(cookie.split('=')[1],false),null);
+ }finally{await new Promise(resolve=>testApi.close(resolve));}
+});

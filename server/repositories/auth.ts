@@ -15,13 +15,13 @@ export async function createDatabaseAuth(db: PrismaClient, secret: string, ttlMs
       if (!await verifyPassword(password, user?.password ?? dummy) || !user || !user.isActive) return null;
       const token = randomBytes(32).toString('base64url');
       const createdAt = new Date(now());
-      const expiresAt = new Date(createdAt.getTime() + Math.min(ttlMs, 8 * 60 * 60 * 1000));
       // Unique userId makes rotation atomic across replicas; last login wins.
       const accepted = await db.$transaction(async tx => {
         // Lock the account so disabling + revocation cannot race a new login.
         await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${user.id} FOR UPDATE`;
         const current = await tx.user.findUnique({ where: { id: user.id } });
         if (!current?.isActive || current.password !== user.password) return null;
+        const expiresAt = new Date(createdAt.getTime() + Math.min(current.role==='ADMIN'?4*60*60*1000:ttlMs,8*60*60*1000));
         await tx.session.upsert({ where: { userId: user.id },
         create: { userId: user.id, tokenHash: digest(token), createdAt, expiresAt },
         update: { tokenHash: digest(token), createdAt, expiresAt },
@@ -30,23 +30,29 @@ export async function createDatabaseAuth(db: PrismaClient, secret: string, ttlMs
       });
       return accepted ? { token, user: profile(accepted) } : null;
     },
-    async session(token) {
+    async session(token, activity=true) {
       if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
       const tokenHash = digest(token);
       let session = await db.session.findUnique({ where: { tokenHash }, include: { user: true } });
       const current = now();
       const absoluteLimit = (session?.createdAt.getTime() ?? 0) + 8 * 60 * 60 * 1000;
       if (!session || !session.user.isActive || session.expiresAt.getTime() <= current || absoluteLimit <= current) return null;
+      const idleMs=session.user.role==='ADMIN'?4*60*60*1000:ttlMs;
       // expiresAt encodes the last persisted activity. CAS prevents competing replicas
       // from renewing more than once/minute; an update never recreates a revoked token.
-      if (session.expiresAt.getTime() < absoluteLimit && session.expiresAt.getTime() <= current + ttlMs - 60_000) {
+      if ((activity||session.user.role!=='ADMIN')&&session.expiresAt.getTime() < absoluteLimit && session.expiresAt.getTime() <= current + idleMs - 60_000) {
         await db.session.updateMany({
           where: { tokenHash, expiresAt: session.expiresAt, createdAt: session.createdAt },
-          data: { expiresAt: new Date(Math.min(current + ttlMs, absoluteLimit)) },
+          data: { expiresAt: new Date(Math.min(current + idleMs, absoluteLimit)) },
         });
         session = await db.session.findUnique({ where: { tokenHash }, include: { user: true } });
       }
       return session && session.user.isActive && session.expiresAt.getTime() > now() && session.createdAt.getTime() + 8 * 60 * 60 * 1000 > now() ? profile(session.user) : null;
+    },
+    async remainingMs(token){
+      if(!/^[A-Za-z0-9_-]{43}$/.test(token))return 0;
+      const row=await db.session.findUnique({where:{tokenHash:digest(token)}});
+      return row?Math.max(0,Math.min(row.expiresAt.getTime(),row.createdAt.getTime()+8*60*60*1000)-now()):0;
     },
     async revoke(token) { if (token) await db.session.deleteMany({ where: { tokenHash: digest(token) } }); },
     async updateName(id, name) { return profile(await db.user.update({ where: { id }, data: { name } })); },
