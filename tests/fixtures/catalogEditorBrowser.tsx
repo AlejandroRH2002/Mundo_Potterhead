@@ -1,3 +1,5 @@
+import {BrowserRouter} from 'react-router-dom';
+import {Promotions} from '/src/features/promotions/pages/Promotions';
 // Browser-only fixture: real components, simulated HTTP and storage.
 import {StrictMode,useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -13,4 +15,4 @@ export function EditorFixture(){
  const common={value,persisted,onChange:setValue,onUploadState:()=>{},onCancel:()=>{},busy,dirty:baseline!==JSON.stringify(value)};
  return <div data-qa-product-id={value.id??''}>{location.search.includes('wizard')?<ProductWizard {...common} onSave={save}/>:<CatalogEditor {...common} onClose={()=>{}} section="images" onSaveValue={save} onSave={()=>void save(value)}/>}</div>;
 }
-createRoot(document.getElementById('root')!).render(<StrictMode><EditorFixture/></StrictMode>);
+createRoot(document.getElementById('root')!).render(<StrictMode>{location.search.includes('promotions')?<BrowserRouter><Promotions/></BrowserRouter>:<EditorFixture/>}</StrictMode>);

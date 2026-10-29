@@ -22,6 +22,7 @@ process.env.VITE_WHATSAPP_NUMBER='15555550123'; // Reserved fictional number; no
 const fixture=detailFixture();let relatedCount=0,relatedRequests=0,designCount=3;
 let failPhoto=false,failSave=false,mediaRequests=0;
 let editorFixture={code:'P-QA',status:'draft',product:{name:'Frazada individual',description:'Producto de prueba para edición',price:500,category:'accessories',subcategory:null,universe:'harry-potter',images:[]},models:['Hogwarts','Reliquias','Pendiente'].map((name,index)=>({code:'M-'+index,name,active:false,images:[],variants:[{code:'S-'+index,size:'one',color:'',images:[],active:true}]}))};
+let promotionSettings={revision:0,currency:'MXN',shipping:{enabled:false,minimum:1500,scope:'',conditions:''},general:{enabled:false,title:'',message:''}};
 const transport=createServer();
 const vite=await createViteServer({configFile:resolve('vite.config.ts'),server:{hmr:false,middlewareMode:true},appType:'custom',plugins:[{name:'browser-qa-no-hmr-port',resolveId(id){if(id==='/qa-editor-entry.tsx')return '\0qa-editor-entry.tsx';},async load(id){if(id==='\0qa-editor-entry.tsx')return (await transformWithEsbuild(await readFile('tests/fixtures/catalogEditorBrowser.tsx','utf8'),'qa-editor-entry.tsx',{loader:'tsx',jsx:'automatic'})).code;},configResolved(config){config.server.hmr={server:transport};config.optimizeDeps.noDiscovery=true;config.optimizeDeps.entries=[];config.optimizeDeps.include=['react','react-dom','react-dom/client','react/jsx-runtime','react/jsx-dev-runtime','react-router-dom','framer-motion','lucide-react','zod'];},configureServer(server){server.config.server.hmr=false;}}]});
 const html=await readFile('index.html','utf8');
@@ -33,6 +34,8 @@ server.on('request',async(req,res)=>{
   if(url.pathname==='/qa-editor'){res.setHeader('Content-Type','text/html');res.end(await vite.transformIndexHtml(req.url,'<html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script type="module" src="/qa-editor-entry.tsx"></script></body></html>'));return;}
   if(url.pathname==='/api/admin/catalog/qa-parent'){json(editorFixture);return;}
   if(url.pathname==='/api/admin/inventory'){json({items:[],total:0,page:1,pageSize:100});return;}
+  if(url.pathname==='/api/promotions'||url.pathname==='/api/admin/promotions'){if(req.method==='PUT'){let body='';for await(const chunk of req)body+=chunk;promotionSettings={...JSON.parse(body),revision:promotionSettings.revision+1};}json(promotionSettings);return;}
+  if(url.pathname==='/api/admin/promotions/products'){json({items:[],total:0,page:1});return;}
   if(url.pathname==='/api/qa-editor'){if(req.method==='PUT'){if(failSave){failSave=false;res.statusCode=503;json({message:'Guardado de prueba rechazado'});return;}let body='';for await(const chunk of req)body+=chunk;const incoming=JSON.parse(body);editorFixture={...incoming,id:'qa-parent',revision:(editorFixture.revision??0)+1,models:incoming.models.map(model=>({...model,id:model.id??model.code,variants:model.variants.map(option=>({...option,id:option.id??option.code}))}))};}json(editorFixture);return;}
   if(url.pathname==='/api/media/config'){mediaRequests++;await pause(400);json({enabled:true,maxBytes:2097152});return;}
   if(url.pathname==='/api/media/upload'){if(failPhoto){failPhoto=false;res.statusCode=503;json({message:'Almacenamiento de prueba sin respuesta'});return;}let body='';for await(const chunk of req)body+=chunk;const {sha256}=JSON.parse(body);json({publicUrl:'https://images.test.invalid/qa-'+sha256+'.webp'});return;}
@@ -102,6 +105,14 @@ try{
   await wait(count?`document.querySelectorAll('.related-product-grid>.product-card').length===${count}`:"!document.body.textContent.includes('Buscando piezas relacionadas')",'Related products did not finish');
   await evaluate('document.fonts.ready.then(()=>true)');
  };
+ stage='promotions responsive settings';
+ for(const width of [390,1440]){
+ await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});
+ await call('Page.navigate',{url:origin+'/qa-editor?promotions'});
+ await wait("document.querySelector('form[aria-label=\"Promociones generales\"]') && document.body.textContent.includes('Guardar promociones generales')",'Promotions did not render');
+ await evaluate('document.fonts.ready.then(()=>true)');
+ assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),'Promotions overflow');
+ }
  for(const count of [0,1,2,4]){
   await navigate(count);
   assert.equal(await evaluate("document.querySelectorAll('.related-products').length"),count?1:0);

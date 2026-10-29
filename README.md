@@ -68,3 +68,5 @@ Las instrucciones de infraestructura y base de datos se mantienen en la guía op
 Compose publica PostgreSQL en loopback:15432 para evitar reservas de puertos de Windows. Ejecuta pnpm dev:check antes de pnpm dev; el ajuste de puerto es solo en memoria y no modifica .env. No expongas Vite a redes ni túneles públicos.
 
 [Informe de recuperación y revisión de dependencias](docs/security/2026-10-26.md).
+
+[Administración y promociones: uso y despliegue](deploy/PROMOTIONS.md).

@@ -1,3 +1,5 @@
+import {evaluateShipping,shippingMessage,initialPromotions,promotionSettingsSchema,publicPromotions} from '../shared/promotions.ts';
+import {quoteSubtotal} from '../shared/money.ts';
 import { after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createTestViteServer } from './fixtures/viteServer.mjs';
@@ -88,4 +90,21 @@ test('a removed last SKU never becomes a generic legacy cart line',()=>{
 test('cart accepts the selected design photo without merging it into the parent gallery',async()=>{
  const product={id:'design-parent',name:'Parent',description:'Base',price:50,image:'/images/product-placeholder.svg',category:'clothing',universe:'harry-potter',inventoryMode:'capture',models:[{id:'design',sku:'MODEL',name:'Design A',active:true,image:'https://images.test.invalid/a.webp',images:['https://images.test.invalid/a.webp'],quantity:2,version:1,skus:[{id:'sku',code:'SKU-A',size:'m',quantity:2,active:true,version:1}]}]};
  const entry={productId:product.id,skuId:'sku',quantity:1,selectedImage:product.models[0].image};assert.equal(resolveCart([entry],[product]).lines.length,1);assert.equal(resolveCart([{...entry,selectedImage:'https://images.test.invalid/wrong.webp'}],[product]).missing.length,1);
+});
+
+test('shipping starts disabled at 1500 without invented geographic coverage',()=>{assert.equal(initialPromotions.shipping.minimum,1500);assert.equal(initialPromotions.shipping.enabled,false);assert.equal(initialPromotions.shipping.scope,'');assert.equal(shippingMessage(evaluateShipping(9999,initialPromotions.shipping)),'');assert.equal(promotionSettingsSchema.safeParse({...initialPromotions,shipping:{...initialPromotions.shipping,enabled:true}}).success,false);});
+test('shipping quote boundaries use product subtotal after discounts and arbitrary valid quantities',()=>{
+ const rule={enabled:true,minimum:1500,scope:'Zona de prueba',conditions:'Confirmar destino y condiciones'};
+ for(const [subtotal,eligible] of [[1499.99,false],[1500,true],[1500.01,true]])assert.equal(evaluateShipping(subtotal,rule).eligible,eligible);
+ const discounted=[{quantity:2,product:{price:500,originalPrice:1000,isOnSale:true}},{quantity:1,product:{price:500,originalPrice:800,isOnSale:true}}];assert.equal(quoteSubtotal(discounted),1500);assert.equal(evaluateShipping(quoteSubtotal(discounted),rule).eligible,true);assert.equal(evaluateShipping(1500,{...rule,minimum:2000}).remaining,500);
+ for(const quantity of [0,-1,1.5,100,NaN])assert.throws(()=>quoteSubtotal([{quantity,product:{price:1000}}]));
+});
+test('WhatsApp keeps designs, sizes, pictures and exact totals and only requests eligible shipping',()=>{
+ const product={...draft,id:'p',price:500,originalPrice:1000,isOnSale:true};const lines=[{productId:'p',product,quantity:2,subtotal:1000,modelName:'Gryffindor',size:'m',sku:'DESIGN-M',selectedImage:'/images/a.webp'},{productId:'p',product,quantity:1,subtotal:500,modelName:'Ravenclaw',size:'l',sku:'DESIGN-L',selectedImage:'/images/b.webp'}];const rule={enabled:true,minimum:1500,scope:'Zona acordada',conditions:'Confirmar domicilio'};
+ const message=decodeURIComponent(new URL(whatsappOrder(lines,'15555550123','https://store.test.invalid',evaluateShipping(1500,rule))).searchParams.get('text'));assert.match(message,/Gryffindor/);assert.match(message,/Ravenclaw/);assert.match(message,/DESIGN-M/);assert.match(message,/images\/b.webp/);assert.match(message,/1,500/);assert.match(message,/solicitar envío gratis/);assert.match(message,/sujeta a confirmación/);assert.doesNotMatch(message,/República Mexicana|Envío: \$0/);
+ const below=new URL(whatsappOrder(lines.slice(0,1),'15555550123',undefined,evaluateShipping(1000,rule))).searchParams.get('text');assert.doesNotMatch(below,/solicitar envío gratis/);
+});
+test('deleted and invalid cart entries never contribute to promotion subtotal',()=>{const product={...draft,id:'known',price:500};const resolved=resolveCart([{productId:'known',quantity:2},{productId:'deleted',quantity:99},{productId:'known',quantity:0}],[product]);assert.equal(resolved.total,1000);assert.equal(resolved.missing.length,2);});
+test('disabled promotion copy is not exposed publicly and old editors only redirect',async()=>{
+ const settings={...initialPromotions,general:{enabled:false,title:'Borrador no público',message:'Texto privado de preparación'}};assert.equal(publicPromotions(settings).general.title,'');const {readFile}=await import('node:fs/promises');for(const file of ['AdminDashboard','EditProduct']){const source=await readFile('src/features/admin-products/pages/'+file+'.tsx','utf8');assert.match(source,/Navigate/);assert.doesNotMatch(source,/ProductEditor|useAdminProducts/);}
 });
