@@ -1,3 +1,4 @@
+import {preparePublication,returnDesignToDraft} from '../src/features/admin-catalog/services/publication.ts';
 import { createInventory, assertInventoryReady } from '../server/repositories/inventory.ts';
 import { createCatalogManagement } from '../server/repositories/catalogManagement.ts';
 import { templateRow } from '../shared/catalogFiles.ts';
@@ -587,4 +588,30 @@ test('pending stock can group as draft under stock enforcement without bypassing
  const owner=await db.user.findUniqueOrThrow({where:{email}}),prefix='GROUP-ENFORCE-DRAFT-'+randomUUID(),target=await groupingProduct(owner,prefix+'-T','Family '+prefix),source=await groupingProduct(owner,prefix+'-S','Hedwig '+prefix),other=await groupingProduct(owner,prefix+'-O','Totoro '+prefix,{universe:'otros-universos'});const previous=process.env.INVENTORY_MODE;
  try{process.env.INVENTORY_MODE='enforce';const request={key:randomUUID(),targetId:target.id,sourceIds:[source.id]},publicPlan=await catalogManagement.groupPreview(request);assert.equal(publicPlan.report.valid,false);assert.ok(publicPlan.report.conflicts.some(message=>message.includes(source.product.name)&&message.includes('conteo')));assert.equal((await catalogManagement.groupPreview({...request,sourceIds:[other.id],keepAsDraft:true})).report.valid,false);const draft={...request,keepAsDraft:true},preview=await catalogManagement.groupPreview(draft);assert.equal(preview.report.valid,true);const before=await db.productSku.findMany({where:{model:{productId:{in:[target.id,source.id]}}},orderBy:{id:'asc'}});await catalogManagement.groupApply(owner.id,draft,preview.token);assert.deepEqual(await db.productSku.findMany({where:{id:{in:before.map(sku=>sku.id)}},orderBy:{id:'asc'}}),before);const value=await catalogManagement.get(target.id);value.status='active';await assert.rejects(()=>catalogManagement.save(owner.id,value),/inventario/);assert.equal((await db.product.findUniqueOrThrow({where:{id:other.id}})).groupedIntoId,null);
  }finally{if(previous===undefined)delete process.env.INVENTORY_MODE;else process.env.INVENTORY_MODE=previous;}
+});
+
+test('employee creation: draft resume, atomic ready designs, withdrawal, permissions and preserved stock/orders',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),session=await auth.authenticate(email,password),cookie='__Host-mp_session='+session.token;
+ const code='FLOW-'+randomUUID();
+ let value={code,status:'draft',product:{...draft,name:'Chamarra de prueba',category:'clothing',images:[]},models:['Gryffindor','Ravenclaw','Pendiente'].map((name,index)=>({code:code+'-M'+index,name,active:false,images:[],variants:[{code:code+'-S'+index,size:'one',color:'',images:[],active:true}]}))};
+ assert.equal((await send('/api/admin/catalog',{method:'POST',payload:value})).status,401);
+ let response=await send('/api/admin/catalog',{method:'POST',payload:value,cookie});assert.equal(response.status,201);value=await response.json();assert.equal(await products.get(value.id),null);
+ value=await catalogManagement.get(value.id);assert.equal(value.models.length,3);
+ for(const [index,model] of value.models.entries())if(model.name!=='Pendiente')model.images=['https://images.test.invalid/coat-'+index+'.webp'];
+ value=await catalogManagement.save(owner.id,value);const resumed=await catalogManagement.get(value.id);assert.deepEqual(resumed,value);assert.ok(resumed.models.filter(model=>model.images.length).every(model=>!model.active));
+ const tracked=value.models.find(model=>model.name==='Gryffindor').variants[0];const inventory=createInventory(db);
+ await inventory.move(owner.id,tracked.id,{key:randomUUID(),type:'COUNT',quantity:12,reason:'Conteo inicial de prueba',expectedVersion:0});
+ const order=await db.order.create({data:{userId:owner.id,total:780,items:{create:{productId:value.id,quantity:1,price:780}}}});
+ const stableSkus=rows=>rows.map(row=>({...row,updatedAt:undefined}));const skuBefore=stableSkus(await db.productSku.findMany({where:{model:{productId:value.id}},orderBy:{id:'asc'}})),movementsBefore=await db.inventoryMovement.findMany({where:{skuId:tracked.id}});
+ const plan=preparePublication(value);assert.equal(plan.ready.length,2);assert.equal(plan.pending.length,1);
+ const priorMode=process.env.INVENTORY_MODE;try{process.env.INVENTORY_MODE='enforce';await assert.rejects(()=>catalogManagement.save(owner.id,plan.value),/inventario/);assert.deepEqual(await catalogManagement.get(value.id),value);}finally{if(priorMode===undefined)delete process.env.INVENTORY_MODE;else process.env.INVENTORY_MODE=priorMode;}
+ response=await send('/api/admin/catalog',{method:'POST',payload:plan.value,cookie});assert.equal(response.status,201);value=await catalogManagement.get((await response.json()).id);assert.equal(value.models.filter(model=>model.active).length,2);
+ const publicProduct=await products.get(value.id);assert.ok(publicProduct.image.startsWith('https://images.test.invalid/coat-'));assert.equal(publicProduct.models.length,2);assert.ok(publicProduct.models.every(model=>model.name!=='Pendiente'));
+ const hidden=value.models.find(model=>model.name==='Pendiente');const invalid={...value,models:value.models.map(model=>model===hidden?{...model,active:true}:model)};
+ await assert.rejects(()=>catalogManagement.save(owner.id,invalid),/fotografía/);assert.deepEqual(await catalogManagement.get(value.id),value);
+ const removed=value.models.find(model=>model.name==='Gryffindor');value=await catalogManagement.save(owner.id,returnDesignToDraft(value,removed.code));assert.ok(!(await products.get(value.id)).models.some(model=>model.id===removed.id));
+ assert.deepEqual(stableSkus(await db.productSku.findMany({where:{model:{productId:value.id}},orderBy:{id:'asc'}})),skuBefore);assert.deepEqual(await db.inventoryMovement.findMany({where:{skuId:tracked.id}}),movementsBefore);assert.equal(Number((await db.orderItem.findFirst({where:{orderId:order.id}})).price),780);
+ const beforeCount=await db.product.count({where:{code}});await assert.rejects(()=>catalogManagement.save(owner.id,{...value,id:undefined,revision:undefined}),/ya existe/);assert.equal(await db.product.count({where:{code}}),beforeCount);
+ const remaining=value.models.find(model=>model.active);value=await catalogManagement.save(owner.id,returnDesignToDraft(value,remaining.code));assert.equal(value.status,'draft');assert.equal(await products.get(value.id),null);
+ const single={...value,id:undefined,revision:undefined,code:'SINGLE-'+randomUUID(),models:[{code:'M-'+randomUUID(),name:'Único',active:false,images:[],variants:[{code:'S-'+randomUUID(),size:'one',color:'',images:[],active:true}]}]};const savedSingle=await catalogManagement.save(owner.id,single);assert.equal(savedSingle.models.length,1);assert.equal(savedSingle.models[0].variants.length,1);assert.equal(savedSingle.status,'draft');
 });

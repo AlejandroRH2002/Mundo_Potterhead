@@ -7,6 +7,7 @@ import {zipSync,unzipSync,strToU8,strFromU8} from 'fflate';
 import {managedProductSchema,planImport} from '../shared/catalogManagement.ts';
 import {parseCsv,recordsFromRows,csvFile,workbookFile,parseWorkbook,safeArchive,templateRow} from '../shared/catalogFiles.ts';
 import {removeVariant,addVariant,duplicateModel} from '../src/features/admin-catalog/services/editorActions.ts';
+import {preparePublication,publicationSummary,returnDesignToDraft} from '../src/features/admin-catalog/services/publication.ts';
 import {PhotoQueue} from '../src/features/admin-catalog/services/photoQueue.ts';
 import {designReadiness} from '../src/features/admin-catalog/services/designReadiness.ts';
 
@@ -43,8 +44,8 @@ test('retrying an association failure reuses a confirmed image without uploading
 });
 test('editor explains draft publication separately from optional fields and saving',async()=>{
  const {CatalogEditor}=await vite.ssrLoadModule('/src/features/admin-catalog/components/CatalogEditor.tsx');const value=planImport([row]).products[0];value.status='draft';value.models[0].active=false;value.models[0].variants[0].color='';
- const html=renderToStaticMarkup(createElement(CatalogEditor,{value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true,section:'variants'}));
- assert.match(html,/Color sin especificar \(opcional\)/);assert.match(html,/Publicar diseño/);assert.match(html,/Los borradores no aparecen/);assert.match(html,/Guardar cambios/);
+ const html=renderToStaticMarkup(createElement(CatalogEditor,{value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true,section:'variants',onSaveValue:async()=>value}));
+ assert.match(html,/Sin especificar · opcional/);assert.match(html,/Guardar y publicar diseños listos/);assert.match(html,/Los borradores no aparecen/);assert.match(html,/Guardar cambios/);
  value.models[0].images=[];const missing=renderToStaticMarkup(createElement(CatalogEditor,{value,onChange:()=>{},onSave:()=>{},onClose:()=>{},onUploadState:()=>{},busy:false,dirty:true,section:'variants'}));assert.match(missing,/Requisitos de publicación pendientes/);assert.match(missing,/Fotografía principal/);
 });
 test('editor sections render separate controls instead of mixing data, variants and galleries',async()=>{
@@ -152,7 +153,7 @@ test('removing a new design drops it while existing designs and options are only
 test('wizard screens separate general information, options, photos and final confirmation',async()=>{
  const {ProductWizard}=await vite.ssrLoadModule('/src/features/admin-catalog/components/ProductWizard.tsx');const value=planImport([row]).products[0];const props={value,onChange:()=>{},onSave:async()=>{},onCancel:()=>{},onUploadState:()=>{},busy:false,dirty:true};
  const screens=[0,1,2,3].map(initialStep=>renderToStaticMarkup(createElement(ProductWizard,{...props,initialStep})));
- assert.match(screens[0],/Datos del producto/);assert.doesNotMatch(screens[0],/type="file"|Quitar variante/);assert.match(screens[1],/Sin variantes: una sola opción/);assert.match(screens[1],/Importar varios diseños/);assert.match(screens[1],/<details><summary>Datos avanzados/);assert.doesNotMatch(screens[1],/Datos del producto/);assert.match(screens[2],/Fotografías de/);assert.match(screens[3],/Guardar borrador/);assert.match(screens[3],/Publicar producto/);assert.doesNotMatch(screens[3],/type="file"/);
+ assert.match(screens[0],/Datos del producto/);assert.doesNotMatch(screens[0],/type="file"|Quitar variante/);assert.match(screens[1],/Un solo diseño/);assert.match(screens[1],/Importar varios diseños/);assert.match(screens[1],/<details><summary>Datos avanzados/);assert.doesNotMatch(screens[1],/Datos del producto/);assert.match(screens[2],/Fotografías de/);assert.match(screens[3],/Guardar borrador/);assert.match(screens[3],/Guardar y publicar diseños listos/);assert.doesNotMatch(screens[3],/type="file"/);
 });
 
 test('employee inventory keeps internal codes behind advanced options',async()=>{
@@ -201,4 +202,20 @@ test('completed photos follow stable design identity after reordering and preser
 
 test('grouping draft decision is explicit and cannot also request publication',()=>{
  const request={key:crypto.randomUUID(),targetId:'target',sourceIds:['source']};assert.equal(groupingRequestSchema.parse(request).keepAsDraft,false);assert.equal(groupingRequestSchema.parse({...request,keepAsDraft:true}).publishTarget,false);assert.equal(groupingRequestSchema.safeParse({...request,keepAsDraft:true,publishTarget:true}).success,false);
+});
+
+test('publication plans two complete designs atomically and leaves a third incomplete without mutating edits',()=>{
+ const value=planImport([row]).products[0];value.status='draft';value.models[0].active=false;value.models[0].variants[0].color='';
+ const second=duplicateModel(value,0);const expanded=duplicateModel(second,0);expanded.models[2].images=[];const before=structuredClone(expanded);
+ const plan=preparePublication(expanded);assert.equal(plan.value.status,'active');assert.equal(plan.value.product.image,plan.ready[0].images[0]);assert.equal(plan.ready.length,2);assert.equal(plan.pending.length,1);assert.deepEqual(plan.value.models.map(model=>model.active),[true,true,false]);assert.deepEqual(expanded,before);assert.deepEqual(plan.value.models.map(model=>model.variants),expanded.models.map(model=>model.variants));
+ assert.match(publicationSummary(plan.value),/Confirmado por el servidor/);expanded.models.forEach(model=>model.images=[]);assert.throws(()=>preparePublication(expanded),/Ningún diseño/);
+});
+test('returning a design to draft preserves option identities and withdraws the last active parent',()=>{
+ const value=planImport([row]).products[0];value.status='active';const before=structuredClone(value);const draft=returnDesignToDraft(value,value.models[0].code);assert.equal(draft.status,'draft');assert.equal(draft.models[0].active,false);assert.deepEqual(draft.models[0].variants,before.models[0].variants);assert.deepEqual(value,before);
+});
+test('add product uses the same wizard route and prepared photography is distinguished from persisted photography',async()=>{
+ const source=await import('node:fs/promises').then(fs=>fs.readFile('src/features/admin-products/pages/AddProduct.tsx','utf8'));assert.match(source,/Navigate.*admin\/catalogo\/nuevo/);assert.doesNotMatch(source,/ProductEditor/);
+ const {DesignPreparation}=await vite.ssrLoadModule('/src/features/admin-catalog/components/DesignPreparation.tsx');const value=planImport([row]).products[0],model=value.models[0];model.active=false;
+ let html=renderToStaticMarkup(createElement(DesignPreparation,{value,model,onField:()=>{}}));assert.match(html,/Subida · pendiente de guardar/);assert.doesNotMatch(html,/Guardada en el producto/);
+ html=renderToStaticMarkup(createElement(DesignPreparation,{value,model,persisted:value,onField:()=>{}}));assert.match(html,/Guardada en el producto/);
 });

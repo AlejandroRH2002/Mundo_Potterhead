@@ -22,9 +22,9 @@ carrito. No cambian precios, disponibilidad ni el mensaje de WhatsApp.
 6. **Fotografía subida** significa que el almacenamiento confirmó la carga y la
    URL pública pudo leerse. Todavía hay que **Guardar cambios** para conservar la
    asociación en la base de datos. No se anuncia como guardada antes de hacerlo.
-7. **Publicar diseño** pide confirmación y prepara el estado para el siguiente
-   guardado. El producto padre debe estar publicado. Subir fotografías nunca
-   activa automáticamente diseños. Los borradores no aparecen en el catálogo.
+7. **Guardar y publicar diseños listos** pide confirmación, guarda y publica en
+   una única operación. Los incompletos quedan pendientes. Subir fotografías nunca
+   activa automáticamente diseños. Consulta [Crear y publicar](CREAR-Y-PUBLICAR.md).
 
 El guardado, el cierre del editor y el cambio de sección esperan a que terminen
 las cargas. Esto evita guardar una versión incompleta o desmontar la cola.
@@ -55,13 +55,14 @@ por el procedimiento habitual de Pages. No requiere actualizar la base de datos.
 
 ## Resultado de esta entrega
 
-Lint, typecheck, las 158 pruebas unitarias, build y build:web pasan. Chrome
+Lint, typecheck, las pruebas unitarias, build y build:web pasan. Chrome
 instalado comprueba los seis anchos, la tira de 1/5/20/50 diseños, teclado,
 desplazamiento táctil, selección para WhatsApp y el editor con fotografías
 simuladas: compresión, cola, cambio de diseño, guardado, recarga y reintento.
 Las respuestas de almacenamiento y guardado del fixture son simuladas; esto
 **no acredita una subida a R2 real ni persistencia en PostgreSQL**.
 
-Se intentó `pnpm test:integration`, pero Docker Desktop no estaba disponible:
-no pudo abrirse el motor Linux y no se creó PostgreSQL desechable. Debe repetirse
-con Docker iniciado antes de integrar. No se modificó ninguna base existente.
+En la entrega inicial Docker no estaba disponible. La corrección del flujo de
+creación y publicación añade pruebas en PostgreSQL desechable, incluidos rollback,
+permisos y conservación de existencias, movimientos y pedidos. No se modifica
+ninguna base existente.
