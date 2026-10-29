@@ -18,6 +18,7 @@ async function authenticatedRequest(path: string, init: RequestInit): Promise<{ 
 // Only server responses establish identity. No credentials, role selectors or tokens
 // are stored in browser storage. This adapter can call a JWT-backed API unchanged.
 export const authService = {
+  activity:()=>authenticatedRequest('/auth/activity',{method:'POST',body:'{}'}),
   getSession: async () => parseSession(await requestJson<unknown>('/auth/session')),
   login: (email: string, password: string) => authenticatedRequest('/auth/login', {
     method: 'POST', body: JSON.stringify({ email, password }),

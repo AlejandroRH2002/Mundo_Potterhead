@@ -26,6 +26,7 @@ try{
  const port=run(['inspect','--format','{{(index (index .NetworkSettings.Ports "5432/tcp") 0).HostPort}}',name]);
  const clean=Object.fromEntries(Object.entries(process.env).filter(([key])=>!key.startsWith('AWS_')&&!key.startsWith('S3_')&&!key.startsWith('ADMIN_BOOTSTRAP_')));
  const url=`postgresql://mp_test:${password}@127.0.0.1:${port}/mp_test`;
+ if(process.argv.includes('--persistence')){const persistence=spawnSync(process.execPath,['--test','tests/persistence.test.mjs'],{env:{...clean,NODE_ENV:'development',DATABASE_URL:url,DIRECT_DATABASE_URL:url,SESSION_SECRET:randomBytes(48).toString('hex'),MP_ISOLATED_TEST_DB:'true',MEDIA_STORAGE:'s3',S3_ENDPOINT:'https://objects.test.invalid',S3_REGION:'auto',S3_BUCKET:'isolated-test-bucket',S3_PUBLIC_BASE_URL:'https://images.test.invalid',DB_TLS_MODE:'disable'},windowsHide:true,stdio:'inherit',timeout:180000});if(persistence.error||persistence.status!==0)throw Error('Persistence integration failed.');}
  const result=spawnSync(process.execPath,['--test','tests/product-history.integration.mjs'],{env:{...clean,NODE_ENV:'development',DATABASE_URL:url,DIRECT_DATABASE_URL:url,SESSION_SECRET:randomBytes(48).toString('hex'),MP_HISTORY_ISOLATED:'true',MEDIA_STORAGE:'inline',DB_TLS_MODE:'disable'},windowsHide:true,stdio:'inherit',timeout:120000});
  if(result.error||result.status!==0)throw Error('Product history integration failed.');
  console.log('History integration passed on a disposable schema copy; no migrations or source data writes.');

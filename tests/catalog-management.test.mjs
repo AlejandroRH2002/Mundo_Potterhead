@@ -1,3 +1,4 @@
+import {publicationFailure} from '../src/features/admin-catalog/services/publicationFailure.ts';
 import test, {after} from 'node:test';
 import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
@@ -218,4 +219,17 @@ test('add product uses the same wizard route and prepared photography is disting
  const {DesignPreparation}=await vite.ssrLoadModule('/src/features/admin-catalog/components/DesignPreparation.tsx');const value=planImport([row]).products[0],model=value.models[0];model.active=false;
  let html=renderToStaticMarkup(createElement(DesignPreparation,{value,model,onField:()=>{}}));assert.match(html,/Subida · pendiente de guardar/);assert.doesNotMatch(html,/Guardada en el producto/);
  html=renderToStaticMarkup(createElement(DesignPreparation,{value,model,persisted:value,onField:()=>{}}));assert.match(html,/Guardada en el producto/);
+});
+
+test('publication errors distinguish expired identity, permissions, conflict and server/network failure',()=>{
+ const failure=status=>Object.assign(new Error('Respuesta del servidor'),{status});assert.match(publicationFailure(failure(401)),/sesión ha expirado/);assert.match(publicationFailure(failure(403)),/HTTP 403/);assert.match(publicationFailure(failure(409)),/HTTP 409/);assert.match(publicationFailure(failure(500)),/HTTP 500/);assert.doesNotMatch(publicationFailure(failure(500)),/sesión ha expirado/);assert.match(publicationFailure(new TypeError('fetch failed')),/No hubo respuesta/);
+});
+
+test('HTTP client preserves login on permission errors and ignores stale unauthorized responses after reauthentication',async()=>{
+ const {requestJson,SESSION_INVALID,advanceSessionEpoch}=await vite.ssrLoadModule('/src/shared/lib/httpClient.ts');const oldFetch=globalThis.fetch,oldWindow=globalThis.window;const target=new EventTarget();let invalid=0;target.addEventListener(SESSION_INVALID,()=>invalid++);globalThis.window=target;
+ try{
+  globalThis.fetch=async()=>new Response(JSON.stringify({message:'Permiso denegado'}),{status:403});await assert.rejects(()=>requestJson('/admin/catalog'),error=>error.status===403);assert.equal(invalid,0);
+  globalThis.fetch=async()=>new Response(JSON.stringify({message:'Credenciales incorrectas'}),{status:401});await assert.rejects(()=>requestJson('/auth/login',{method:'POST'}));assert.equal(invalid,0);await assert.rejects(()=>requestJson('/admin/catalog'));assert.equal(invalid,1);
+  let release;globalThis.fetch=()=>new Promise(resolve=>{release=resolve;});const late=requestJson('/admin/catalog');advanceSessionEpoch();release(new Response(JSON.stringify({message:'Sesión anterior expirada'}),{status:401}));await assert.rejects(()=>late);assert.equal(invalid,1);
+ }finally{globalThis.fetch=oldFetch;if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;}
 });

@@ -106,3 +106,5 @@ El modo backend INVENTORY_MODE es opcional y predetermina capture. No activar en
 ## Diagnóstico de fotografías e inventario
 
 Ver [diagnóstico y prueba aislada de R2](../docs/catalogo/DIAGNOSTICO-FOTOS-INVENTARIO.md). MEDIA_STORAGE=inline permite desarrollo sin objetos, pero el administrador informa que las fotografías no están habilitadas; no se convierten en referencias Base64 de sustitución. Configurar s3 y un perfil aislado para probar fotografías. Readiness de la API no valida los permisos ni el binding R2. El estado real de migraciones en Neon debe consultarse antes del release; no se deduce del resultado local.
+
+Para actualizar sesiones administrativas, desplegar API antes que frontend, sin cambiar secretos ni variables: [Política y pruebas](ADMIN-SESSIONS.md). No se requieren migraciones.

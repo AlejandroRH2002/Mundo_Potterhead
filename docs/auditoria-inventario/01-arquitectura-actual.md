@@ -43,7 +43,7 @@ S3_PUBLIC_BASE_URL también permite servir imágenes por URL pública directa. E
 
 ## Sesiones y acceso
 
-Scrypt, token aleatorio con digest HMAC persistido; una sesión por usuario por unique userId. Rotación en login, expiración por inactividad 30 min, tope 8 h, renovación con CAS aproximadamente una vez por minuto. Logout/desactivación revocan. Cookie HttpOnly, Path=/, Secure y prefijo __Host- en HTTPS, SameSite configurable y sin Domain. Roles CUSTOMER/ADMIN. Origin y X-Requested-With exigidos en escrituras; admin obligatorio para productos/media/usuarios. Transacción con advisory lock protege último admin y actor en gestión de cuentas. Limitador compartido en BD con HMAC de dirección. No se encontró cambio propio de contraseña en rutas inspeccionadas.
+Scrypt, token aleatorio con digest HMAC persistido; una sesión por usuario por unique userId. Rotación en login, expiración por inactividad de 4 h para administradores y 30 min para clientes, tope absoluto 8 h. La actividad administrativa se registra con una solicitud autenticada y CSRF protegida, iniciada por interacción; las lecturas no renuevan. CAS limita la persistencia a una vez por minuto. Logout/desactivación revocan. Cookie HttpOnly, Path=/, Secure y prefijo __Host- en HTTPS, SameSite configurable y sin Domain. Roles CUSTOMER/ADMIN. Origin y X-Requested-With exigidos en escrituras; admin obligatorio para productos/media/usuarios. Transacción con advisory lock protege último admin y actor en gestión de cuentas. Limitador compartido en BD con HMAC de dirección. No se encontró cambio propio de contraseña en rutas inspeccionadas.
 
 Fuentes: server/repositories/auth.ts:13-58, users.ts:17-57, http/app.ts:45-47,95-137,218-235. TRUST_PROXY depende de la cadena real de proxies, no comprobada aquí.
 

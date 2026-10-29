@@ -1,3 +1,5 @@
+let sessionEpoch=0;
+export function advanceSessionEpoch(){sessionEpoch++;}
 export const SESSION_INVALID = 'mp:session-invalid';
 export class ApiError extends Error {
   status: number;
@@ -5,6 +7,7 @@ export class ApiError extends Error {
   constructor(status: number, message: string, code?:string) { super(message); this.status = status;this.code=code; }
 }
 export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const epoch=sessionEpoch;
   if (!path.startsWith('/') || path.startsWith('//')) throw new Error('Ruta API inválida.');
   const headers = new Headers(init?.headers);
   headers.set('Content-Type', 'application/json');
@@ -23,7 +26,7 @@ export async function requestJson<T>(path: string, init?: RequestInit): Promise<
     headers,
   });
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) window.dispatchEvent(new Event(SESSION_INVALID));
+    if(epoch===sessionEpoch&&response.status===401&&path!=='/auth/login'&&path!=='/auth/register'&&typeof window!=='undefined')window.dispatchEvent(new Event(SESSION_INVALID));
     const body: unknown = await response.json().catch(() => null);
     const message = body && typeof body === 'object' && 'message' in body && typeof body.message === 'string'
       ? body.message : 'No se pudo completar la solicitud.';

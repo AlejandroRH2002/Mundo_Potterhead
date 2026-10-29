@@ -3,6 +3,7 @@ import {usePhotoQueue} from '../hooks/usePhotoQueue';
 import {DesignPreparation} from './DesignPreparation';
 import {returnDesignToDraft} from '../services/publication';
 import {PublicationActions} from './PublicationActions';
+import {errorMessage} from '@/shared/lib/money';
 import {Button} from '@/shared/components/Button';
 import {taxonomy,categories,universes,categoryLabels,universeLabels} from '../../../../shared/catalogTaxonomy';
 import {sizeTaxonomy} from '../../../../shared/sizes';
@@ -14,6 +15,7 @@ export type EditorSection='models'|'variants'|'images';
 export type EditorView='general'|'designs'|'photos';
 type Props={value:ManagedProduct;onChange:(value:ManagedProduct)=>void;onSave:()=>void;onClose:()=>void;busy:boolean;dirty:boolean;section:EditorSection;onUploadState:(busy:boolean)=>void;view?:EditorView;hideActions?:boolean;onEditDesign?:()=>void;onEditPhotos?:()=>void;onEditInventory?:()=>void;persisted?:ManagedProduct;onSaveValue?:(value:ManagedProduct)=>Promise<unknown>;focusModelCode?:string};
 export function CatalogEditor({value,onChange,onSave,onClose,busy,dirty,section,onUploadState,view,hideActions=false,onEditDesign,onEditPhotos,onEditInventory,persisted,onSaveValue,focusModelCode}:Props){
+ const [saveError,setSaveError]=useState('');
  const [uploading,setUploading]=useState(false),[selected,setSelected]=useState(0),[variantIndex,setVariantIndex]=useState(0),[showInactive,setShowInactive]=useState(false);
  const appliedFocus=useRef<string>();
  useEffect(()=>{if(!focusModelCode||appliedFocus.current===focusModelCode)return;const found=value.models.findIndex(model=>model.code===focusModelCode);if(found>=0){setSelected(found);appliedFocus.current=focusModelCode;}},[focusModelCode,value.models]);
@@ -44,8 +46,9 @@ export function CatalogEditor({value,onChange,onSave,onClose,busy,dirty,section,
  {photos&&<><ModelPhotos value={value} onSelect={i=>{setSelected(i);setVariantIndex(0);}} onUpload={(code,file)=>uploads.queue.enqueue({productCode:value.code,modelCode:code},value.models.find(model=>model.code===code)?.name??'Diseño',file)}/>{item&&<GalleryEditor id="design-photo-fields" onUpload={files=>enqueue(files,item.code)} pending={uploads.pending} thumbnails={value.product.imageThumbnails} label={'Fotografías de '+item.name} images={item.images} onBusyChange={onBusy} onChange={images=>model({images,active:images.length?item.active:false})}/>}<details><summary>Fotografías generales y opciones avanzadas</summary><GalleryEditor onUpload={files=>enqueue(files)} pending={uploads.pending} label="Galería del producto" images={gallery} onBusyChange={onBusy} onChange={images=>patch({image:images[0],images:images.slice(1)})}/>{selectedVariant&&<><label>Opción con fotografías propias<select className="shop-input" value={Math.min(variantIndex,item.variants.length-1)} onChange={e=>setVariantIndex(Number(e.target.value))}>{item.variants.map((s,i)=><option key={s.code} value={i}>{s.size} · {s.color||'Sin color'}</option>)}</select></label><GalleryEditor onUpload={files=>enqueue(files,item.code,selectedVariant.code)} pending={uploads.pending} label="Fotografías específicas de la opción" images={selectedVariant.images} onBusyChange={onBusy} onChange={images=>variant(Math.min(variantIndex,item.variants.length-1),{images})}/></>}</details></>}
  </>}
  {!!value.removedVariantIds?.length&&<p className="catalog-pending-removal" role="status">{value.removedVariantIds.length} opciones pendientes de quitar. Se aplicará al guardar.</p>}
+ {saveError&&<p className="shop-error" role="alert">{saveError}</p>}
  {onSaveValue&&!hideActions&&<PublicationActions value={value} onSave={onSaveValue} disabled={busy||uploads.pending}/>}
- {onSaveValue&&item&&persisted?.status==='active'&&persisted.models.some(m=>m.code===item.code&&m.active)&&<Button type="button" variant="secondary" disabled={busy||uploads.pending} onClick={()=>{if(window.confirm('¿Volver este diseño a borrador y retirarlo del catálogo? Se conservan sus fotografías, tallas, existencias e historial. Si es el último diseño activo, el producto también vuelve a borrador.'))void onSaveValue(returnDesignToDraft(value,item.code));}}>Volver a borrador: {item.name}</Button>}
+ {onSaveValue&&item&&persisted?.status==='active'&&persisted.models.some(m=>m.code===item.code&&m.active)&&<Button type="button" variant="secondary" disabled={busy||uploads.pending} onClick={()=>{if(window.confirm('¿Volver este diseño a borrador y retirarlo del catálogo? Se conservan sus fotografías, tallas, existencias e historial. Si es el último diseño activo, el producto también vuelve a borrador.'))void onSaveValue(returnDesignToDraft(value,item.code)).catch(cause=>setSaveError(errorMessage(cause)));}}>Volver a borrador: {item.name}</Button>}
  {!hideActions&&<div className="admin-actions catalog-save-bar"><Button type="submit" loading={busy} disabled={!dirty||uploads.pending}>Guardar cambios</Button><Button type="button" variant="secondary" disabled={uploads.pending} onClick={onClose}>Cancelar y volver</Button></div>}
  </fieldset></form>;
 }

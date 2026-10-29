@@ -76,7 +76,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
       const path = new URL(request.url ?? '/', 'http://localhost').pathname;
       const method = request.method ?? 'GET';
       route = /^\/api\/admin\/users(?:\/[^/]+)?$/.test(path) ? '/api/admin/users/:id?' : /^\/api\/products(?:\/[^/]+)?$/.test(path) ? '/api/products/:id?' :
-        ['/api/quote', '/api/media/config', '/api/media/upload', '/api/media/complete', '/api/auth/session', '/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/users/me', '/health/live', '/health/ready'].includes(path) ? path : 'unknown';
+        ['/api/quote', '/api/media/config', '/api/media/upload', '/api/media/complete', '/api/auth/session', '/api/auth/activity', '/api/auth/login', '/api/auth/logout', '/api/auth/register', '/api/users/me', '/health/live', '/health/ready'].includes(path) ? path : 'unknown';
       const requestOrigin = request.headers.origin;
       if (requestOrigin && requestOrigin !== origin) throw new HttpError(403, 'Origen no autorizado.');
       if (requestOrigin === origin) {
@@ -99,8 +99,8 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         json(response, 200, { status: 'ok' }); return;
       }
       const token = tokenFrom(request);
-      const user = await auth.session(token);
-      if (user && token) response.setHeader('Set-Cookie', cookie(token, Math.floor(auth.ttlMs / 1000)));
+      const user = await auth.session(token,false);
+      if (user && token && user.role!=='admin') response.setHeader('Set-Cookie', cookie(token,Math.floor((await auth.remainingMs?.(token)??auth.ttlMs)/1000)));
       if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
         if (request.headers.origin !== origin || request.headers['x-requested-with'] !== 'MundoPotterhead') throw new HttpError(403, 'Origen de solicitud no autorizado.');
       }
@@ -218,6 +218,13 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
           json(response, 200, await media.sign(input.data)); return;
         }
       }
+      if(path==='/api/auth/activity'&&method==='POST'){
+        if(!user||!token)throw new HttpError(401,'Tu sesión ha expirado. Inicia sesión nuevamente para continuar.');
+        if(user.role!=='admin')throw new HttpError(403,'Se requiere administrador.');
+        if(!z.object({}).strict().safeParse(await body(request,128)).success)throw new HttpError(400,'Solicitud de actividad inválida.');
+        const active=await auth.session(token,true);if(!active)throw new HttpError(401,'Tu sesión ha expirado. Inicia sesión nuevamente para continuar.');
+        response.setHeader('Set-Cookie',cookie(token,Math.floor((await auth.remainingMs?.(token)??auth.ttlMs)/1000)));json(response,200,{user:active});return;
+      }
       if (path === '/api/auth/session' && method === 'GET') {
         json(response, 200, { user }); return;
       }
@@ -246,7 +253,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         const session = await auth.authenticate(input.data.email, input.data.password);
         if (!session) throw new HttpError(401, 'Credenciales incorrectas.');
         await auth.revoke(token);
-        response.setHeader('Set-Cookie', cookie(session.token, Math.floor(auth.ttlMs / 1000)));
+        response.setHeader('Set-Cookie', cookie(session.token,Math.floor((await auth.remainingMs?.(session.token)??auth.ttlMs)/1000)));
         json(response, 200, { user: session.user }); return;
       }
       if (path === '/api/auth/logout' && method === 'POST') {
