@@ -20,6 +20,7 @@ const ProductDetail = lazy(() => import('@/features/catalog/pages/ProductDetail'
 const OtherUniverses = lazy(() => import('@/features/catalog/pages/OtherUniverses').then(module => ({ default: module.OtherUniverses })));
 const Login = lazy(() => import('@/features/auth/pages/Login').then(module => ({ default: module.Login })));
 const CatalogManagement = lazy(() => import('@/features/admin-catalog/pages/CatalogManagement').then(module => ({default:module.CatalogManagement})));
+const Promotions=lazy(()=>import('@/features/promotions/pages/Promotions').then(module=>({default:module.Promotions})));
 const Inventory = lazy(() => import('@/features/inventory/pages/Inventory').then(module => ({ default: module.Inventory })));
 const AdminUsers = lazy(() => import('@/features/admin-users/pages/AdminUsers').then(module => ({ default: module.AdminUsers })));
 const AdminDashboard = lazy(() => import('@/features/admin-products/pages/AdminDashboard').then(module => ({ default: module.AdminDashboard })));
@@ -67,6 +68,7 @@ function AnimatedRoutes() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/catalogo" element={<CatalogManagement />} />
           <Route path="/admin/catalogo/:productId" element={<CatalogManagement />} />
+          <Route path="/admin/promociones" element={<Promotions/>}/>
           <Route path="/admin/inventario" element={<Inventory />} />
           <Route path="/admin/usuarios" element={<AdminUsers />} />
           <Route path="/products/new" element={<AddProduct />} />

@@ -1,3 +1,4 @@
+import {shippingMessage} from '../../../../shared/promotions';
 import {SafeImage} from '@/shared/components/SafeImage';
 import { sizeLabel } from '../../../../shared/sizes';
 import { cartEntryKey } from '../services/cartService';
@@ -26,11 +27,12 @@ export function Cart({ drawer = false }: { drawer?: boolean }) {
         <input className="shop-input w-24" type="number" min="1" max="99" step="1" value={line.quantity} onChange={event => cart.setQuantity(line.productId, Number(event.target.value), line.selectedImage, line.skuId??line.modelId)} aria-label={`Cantidad de ${line.product.name}`} />
       </label>
       <strong>{money(line.subtotal)}</strong>
-      <button aria-label={`Eliminar ${line.product.name} del carrito`} className="shop-link" onClick={() => cart.remove(line.productId, line.selectedImage, line.modelId)}>Eliminar</button>
+      <button aria-label={`Eliminar ${line.product.name} del carrito`} className="shop-link" onClick={() => cart.remove(line.productId, line.selectedImage, line.skuId??line.modelId)}>Eliminar</button>
     </article>)}
     {!!cart.lines.length && <div className="shop-panel cart-summary">
       <p className="eyebrow">Tu cotización</p><p className="text-2xl font-bold">Total estimado: {money(cart.total)} MXN</p>
       <p className="my-3">Coordinaremos disponibilidad, envío y pago por WhatsApp. El envío no está incluido.</p>
+      {cart.shipping?.enabled&&<div className="shipping-promotion" role="status"><strong>{cart.shipping.eligible?'Puedes solicitar la promoción de envío':'Promoción de envío disponible'}</strong><p>{cart.shipping.eligible?shippingMessage(cart.shipping):'Faltan '+money(cart.shipping.remaining)+' MXN en productos para alcanzar el mínimo. Sujeto a cobertura y confirmación de la tienda.'}</p></div>}
       {/* REVISAR CON ASESOR LEGAL */}
       <p className="mb-4 text-sm">Este carrito es una cotización, no una compra. Confirmaremos precios, disponibilidad y envío por WhatsApp. Consulta los <Link className="shop-link" to="/terms">términos</Link> y el <Link className="shop-link" to="/privacy">aviso de privacidad</Link> antes de continuar.</p>
       <Button loading={cart.sending} disabled={cart.loading || cart.missing.length > 0} onClick={() => void cart.checkout()}><WhatsappIcon/> Cotizar por WhatsApp</Button>

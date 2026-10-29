@@ -1,3 +1,4 @@
+import {createPromotions} from '../server/repositories/promotions.ts';
 import {preparePublication,returnDesignToDraft} from '../src/features/admin-catalog/services/publication.ts';
 import { createInventory, assertInventoryReady } from '../server/repositories/inventory.ts';
 import { createCatalogManagement } from '../server/repositories/catalogManagement.ts';
@@ -24,10 +25,11 @@ const origin = 'https://shop.test.invalid';
 await bootstrapAdmin(db, email, password);
 const auth = await createDatabaseAuth(db, secret);
 const products = createDatabaseProducts(db);
+const promotions=createPromotions(db);
 const catalogManagement=createCatalogManagement(db,secret);
 const entries = [];
 const api = createApi({ auth, products, origin, secureCookies: true, sameSite: 'None', registrationEnabled: true,
-  catalogManagement,limiter: databaseLoginLimiter(db, secret), logger: entry => entries.push(entry), ready: async () => { await db.$queryRaw`SELECT 1`; } });
+  catalogManagement,promotions,inventory:createInventory(db,products,'capture'),limiter: databaseLoginLimiter(db, secret), logger: entry => entries.push(entry), ready: async () => { await db.$queryRaw`SELECT 1`; } });
 await new Promise(resolve => api.listen(0, '127.0.0.1', resolve));
 after(async () => { await new Promise(resolve => api.close(resolve)); await db.$disconnect(); });
 const base = 'http://127.0.0.1:' + api.address().port;
@@ -616,6 +618,31 @@ test('employee creation: draft resume, atomic ready designs, withdrawal, permiss
  const single={...value,id:undefined,revision:undefined,code:'SINGLE-'+randomUUID(),models:[{code:'M-'+randomUUID(),name:'Único',active:false,images:[],variants:[{code:'S-'+randomUUID(),size:'one',color:'',images:[],active:true}]}]};const savedSingle=await catalogManagement.save(owner.id,single);assert.equal(savedSingle.models.length,1);assert.equal(savedSingle.models[0].variants.length,1);assert.equal(savedSingle.status,'draft');
 });
 
+test('promotion settings persist, default disabled, enforce admin/CSRF and compare-and-swap concurrent updates',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),session=await auth.authenticate(email,password),cookie='__Host-mp_session='+session.token;let settings=await promotions.get();assert.equal(settings.shipping.enabled,false);assert.equal(settings.shipping.minimum,1500);assert.equal(settings.shipping.scope,'');
+ assert.equal((await send('/api/admin/promotions')).status,401);const customer=await db.user.create({data:{email:randomUUID()+'@test.invalid',password:owner.password,role:'CUSTOMER'}}),client=await auth.authenticate(customer.email,password),clientCookie='__Host-mp_session='+client.token;
+ assert.equal((await send('/api/admin/promotions',{cookie:clientCookie})).status,403);assert.equal((await send('/api/admin/promotions',{cookie,method:'PUT',payload:settings,from:'https://outside.test.invalid'})).status,403);
+ assert.equal((await send('/api/admin/promotions',{cookie,method:'PUT',payload:{...settings,extra:true}})).status,400);assert.equal((await send('/api/admin/promotions',{cookie,method:'PUT',payload:{...settings,shipping:{...settings.shipping,enabled:true}}})).status,400);
+ const proposed={...settings,shipping:{enabled:true,minimum:1500,scope:'Zona de pruebas',conditions:'Confirmar destino'},general:{enabled:true,title:'Promoción de prueba',message:'Condiciones informativas'}};
+ const responses=await Promise.all([promotions.save(owner.id,proposed),promotions.save(owner.id,{...proposed,shipping:{...proposed.shipping,minimum:2000}})].map(promise=>promise.then(value=>({ok:true,value}),error=>({ok:false,status:error.status}))));assert.equal(responses.filter(result=>result.ok).length,1);assert.equal(responses.find(result=>!result.ok).status,409);
+ settings=await promotions.get();assert.equal(settings.revision,1);settings=await promotions.save(owner.id,{...settings,shipping:{...settings.shipping,minimum:1500}});const publicResponse=await send('/api/promotions');assert.equal(publicResponse.status,200);assert.equal((await publicResponse.json()).shipping.minimum,1500);
+ assert.equal((await db.promotionSettings.findUniqueOrThrow({where:{id:'store'}})).updatedById,owner.id);
+});
+test('product discounts preserve base price, historic orders and SKU balances; quote shipping uses validated discounted lines',async()=>{
+ const owner=await db.user.findUniqueOrThrow({where:{email}}),session=await auth.authenticate(email,password),cookie='__Host-mp_session='+session.token;
+ let managed=await catalogManagement.save(owner.id,{code:'PROMO-'+randomUUID(),status:'active',product:{...draft,name:'Producto promocional',price:1000},models:['Diseño A','Diseño B'].map(name=>({code:'M-'+randomUUID(),name,active:true,images:['/images/test.webp'],variants:[{code:'S-'+randomUUID(),size:'one',color:'',images:[],active:true}]}))});
+ const order=await db.order.create({data:{userId:owner.id,total:1000,items:{create:{productId:managed.id,quantity:1,price:1000}}}}),skuIds=managed.models.flatMap(model=>model.variants.map(option=>option.id)),before=await db.productSku.findMany({where:{id:{in:skuIds}},orderBy:{id:'asc'}});
+ assert.equal((await send('/api/admin/promotions/products/'+managed.id,{method:'PATCH',payload:{revision:managed.revision,enabled:true,promotionalPrice:500}})).status,401);
+ const bad=await send('/api/admin/promotions/products/'+managed.id,{method:'PATCH',cookie,payload:{revision:managed.revision,enabled:true,promotionalPrice:1100}});assert.equal(bad.status,400);assert.equal(Number((await db.product.findUniqueOrThrow({where:{id:managed.id}})).price),1000);
+ const offer=await send('/api/admin/promotions/products/'+managed.id,{method:'PATCH',cookie,payload:{revision:managed.revision,enabled:true,promotionalPrice:500}});assert.equal(offer.status,200);managed=await catalogManagement.get(managed.id);assert.equal(managed.product.originalPrice,1000);assert.equal(managed.product.price,500);
+ for(const [a,b,eligible] of [[1,1,false],[2,1,true],[2,2,true]]){const quote=await send('/api/quote',{method:'POST',payload:{lines:[{productId:managed.id,skuId:skuIds[0],quantity:a},{productId:managed.id,skuId:skuIds[1],quantity:b}]}});assert.equal(quote.status,200);const body=await quote.json();assert.equal(body.total,500*(a+b));assert.equal(body.shipping.eligible,eligible);assert.ok(body.lines.every(line=>line.product.price===500));}
+ assert.equal((await send('/api/quote',{method:'POST',payload:{lines:[{productId:managed.id,skuId:skuIds[0],quantity:0}]}})).status,400);
+ await assert.rejects(()=>promotions.product(owner.id,managed.id,{revision:managed.revision-1,enabled:false}),error=>error.status===409);
+ await promotions.product(owner.id,managed.id,{revision:managed.revision,enabled:false});const restored=await db.product.findUniqueOrThrow({where:{id:managed.id}});assert.equal(Number(restored.price),1000);assert.equal(restored.originalPrice,null);assert.equal(restored.isOnSale,false);assert.equal(Number((await db.orderItem.findFirst({where:{orderId:order.id}})).price),1000);assert.deepEqual(await db.productSku.findMany({where:{id:{in:skuIds}},orderBy:{id:'asc'}}),before);
+ await catalogManagement.bulk(owner.id,{items:[{id:restored.id,revision:restored.revision}],status:'archived'});assert.equal(await products.get(restored.id),null);const archived=await catalogManagement.get(restored.id);await catalogManagement.bulk(owner.id,{items:[{id:archived.id,revision:archived.revision}],status:'draft'});assert.equal((await catalogManagement.get(restored.id)).status,'draft');assert.equal(await products.get(restored.id),null);
+ const alias=await db.product.findFirst({where:{groupedIntoId:{not:null}}});assert.ok(alias);assert.equal((await catalogManagement.destination(alias.id)).id,alias.groupedIntoId);assert.equal((await send('/api/admin/catalog/'+alias.id+'/destination',{cookie})).status,200);await assert.rejects(()=>promotions.product(owner.id,alias.id,{revision:alias.revision,enabled:false}),error=>error.status===409);
+ const settings=await promotions.get();await promotions.save(owner.id,{...settings,shipping:{...settings.shipping,enabled:false},general:{...settings.general,enabled:false,title:'Anuncio aún privado'}});const hidden=await send('/api/promotions');assert.equal((await hidden.json()).general.title,'');
+});
 test('admin session expires during editing, explicit login resumes publication without automatic writes',async()=>{
  let clock=Date.now();const clockAuth=await createDatabaseAuth(db,secret,30*60000,()=>clock);
  const owner=await db.user.findUniqueOrThrow({where:{email}}),newCode='AUTH-'+randomUUID();

@@ -1,3 +1,5 @@
+import {evaluateShipping,publicPromotions} from '../../shared/promotions.ts';
+import type {PromotionsRepository} from '../repositories/promotions.ts';
 import {applyGroupingSchema,adminCatalogQuerySchema} from '../../shared/productGrouping.ts';
 import { skuInputSchema } from '../../shared/sizes.ts';
 import { z } from 'zod';
@@ -44,9 +46,9 @@ function json(response: ServerResponse, status: number, value?: unknown) {
   response.end(value === undefined ? undefined : JSON.stringify(value));
 }
 export function createApi({ auth, products, origin, secureCookies = false, sameSite = 'Strict', trustProxy = false,
-  registrationEnabled = false, allowInlineImages = process.env.NODE_ENV !== 'production', limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users, inventory, adminProducts, catalogManagement,
+  registrationEnabled = false, allowInlineImages = process.env.NODE_ENV !== 'production', limiter = createLoginLimiter(), ready = async () => {}, logger = audit, media, users, inventory, adminProducts, catalogManagement,promotions,
 }: { auth: Auth; products: ProductRepository; origin: string; secureCookies?: boolean;
-  allowInlineImages?: boolean; catalogManagement?:CatalogManagement; inventory?: InventoryRepository; adminProducts?: ProductRepository; users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
+  promotions?:PromotionsRepository; allowInlineImages?: boolean; catalogManagement?:CatalogManagement; inventory?: InventoryRepository; adminProducts?: ProductRepository; users?: UserRepository; media?: MediaStorage; sameSite?: 'Strict' | 'Lax' | 'None'; trustProxy?: boolean; registrationEnabled?: boolean;
   limiter?: (key: string) => boolean | Promise<boolean>; ready?: () => Promise<void>; logger?: (entry: AuditEntry) => void;
 }) {
   if (sameSite === 'None' && !secureCookies) throw new Error('SameSite=None requires Secure.');
@@ -106,7 +108,16 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         if (!inventory) throw new HttpError(503, 'Validación de inventario no disponible.');
         const input=quoteSchema.safeParse(await body(request,2*1024*1024));
         if (!input.success) throw new HttpError(400, 'Cotización inválida.');
-        json(response,200,await inventory.quote(input.data));return;
+        const quote=await inventory.quote(input.data);json(response,200,{...quote,...(promotions?{shipping:evaluateShipping(quote.total,publicPromotions(await promotions.get()).shipping)}:{})});return;
+      }
+      if(path==='/api/promotions'&&method==='GET'){if(!promotions)throw new HttpError(503,'Promociones no disponibles.');json(response,200,publicPromotions(await promotions.get()));return;}
+      if(path==='/api/admin/promotions'||path.startsWith('/api/admin/promotions/')){
+       if(!user)throw new HttpError(401,'Inicia sesión para continuar.');if(user.role!=='admin')throw new HttpError(403,'Se requiere administrador.');if(!promotions)throw new HttpError(503,'Promociones no disponibles.');
+       if(path==='/api/admin/promotions'&&method==='GET'){json(response,200,await promotions.get());return;}
+       if(path==='/api/admin/promotions'&&method==='PUT'){json(response,200,await promotions.save(user.id,await body(request,8192)));return;}
+       if(path==='/api/admin/promotions/products'&&method==='GET'){json(response,200,await promotions.products(Object.fromEntries(new URL(request.url??'/','http://localhost').searchParams)));return;}
+       const match=path.match(/^\/api\/admin\/promotions\/products\/([^/]+)$/);if(match&&method==='GET'){json(response,200,await promotions.getProduct(resourceId(match[1])));return;}if(match&&method==='PATCH'){json(response,200,await promotions.product(user.id,resourceId(match[1]),await body(request,1024)));return;}
+       throw new HttpError(405,'Operación de promociones no permitida.');
       }
       if (path==='/api/admin/catalog' || path.startsWith('/api/admin/catalog/')) {
         route='/api/admin/catalog';
@@ -122,6 +133,7 @@ export function createApi({ auth, products, origin, secureCookies = false, sameS
         if(path==='/api/admin/catalog/import'&&method==='POST'){const value=z.object({request:z.unknown(),token:z.string().max(200)}).strict().parse(await body(request,2*1024*1024));json(response,200,await catalogManagement.apply(user.id,value.request,value.token));return;}
         if(path==='/api/admin/catalog/bulk'&&method==='PATCH'){json(response,200,await catalogManagement.bulk(user.id,await body(request)));return;}
         if(path==='/api/admin/catalog'&&method==='POST'){json(response,201,await catalogManagement.save(user.id,await body(request,256*1024)));return;}
+        if(parts.length===5&&parts[4]==='destination'&&method==='GET'){json(response,200,await catalogManagement.destination(resourceId(parts[3])));return;}
         if(parts.length===4&&method==='GET'){json(response,200,await catalogManagement.get(resourceId(parts[3])));return;}
         if(parts.length===5&&parts[4]==='duplicate'&&method==='POST'){json(response,201,await catalogManagement.duplicate(user.id,resourceId(parts[3])));return;}
         throw new HttpError(405,'Operación de catálogo no permitida.');
