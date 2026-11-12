@@ -38,7 +38,7 @@
     "@aws-sdk/client-s3": "^3.1142.0",
     "@aws-sdk/s3-request-presigner": "3.1142.0",
     "@prisma/client": "5.22.0",
-    "fast-xml-parser": "5.11.2",
+    "fast-xml-parser": "5.12.0",
     "fflate": "0.8.3",
     "framer-motion": "^11.0.8",
     "lucide-react": "^0.344.0",
